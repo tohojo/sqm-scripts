@@ -35,7 +35,7 @@ ipt_stop() {
 
 sqm_stop
 ipt_stop
-[ ! -z "$CUR_IFB" ] && ifconfig ${CUR_IFB} down
+[ ! -z "$CUR_IFB" ] && ip link set dev ${CUR_IFB} down
 [ ! -z "$CUR_IFB" ] && ip link delete ${CUR_IFB} type ifb
 [ ! -z "$CUR_IFB" ] && sqm_logger "${0}: ${CUR_IFB} interface deleted"
 

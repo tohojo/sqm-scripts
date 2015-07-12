@@ -58,7 +58,7 @@ case $QDISC in
 	    ;;
 esac
 
-ifconfig $DEV up
+ip link set dev $DEV up
 
 # redirect all IP packets arriving in $IFACE to ifb0
 

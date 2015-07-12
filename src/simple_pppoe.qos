@@ -351,7 +351,7 @@ diffserv_pppoe $DEV
 
 fi
 
-ifconfig $DEV up
+ip link set dev $DEV up
 
 # redirect all IP packets arriving in $IFACE to ifb0
 
