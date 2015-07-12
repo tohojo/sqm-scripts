@@ -1,0 +1,16 @@
+[Unit]
+Description=SQM scripts for iface %i
+Wants=network.target
+Before=network.target
+BindsTo=sys-subsystem-net-devices-%i.device
+After=sys-subsystem-net-devices-%i.device
+
+[Service]
+Type=oneshot
+EnvironmentFile="/etc/sqm/sqm-%i.conf"
+Environment="IFACE=%i"
+ExecStart=/usr/lib/sqm/run.sh start %i
+ExecStop=/usr/lib/sqm/run.sh stop %i
+
+[Install]
+WantedBy=multi-user.target
