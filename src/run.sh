@@ -7,12 +7,13 @@
 #       Copyright (C) 2012-4 Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller
 
 
-. /lib/functions.sh
+SQM_LIB_DIR=${SQM_LIB_DIR:-/usr/lib/sqm}
+. ${SQM_LIB_DIR}/functions.sh
 
-STOP=
+ACTION="${1:-start}"
+SQM_STATE_DIR=${SQM_STATE_DIR:-/var/run/SQM}
 ACTIVE_STATE_PREFIX="SQM_active_on_"
-ACTIVE_STATE_FILE_DIR="/var/run/SQM"
-mkdir -p ${ACTIVE_STATE_FILE_DIR}
+mkdir -p ${SQM_STATE_DIR}
 
 
 START_ON_IF=$2	# only process this interface
@@ -20,28 +21,13 @@ START_ON_IF=$2	# only process this interface
 if [ -z ${START_ON_IF} ] ;
 then
     # find all interfaces with active sqm instance
-    logger -t SQM -s "Trying to start/stop SQM on all interfaces."
-    PROTO_STATE_FILE_LIST=$( ls ${ACTIVE_STATE_FILE_DIR}/${ACTIVE_STATE_PREFIX}* 2> /dev/null )
+    sqm_logger "Trying to start/stop SQM on all interfaces."
+    PROTO_STATE_FILE_LIST=$( echo ${SQM_STATE_DIR}/${ACTIVE_STATE_PREFIX}* 2> /dev/null )
 else
     # only try to restart the just hotplugged interface, so reduce the list of interfaces to stop to the specified one
-    logger -t SQM -s "Trying to start/stop SQM on interface ${START_ON_IF}"
-    PROTO_STATE_FILE_LIST=${ACTIVE_STATE_FILE_DIR}/${ACTIVE_STATE_PREFIX}${START_ON_IF}
+    sqm_logger "Trying to start/stop SQM on interface ${START_ON_IF}"
+    PROTO_STATE_FILE_LIST=${SQM_STATE_DIR}/${ACTIVE_STATE_PREFIX}${START_ON_IF}
 fi
-
-
-
-
-case ${1} in
-    start)
-	# just run through, same as passing no argument
-	;;
-    stop)
-        logger -t SQM -s "run.sh stop"
-	STOP=$1
-        ;;
-esac
-
-
 
 
 
@@ -55,79 +41,20 @@ for STATE_FILE in ${PROTO_STATE_FILE_LIST} ; do
     then
 	STATE_FILE_BASE_NAME=$( basename ${STATE_FILE} )
 	CURRENT_INTERFACE=${STATE_FILE_BASE_NAME:${#ACTIVE_STATE_PREFIX}:$(( ${#STATE_FILE_BASE_NAME} - ${#ACTIVE_STATE_PREFIX} ))}
-	logger -t SQM -s "${0} Stopping SQM on interface: ${CURRENT_INTERFACE}"
-	/usr/lib/sqm/stop.sh ${CURRENT_INTERFACE}
+	sqm_logger "${0} Stopping SQM on interface: ${CURRENT_INTERFACE}"
+	${SQM_LIB_DIR}/stop.sh ${CURRENT_INTERFACE}
 	rm ${STATE_FILE}	# well, we stop it so it is not running anymore and hence no active state file needed...
     fi
 done
 
-config_load sqm
+[ "$ACTION" = "stop" ] && exit 0
 
-run_simple_qos() {
-	local section="$1"
-	export IFACE=$(config_get "$section" interface)
+# in case of spurious hotplug events, try double check whether the interface is really up
+if [ ! -d /sys/class/net/${IFACE} ] ;
+then
+    sqm_logger "${IFACE} does currently not exist, not even trying to start SQM on nothing."
+    exit 0
+fi
 
-	# If called explicitly for one interface only , so ignore anything else
-	[ -n "${START_ON_IF}" -a "$START_ON_IF" != "$IFACE" ] && return
-	#logger -t SQM -s "marching on..."
-
-	ACTIVE_STATE_FILE_FQN="${ACTIVE_STATE_FILE_DIR}/${ACTIVE_STATE_PREFIX}${IFACE}"	# this marks interfaces as active with SQM
-	[ -f "${ACTIVE_STATE_FILE_FQN}" ] && logger -t SQM -s "Uh, oh, ${ACTIVE_STATE_FILE_FQN} should already be stopped."	# Not supposed to happen
-
-	if [ $(config_get "$section" enabled) -ne 1 ];
-	then
-	    if [ -f "${ACTIVE_STATE_FILE_FQN}" ];
-	    then
-		# this should not be possible, delete after testing
-		local SECTION_STOP="stop"	# it seems the user just de-selected enable, so stop the active SQM
-	    else
-		logger -t SQM -s "${0} SQM for interface ${IFACE} is not enabled, skipping over..."
-		return 0	# since SQM is not active on the current interface nothing to do here
-	    fi
-	fi
-
-	export UPLINK=$(config_get "$section" upload)
-	export DOWNLINK=$(config_get "$section" download)
-	export LLAM=$(config_get "$section" linklayer_adaptation_mechanism)
-	export LINKLAYER=$(config_get "$section" linklayer)
-	export OVERHEAD=$(config_get "$section" overhead)
-	export STAB_MTU=$(config_get "$section" tcMTU)
-	export STAB_TSIZE=$(config_get "$section" tcTSIZE)
-	export STAB_MPU=$(config_get "$section" tcMPU)
-	export ILIMIT=$(config_get "$section" ilimit)
-	export ELIMIT=$(config_get "$section" elimit)
-	export ITARGET=$(config_get "$section" itarget)
-	export ETARGET=$(config_get "$section" etarget)
-	export IECN=$(config_get "$section" ingress_ecn)
-	export EECN=$(config_get "$section" egress_ecn)
-	export IQDISC_OPTS=$(config_get "$section" iqdisc_opts)
-	export EQDISC_OPTS=$(config_get "$section" eqdisc_opts)
-	export TARGET=$(config_get "$section" target)
-	export SQUASH_DSCP=$(config_get "$section" squash_dscp)
-	export SQUASH_INGRESS=$(config_get "$section" squash_ingress)
-
-	export QDISC=$(config_get "$section" qdisc)
-	export SCRIPT=/usr/lib/sqm/$(config_get "$section" script)
-
-#	# there should be nothing left to stop, so just avoid calling the script
-	if [ "$STOP" == "stop" -o "$SECTION_STOP" == "stop" ];
-	then
-#	     /usr/lib/sqm/stop.sh
-#	     [ -f ${ACTIVE_STATE_FILE_FQN} ] && rm ${ACTIVE_STATE_FILE_FQN}	# conditional to avoid errors ACTIVE_STATE_FILE_FQN does not exist anymore
-#	     $(config_set "$section" enabled 0)	# this does not save to the config file only to the loaded memory representation
-	     logger -t SQM -s "${0} SQM qdiscs on ${IFACE} removed"
-	     return 0
-	fi
-	# in case of spurious hotplug events, try double check whether the interface is really up
-	if [ ! -d /sys/class/net/${IFACE} ] ;
-	then
-	    echo "${IFACE} does currently not exist, not even trying to start SQM on nothing." > /dev/kmsg
-	    logger -t SQM -s "${IFACE} does currently not exist, not even trying to start SQM on nothing."
-	    return 0
-	fi
-
-	logger -t SQM -s "${0} Queue Setup Script: ${SCRIPT}"
-	[ -x "$SCRIPT" ] && { $SCRIPT ; touch ${ACTIVE_STATE_FILE_FQN}; }
-}
-
-config_foreach run_simple_qos
+sqm_logger "${0} Queue Setup Script: ${SCRIPT}"
+[ -x "${SQM_LIB_DIR}/$SCRIPT" ] && { "${SQM_lIB_DIR}/$SCRIPT" ; touch ${ACTIVE_STATE_FILE_FQN}; }

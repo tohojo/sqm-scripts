@@ -9,7 +9,10 @@
 #
 #       Copyright (C) 2012-5 Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller
 
-. /usr/lib/sqm/functions.sh
+SQM_LIB_DIR=${SQM_LIB_DIR:-/usr/lib/sqm}
+. ${SQM_LIB_DIR}/functions.sh
+. ${SQM_LIB_DIR}/defaults.sh
+
 sqm_logger "Starting simplest.qos"
 
 egress() {
