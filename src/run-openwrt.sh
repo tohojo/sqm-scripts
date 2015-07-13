@@ -15,7 +15,7 @@ ACTION="${1:-start}"
 # Stopping all active interfaces
 if [ "$ACTION" = "stop" -a -z "$2" ]; then
     for f in ${SQM_STATE_DIR}/*.state; do
-        IFACE=$(basename $f .state) ${SQM_LIB_DIR}/stop-sqm
+        [ -f "$f" ] && IFACE=$(basename $f .state) ${SQM_LIB_DIR}/stop-sqm
     done
     exit 0
 fi

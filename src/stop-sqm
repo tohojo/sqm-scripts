@@ -18,7 +18,7 @@ sqm_logger "${0}: Stopping ${IFACE}"
 
 # make sure to only delete the ifb associated with the current interface
 CUR_IFB=$( get_ifb_associated_with_if ${IFACE} )
-[ -z "$CUR_IFB" ] && CUR_IFB=$( ifb_name ${CUR_IF} )
+[ -z "$CUR_IFB" ] && CUR_IFB=$( ifb_name ${IFACE} )
 
 sqm_stop() {
 	tc qdisc del dev $IFACE ingress 2> /dev/null
