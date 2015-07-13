@@ -6,7 +6,11 @@
 
 #improve the logread output
 sqm_logger() {
-    logger -t SQM -s "${1}"
+    if [ "$SQM_SYSLOG" -eq "1" ]; then
+        logger -t SQM -s "$*"
+    else
+        echo "$@" >&2
+    fi
 }
 
 insmod() {
