@@ -53,20 +53,25 @@ get_ifb_associated_with_if() {
     echo ${CUR_IFB}
 }
 
-# ATTENTION, IFB names can only be 15 chararcters, so we chop of excessive characters at the start of the interface name
-# if required
-create_new_ifb_for_if() {
+ifb_name() {
     CUR_IF=$1
     MAX_IF_NAME_LENGTH=15
     IFB_PREFIX="ifb4"
     NEW_IFB="${IFB_PREFIX}${CUR_IF}"
     IFB_NAME_LENGTH=${#NEW_IFB}
+    # IFB names can only be 15 chararcters, so we chop of excessive characters
+    # at the start of the interface name
     if [ ${IFB_NAME_LENGTH} -gt ${MAX_IF_NAME_LENGTH} ];
     then
-	sqm_logger "The requsted IFB name ${NEW_IFB} is longer than the allowed 15 characters, trying to make it shorter"
 	OVERLIMIT=$(( ${#NEW_IFB} - ${MAX_IF_NAME_LENGTH} ))
 	NEW_IFB=${IFB_PREFIX}${CUR_IF:${OVERLIMIT}:$(( ${MAX_IF_NAME_LENGTH} - ${#IFB_PREFIX} ))}
     fi
+    echo ${NEW_IFB}
+}
+
+# if required
+create_new_ifb_for_if() {
+    NEW_IFB=$(ifb_name $1)
     sqm_logger "trying to create new IFB: ${NEW_IFB}"
     $IP link add name ${NEW_IFB} type ifb #>/dev/null 2>&1	# better be verbose
     echo ${NEW_IFB}
