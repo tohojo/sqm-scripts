@@ -11,7 +11,7 @@
 
 . /etc/sqm/sqm.conf
 . ${SQM_LIB_DIR}/functions.sh
-STATE_FILE="${SQM_STATE_DIR}/sqm-${IFACE}.state"
+STATE_FILE="${SQM_STATE_DIR}/${IFACE}.state"
 
 [ -d "${SQM_STATE_DIR}" ] || mkdir -p "${SQM_STATE_DIR}"
 
@@ -31,8 +31,8 @@ if [ "${ENABLED:-1}" -ne "1" ]; then
     exit 0
 fi
 
-sqm_logger "${0} Starting ${IFACE}"
-sqm_logger "${0} Queue Setup Script: ${SCRIPT}"
+sqm_logger "${0}: Starting ${IFACE}"
+sqm_logger "${0}: Queue Setup Script: ${SCRIPT}"
 [ -f "${SQM_LIB_DIR}/$SCRIPT" ] && { . "${SQM_LIB_DIR}/$SCRIPT" ; touch ${STATE_FILE}; }
 
 exit 0

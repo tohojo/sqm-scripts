@@ -9,12 +9,12 @@
 
 . /lib/functions.sh
 
-SQM_LIB_DIR=${SQM_LIB_DIR:-/usr/lib/sqm}
+. /etc/sqm/sqm.conf
 ACTION="${1:-start}"
 
 # Stopping all active interfaces
 if [ "$ACTION" = "stop" -a -z "$2" ]; then
-    for f in ${SQM_STATE_DIR}/sqm-*.state; do
+    for f in ${SQM_STATE_DIR}/*.state; do
         IFACE=$(basename $f .state) ${SQM_LIB_DIR}/stop-sqm
     done
     exit 0
