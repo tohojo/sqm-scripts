@@ -1,0 +1,11 @@
+#!/bin/sh
+
+[ -n "$IFACE" ] || exit 1
+
+. /etc/sqm/sqm.conf
+
+if [ -f /etc/sqm/sqm-${IFACE}.conf ]; then
+    . /etc/sqm/sqm-${IFACE}.conf
+    ( . ${SQM_LIB_DIR}/stop-sqm )
+    ( . ${SQM_LIB_DIR}/start-sqm )
+fi

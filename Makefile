@@ -25,6 +25,8 @@ install-linux: install-lib
 		$(DESTDIR)$(PREFIX)/lib/systemd/system
 	install -m 0644  platform/linux/sqm-tmpfiles.conf \
 		$(DESTDIR)$(PREFIX)/lib/tmpfiles.d/sqm.conf
+	test -d $(DESTDIR)/etc/network/if-up.d && install -m 0755 platform/linux/sqm-ifup \
+		$(DESTDIR)/etc/network/if-up.d/sqm || exit 0
 
 .PHONY: install-lib
 
