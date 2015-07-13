@@ -7,12 +7,12 @@
 #       Copyright (C) 2012-4 Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller
 
 # allow passing in the IFACE as first command line argument
-IFACE=$1
 
-[ -z "$IFACE" ] && exit 1
+[ -n "$IFACE" ] || exit 1
 
-SQM_LIB_DIR=${SQM_LIB_DIR:-/usr/lib/sqm}
+. /etc/sqm/sqm.conf
 . ${SQM_LIB_DIR}/functions.sh
+STATE_FILE="${SQM_STATE_DIR}/${IFACE}.state"
 
 sqm_logger "${0}: Stopping ${IFACE}"
 
@@ -41,5 +41,7 @@ ipt_stop
 [ -n "$CUR_IFB" ] && ip link set dev ${CUR_IFB} down
 [ -n "$CUR_IFB" ] && ip link delete ${CUR_IFB} type ifb
 [ -n "$CUR_IFB" ] && sqm_logger "${0}: ${CUR_IFB} interface deleted"
+
+rm -f "${STATE_FILE}"
 
 exit 0

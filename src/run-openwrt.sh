@@ -14,7 +14,9 @@ ACTION="${1:-start}"
 
 # Stopping all active interfaces
 if [ "$ACTION" = "stop" -a -z "$2" ]; then
-    ${SQM_LIB_DIR}/run.sh stop
+    for f in ${SQM_STATE_DIR}/sqm-*.state; do
+        IFACE=$(basename $f .state) ${SQM_LIB_DIR}/stop-sqm
+    done
     exit 0
 fi
 
@@ -49,7 +51,8 @@ run_sqm_scripts() {
 	export QDISC=$(config_get "$section" qdisc)
 	export SCRIPT=$(config_get "$section" script)
 
-        ${SQM_LIB_DIR}/run.sh $ACTION $IFACE
+        "${SQM_LIB_DIR}/stop-sqm"
+        [ "$ACTION" = "start" ] && "${SQM_LIB_DIR}/start-sqm"
 }
 
 config_foreach run_sqm_scripts

@@ -24,9 +24,9 @@
 #	(this should help cut down the number of OPs per packet considerably)
 
 
-SQM_LIB_DIR=${SQM_LIB_DIR:-/usr/lib/sqm}
-. ${SQM_LIB_DIR}/functions.sh
-. ${SQM_LIB_DIR}/defaults.sh
+[ -n "$IFACE" ] || exit 1
+
+. ${SQM_LIB_DIR}/defaults.sh || exit 1
 
 #sqm_logger IPT_MASK: ${IPT_MASK_STRING}
 ipt_setup() {

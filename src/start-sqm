@@ -1,0 +1,38 @@
+#!/bin/sh
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+#
+#       Copyright (C) 2012-4 Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller
+
+
+[ -n "$IFACE" ] || exit 1
+
+. /etc/sqm/sqm.conf
+. ${SQM_LIB_DIR}/functions.sh
+STATE_FILE="${SQM_STATE_DIR}/sqm-${IFACE}.state"
+
+[ -d "${SQM_STATE_DIR}" ] || mkdir -p "${SQM_STATE_DIR}"
+
+if [ -f "${STATE_FILE}" ]; then
+    sqm_logger "SQM already activated on ${IFACE}."
+    exit 1
+fi
+
+# in case of spurious hotplug events, try double check whether the interface is really up
+if [ ! -d /sys/class/net/${IFACE} ] ; then
+    sqm_logger "${IFACE} does currently not exist, not even trying to start SQM on nothing."
+    exit 1
+fi
+
+if [ "${ENABLED:-1}" -ne "1" ]; then
+    sqm_logger "SQM config disabled on ${IFACE}."
+    exit 0
+fi
+
+sqm_logger "${0} Starting ${IFACE}"
+sqm_logger "${0} Queue Setup Script: ${SCRIPT}"
+[ -f "${SQM_LIB_DIR}/$SCRIPT" ] && { . "${SQM_lIB_DIR}/$SCRIPT" ; touch ${STATE_FILE}; }
+
+exit 0

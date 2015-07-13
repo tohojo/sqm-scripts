@@ -9,9 +9,9 @@
 #
 #       Copyright (C) 2012-5 Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller
 
-SQM_LIB_DIR=${SQM_LIB_DIR:-/usr/lib/sqm}
-. ${SQM_LIB_DIR}/functions.sh
-. ${SQM_LIB_DIR}/defaults.sh
+[ -n "$IFACE" ] || exit 1
+
+. ${SQM_LIB_DIR}/defaults.sh || exit 1
 
 sqm_logger "Starting simplest.qos"
 
