@@ -9,8 +9,9 @@ After=sys-subsystem-net-devices-%i.device
 Type=oneshot
 EnvironmentFile=/etc/sqm/sqm-%i.conf
 Environment=IFACE=%i ENABLED=1
-ExecStart=/usr/lib/sqm/start-sqm %i
-ExecStop=/usr/lib/sqm/stop-sqm %i
+ExecStart=/usr/lib/sqm/start-sqm
+ExecStop=/usr/lib/sqm/stop-sqm
+RemainAfterExit=1
 
 [Install]
 WantedBy=multi-user.target
