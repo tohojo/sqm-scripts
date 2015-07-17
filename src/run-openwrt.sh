@@ -11,9 +11,10 @@
 
 . /etc/sqm/sqm.conf
 ACTION="${1:-start}"
+RUN_IFACE="$2"
 
 # Stopping all active interfaces
-if [ "$ACTION" = "stop" -a -z "$2" ]; then
+if [ "$ACTION" = "stop" -a -z "$RUN_IFACE" ]; then
     for f in ${SQM_STATE_DIR}/*.state; do
         [ -f "$f" ] && IFACE=$(basename $f .state) ${SQM_LIB_DIR}/stop-sqm
     done
@@ -25,6 +26,8 @@ config_load sqm
 run_sqm_scripts() {
 	local section="$1"
 	export IFACE=$(config_get "$section" interface)
+
+	[ -z "$RUN_IFACE" -o "$RUN_IFACE" = "$IFACE" ] || return
 
 	[ $(config_get "$section" enabled) -ne 1 ] && ACTION=stop
 
