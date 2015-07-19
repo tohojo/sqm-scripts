@@ -1,0 +1,60 @@
+#!/bin/sh
+# Cero3 Simple Shaper
+# A 1 bin tc_codel and ipv6 enabled shaping script for
+# ethernet gateways. This is nearly the simplest possible
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+#
+#       Copyright (C) 2012-5 Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller
+
+[ -n "$IFACE" ] || exit 1
+
+. ${SQM_LIB_DIR}/defaults.sh || exit 1
+
+sqm_logger "Starting piece_of_cake.qos"
+
+egress() {
+    sqm_logger "egress"
+    $TC qdisc del dev $IFACE root 2>/dev/null
+    $TC qdisc add dev $IFACE root `get_stab_string` cake bandwidth ${UPLINK}kbit besteffort `get_cake_lla_string` ${EQDISC_OPTS}
+}
+
+
+ingress() {
+    sqm_logger "ingress"
+    $TC qdisc del dev $IFACE handle ffff: ingress 2>/dev/null
+    $TC qdisc add dev $IFACE handle ffff: ingress
+    $TC qdisc del dev $DEV root 2>/dev/null
+    $TC qdisc add dev $DEV root `get_stab_string` cake bandwidth ${DOWNLINK}kbit besteffort `get_cake_lla_string` ${IQDISC_OPTS}
+
+    ip link set dev $DEV up
+
+    # redirect all IP packets arriving in $IFACE to ifb0
+
+    $TC filter add dev $IFACE parent ffff: protocol all prio 10 u32 \
+	match u32 0 0 flowid 1:1 action mirred egress redirect dev $DEV
+}
+
+do_modules
+
+if [ "$UPLINK" -ne 0 ];
+then
+	egress
+	sqm_logger "egress shaping activated"
+else
+	sqm_logger "egress shaping deactivated"
+	tc qdisc del dev $IFACE root 2> /dev/null
+fi
+if [ "$DOWNLINK" -ne 0 ];
+then
+	ingress
+	sqm_logger "ingress shaping activated"
+else
+	sqm_logger "ingress shaping deactivated"
+	tc qdisc del dev $DEV root 2> /dev/null
+	tc qdisc del dev $IFACE ingress 2> /dev/null
+fi
+
+
