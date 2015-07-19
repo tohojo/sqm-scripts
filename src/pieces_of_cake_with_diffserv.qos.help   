@@ -1,3 +1,0 @@
-This just uses the cake qdisc as a replacement for htb as shaper and fq_codel as leaf qdisc
-this allow exercises cake's diffserv profile(s)
-See: http://www.bufferbloat.net/projects/codel/wiki/Cake for more information

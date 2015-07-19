@@ -170,11 +170,15 @@ fc_pppoe() {
 	prio=$(($prio + 1))
 }
 
+#sm: TODO: increase the quantum to lower computation cost.
+# a) this should be calculated slightly more inteligently
+# b) this should not arbitrarily end
+# c) most likely it should be set so that the transfer time of a quantum stays constant
 get_htb_quantum() {
 	CUR_QUANTUM=$( get_mtu $1 )
 	BANDWIDTH=$2
 	
-	if [ -z "${CUR_MTU}" ]
+	if [ -z "${CUR_QUANTUM}" ]
 	then
 	CUR_QUANTUM=1500
 	fi
@@ -209,7 +213,8 @@ get_htb_quantum() {
 }
 
 
-# FIXME: actually you need to get the underlying MTU on PPOE thing
+#sm: For a default PPPoE link this returns 1492 just as expected
+# but I fear we actually need the wire size of the whole thing not so much the MTU
 get_mtu() {
 	CUR_MTU=$(cat /sys/class/net/$1/mtu)
 	#sqm_logger "IFACE: ${1} MTU: ${CUR_MTU}"
