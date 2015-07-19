@@ -1,0 +1,45 @@
+#!/bin/sh
+
+. /etc/sqm/sqm.conf
+ACTION="$1"
+RUN_IFACE="$2"
+
+if [ "$(id -u)" -ne "0" ]; then
+    echo "This script must be run as root." >&2
+    exit 1
+fi
+
+if [ "$ACTION" != "start" -a "$ACTION" != "stop" -a "$ACTION" != "reload" ]; then
+    echo "Usage: $0 <start|stop|reload> [iface]." >&2
+    exit 1
+fi
+
+# Stopping all active interfaces
+if [ "$ACTION" = "stop" -a -z "$RUN_IFACE" ]; then
+    echo "Stopping SQM on all active interfaces." >&2
+    for f in ${SQM_STATE_DIR}/*.state; do
+        [ -f "$f" ] && IFACE=$(basename $f .state) ${SQM_LIB_DIR}/stop-sqm
+    done
+    exit 0
+fi
+
+if [ -n "$RUN_IFACE" ]; then
+    if [ ! -f /etc/sqm/${RUN_IFACE}.iface.conf ]; then
+        echo "No config file found for iface $RUN_IFACE." >&2
+        exit 1
+    fi
+    IFACE=$RUN_IFACE
+    . /etc/sqm/${RUN_IFACE}.iface.conf
+    [ -f ${SQM_STATE_DIR}/$IFACE.state ] && ( . ${SQM_LIB_DIR}/stop-sqm )
+    [ "$ACTION" = "stop" ] || ( . ${SQM_LIB_DIR}/start-sqm )
+else
+    echo "Starting SQM on all configured interfaces." >&2
+    for f in /etc/sqm/*.iface.conf; do
+        if [ -f "$f" ]; then
+            IFACE=$(basename $f .iface.conf)
+            . $f
+            [ -f ${SQM_STATE_DIR}/$IFACE.state ] && ( . ${SQM_LIB_DIR}/stop-sqm )
+            [ "$ACTION" = "stop" ] || ( . ${SQM_LIB_DIR}/start-sqm )
+        fi
+    done
+fi
