@@ -88,7 +88,7 @@ BE_RATE=`expr $CEIL / 6`   # Min for best effort
 BK_RATE=`expr $CEIL / 6`   # Min for background
 BE_CEIL=`expr $CEIL - 16`  # A little slop at the top
 
-LQ="quantum `get_mtu $IFACE $CEIL`"
+LQ="quantum `get_htb_quantum $IFACE $CEIL`"
 
 $TC qdisc del dev $IFACE root 2> /dev/null
 case $QDISC in
@@ -151,7 +151,7 @@ BE_RATE=`expr $CEIL / 6`   # Min for best effort
 BK_RATE=`expr $CEIL / 6`   # Min for background
 BE_CEIL=`expr $CEIL - 16`  # A little slop at the top
 
-LQ="quantum `get_mtu $IFACE $CEIL`"
+LQ="quantum `get_htb_quantum $IFACE $CEIL`"
 
 $TC qdisc del dev $IFACE handle ffff: ingress 2> /dev/null
 $TC qdisc add dev $IFACE handle ffff: ingress

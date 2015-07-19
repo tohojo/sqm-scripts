@@ -17,7 +17,7 @@ sqm_logger "Starting simplest.qos"
 
 egress() {
 
-LQ="quantum `get_mtu $IFACE ${UPLINK}`"
+LQ="quantum `get_htb_quantum $IFACE ${UPLINK}`"
 
 $TC qdisc del dev $IFACE root 2>/dev/null
 case $QDISC in
@@ -40,7 +40,7 @@ sqm_logger "ingress"
 $TC qdisc del dev $IFACE handle ffff: ingress 2>/dev/null
 $TC qdisc add dev $IFACE handle ffff: ingress
 
-LQ="quantum `get_mtu $IFACE ${DOWNLINK}`"
+LQ="quantum `get_htb_quantum $IFACE ${DOWNLINK}`"
 
 $TC qdisc del dev $DEV root 2>/dev/null
 case $QDISC in

@@ -166,48 +166,54 @@ fc_pppoe() {
 	    match u16 ${PPP_PROTO_IP6} 0xffff at 6 \
 	    match u16 0x0${2:2:2}0 0x0fc0 at 8 \
 	    flowid $3
-
-
-
-
+	    
 	prio=$(($prio + 1))
-
-
 }
-# FIXME: actually you need to get the underlying MTU on PPOE thing
 
+get_htb_quantum() {
+	CUR_QUANTUM=$( get_mtu $1 )
+	BANDWIDTH=$2
+	
+	if [ -z "${CUR_MTU}" ]
+	then
+	CUR_QUANTUM=1500
+	fi
+	if [ ${BANDWIDTH} -gt 20000 ]
+	then
+		CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
+	fi
+	if [ ${BANDWIDTH} -gt 30000 ]
+	then
+		CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
+	fi
+	if [ ${BANDWIDTH} -gt 40000 ]
+	then
+		CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
+	fi
+	if [ ${BANDWIDTH} -gt 50000 ]
+	then
+		CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
+	fi
+	if [ ${BANDWIDTH} -gt 60000 ]
+	then
+		CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
+	fi
+	if [ ${BANDWIDTH} -gt 80000 ]
+	then
+		CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
+	fi
+
+	#sqm_logger "CUR_HTB_QUANTUM: ${CUR_QUANTUM}, BANDWIDTH: ${BANDWIDTH}"
+
+	echo $CUR_QUANTUM
+}
+
+
+# FIXME: actually you need to get the underlying MTU on PPOE thing
 get_mtu() {
-	BW=$2
-	F=$(cat /sys/class/net/$1/mtu)
-	if [ -z "$F" ]
-	then
-	F=1500
-	fi
-	if [ $BW -gt 20000 ]
-	then
-		F=$(($F * 2))
-	fi
-	if [ $BW -gt 30000 ]
-	then
-		F=$(($F * 2))
-	fi
-	if [ $BW -gt 40000 ]
-	then
-		F=$(($F * 2))
-	fi
-	if [ $BW -gt 50000 ]
-	then
-		F=$(($F * 2))
-	fi
-	if [ $BW -gt 60000 ]
-	then
-		F=$(($F * 2))
-	fi
-	if [ $BW -gt 80000 ]
-	then
-		F=$(($F * 2))
-	fi
-	echo $F
+	CUR_MTU=$(cat /sys/class/net/$1/mtu)
+	#sqm_logger "IFACE: ${1} MTU: ${CUR_MTU}"
+	echo ${CUR_MTU}
 }
 
 # FIXME should also calculate the limit
