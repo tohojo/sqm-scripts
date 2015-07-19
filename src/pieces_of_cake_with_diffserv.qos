@@ -1,0 +1,112 @@
+#!/bin/sh
+# Cero3 Shaper
+# A cake shaper and AQM solution that allows several diffserv marking schemes
+# for ethernet gateways
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+#
+#       Copyright (C) 2012-5 Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller
+
+
+#sm: TODO pass in the cake diffserv keyword
+
+[ -n "$IFACE" ] || exit 1
+. ${SQM_LIB_DIR}/defaults.sh || exit 1
+
+CAKE_OPTS="diffserv4"
+INGRESS_CAKE_OPTS=${CAKE_OPTS}
+EGRESS_CAKE_OPTS=${CAKE_OPTS}
+
+ipt_setup() {
+
+    ipt -t mangle -N QOS_MARK_${IFACE}
+
+    sqm_logger cake does all the diffserv work - no need for iptables rules
+
+    # Turn it on. Preserve classification if already performed
+
+    #sm: Since we use an IFB for ingress shaping the TOS bits will not be re-mapped/squashed
+    #	before reaching cake, so we need to tell cake to ignore them, iptables will squash them later.
+    if [ "$SQUASH_DSCP" = "1" ]
+    then
+	sqm_logger "Squashing differentiated services code points (DSCP) from ingress."
+	INGRESS_CAKE_OPTS=besteffort # someday squash
+	ipt -t mangle -I PREROUTING -i $IFACE -m dscp ! --dscp 0 -j DSCP --set-dscp-class be
+    else
+	sqm_logger "Keeping differentiated services code points (DSCP) from ingress."
+	#INGRESS_CAKE_OPTS="diffserv4"
+	ipt -t mangle -A PREROUTING -i $IFACE -m mark --mark 0x00${IPT_MASK_STRING} -g QOS_MARK_${IFACE}
+    fi
+
+    ipt -t mangle -A POSTROUTING -o $IFACE -m mark --mark 0x00${IPT_MASK_STRING} -g QOS_MARK_${IFACE}
+
+    # Not sure if this will work. Encapsulation is a problem period
+    ipt -t mangle -I PREROUTING -i vtun+ -p tcp -j MARK --set-mark 0x2${IPT_MASK_STRING} # tcp tunnels need ordering
+
+    ## Emanating from router, do a little more optimization
+    ## but don't bother with it too much.
+    #sm: actually just keep this as reference in case it should be needed, our 1-tier shaper scripts
+    # work quite well without that "optimization"
+    #ipt -t mangle -A OUTPUT -p udp -m multiport --ports 123,53 -j DSCP --set-dscp-class AF42
+}
+
+
+egress() {
+
+    $TC qdisc del dev $IFACE root 2> /dev/null
+    $TC qdisc add dev $IFACE root $( get_stab_string ) $QDISC bandwidth ${UPLINK}kbit $( get_cake_lla_strin ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
+
+    #diffserv $IFACE
+}
+
+
+ingress() {
+
+    $TC qdisc del dev $IFACE handle ffff: ingress 2> /dev/null
+    $TC qdisc add dev $IFACE handle ffff: ingress
+
+    $TC qdisc del dev $DEV root  2> /dev/null
+
+    if [ "$SQUASH_INGRESS" = "1" ]
+    then
+	sqm_logger "Do not perform DSCP based filtering on ingress. (1-tier classification)"
+	# Revert to no dscp based filtering
+	INGRESS_CAKE_OPTS="besteffort"
+	$TC qdisc add dev $DEV root $( get_stab_string ) $QDISC bandwidth ${DOWNLINK}kbit $( get_cake_lla_string ) ${INGRESS_CAKE_OPTS} ${IQDISC_OPTS}
+    else
+	sqm_logger "Perform DSCP based filtering on ingress. (multi-tier classification)"
+	$TC qdisc add dev $DEV root $( get_stab_string) $QDISC bandwidth ${DOWNLINK}kbit $( get_cake_lla_string ) $INGRESS_CAKE_OPTS ${IQDISC_OPTS}
+    fi
+
+    ip link set dev $DEV up
+
+    # redirect all IP packets arriving in $IFACE to ifb0
+
+    $TC filter add dev $IFACE parent ffff: protocol all prio 10 u32 \
+	match u32 0 0 flowid 1:1 action mirred egress redirect dev $DEV
+}
+
+do_modules
+ipt_setup
+
+if [ "${UPLINK}" -ne 0 ];
+then
+	egress
+	sqm_logger "egress shaping activated"
+else
+	sqm_logger "egress shaping deactivated"
+	tc qdisc del dev ${IFACE} root 2> /dev/null
+fi
+if [ "${DOWNLINK}" -ne 0 ];
+then
+	ingress
+	sqm_logger "ingress shaping activated"
+else
+	sqm_logger "ingress shaping deactivated"
+	tc qdisc del dev ${DEV} root 2> /dev/null
+	tc qdisc del dev ${IFACE} ingress 2> /dev/null
+fi
+
+
