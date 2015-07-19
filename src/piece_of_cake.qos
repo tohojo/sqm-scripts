@@ -1,6 +1,6 @@
 #!/bin/sh
 # Cero3 Simple Shaper
-# A 1 bin tc_codel and ipv6 enabled shaping script for
+# A 1 bin cake shaper for
 # ethernet gateways. This is nearly the simplest possible
 
 # This program is free software; you can redistribute it and/or modify
@@ -13,12 +13,16 @@
 
 . ${SQM_LIB_DIR}/defaults.sh || exit 1
 
+CAKE_OPTS="besteffort"
+INGRESS_CAKE_OPTS=${CAKE_OPTS}
+EGRESS_CAKE_OPTS=${CAKE_OPTS}
+
 sqm_logger "Starting piece_of_cake.qos"
 
 egress() {
     sqm_logger "egress"
     $TC qdisc del dev $IFACE root 2>/dev/null
-    $TC qdisc add dev $IFACE root `get_stab_string` cake bandwidth ${UPLINK}kbit besteffort `get_cake_lla_string` ${EQDISC_OPTS}
+    $TC qdisc add dev $IFACE root $( get_stab_string ) cake bandwidth ${UPLINK}kbit $( get_cake_lla_string ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
 }
 
 
@@ -27,7 +31,7 @@ ingress() {
     $TC qdisc del dev $IFACE handle ffff: ingress 2>/dev/null
     $TC qdisc add dev $IFACE handle ffff: ingress
     $TC qdisc del dev $DEV root 2>/dev/null
-    $TC qdisc add dev $DEV root `get_stab_string` cake bandwidth ${DOWNLINK}kbit besteffort `get_cake_lla_string` ${IQDISC_OPTS}
+    $TC qdisc add dev $DEV root $( get_stab_string ) cake bandwidth ${DOWNLINK}kbit $( get_cake_lla_string ) ${INGRESS_CAKE_OPTS} ${IQDISC_OPTS}
 
     ip link set dev $DEV up
 
@@ -39,22 +43,22 @@ ingress() {
 
 do_modules
 
-if [ "$UPLINK" -ne 0 ];
+if [ "${UPLINK}" -ne 0 ];
 then
 	egress
 	sqm_logger "egress shaping activated"
 else
 	sqm_logger "egress shaping deactivated"
-	tc qdisc del dev $IFACE root 2> /dev/null
+	tc qdisc del dev ${IFACE} root 2> /dev/null
 fi
-if [ "$DOWNLINK" -ne 0 ];
+if [ "${DOWNLINK}" -ne 0 ];
 then
 	ingress
 	sqm_logger "ingress shaping activated"
 else
 	sqm_logger "ingress shaping deactivated"
-	tc qdisc del dev $DEV root 2> /dev/null
-	tc qdisc del dev $IFACE ingress 2> /dev/null
+	tc qdisc del dev ${DEV} root 2> /dev/null
+	tc qdisc del dev ${IFACE} ingress 2> /dev/null
 fi
 
 
