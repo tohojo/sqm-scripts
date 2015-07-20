@@ -15,9 +15,7 @@
 [ -n "$IFACE" ] || exit 1
 . ${SQM_LIB_DIR}/defaults.sh || exit 1
 
-CAKE_OPTS="diffserv4"
-INGRESS_CAKE_OPTS=${CAKE_OPTS}
-EGRESS_CAKE_OPTS=${CAKE_OPTS}
+# INGRESS_CAKE_OPTS and EGRESS_CAKE_OPTS are defined in defaults.sh now
 
 ipt_setup() {
 

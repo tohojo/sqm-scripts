@@ -13,9 +13,9 @@
 
 . ${SQM_LIB_DIR}/defaults.sh || exit 1
 
-CAKE_OPTS="besteffort"
-INGRESS_CAKE_OPTS=${CAKE_OPTS}
-EGRESS_CAKE_OPTS=${CAKE_OPTS}
+# to keep this as simple as possible we ignore the *_CAKE_OPTS from defaults.sh
+INGRESS_CAKE_OPTS="besteffort"
+EGRESS_CAKE_OPTS="besteffort"
 
 sqm_logger "Starting piece_of_cake.qos"
 

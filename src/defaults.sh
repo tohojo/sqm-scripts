@@ -31,3 +31,6 @@
 [ -z "$IPT_MASK_STRING" ] && IPT_MASK_STRING="/${IPT_MASK}"	# for set-mark
 #sm: we need the functions above before trying to set the ingress IFB device
 [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )      # automagically get the right IFB device for the IFACE"
+#sm: *_CAKE_OPTS should contain the diffserv keyword for cake
+[ -z "$INGRESS_CAKE_OPTS" ] && INGRESS_CAKE_OPTS="diffserv4"
+[ -z "$EGRESS_CAKE_OPTS" ] && EGRESS_CAKE_OPTS="diffserv4"
