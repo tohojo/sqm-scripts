@@ -54,7 +54,13 @@ run_sqm_scripts() {
 	export QDISC=$(config_get "$section" qdisc)
 	export SCRIPT=$(config_get "$section" script)
 
-        "${SQM_LIB_DIR}/stop-sqm"
+	#sm: only stop-sqm if there is something running
+	CUR_STATE_FILE="${SQM_STATE_DIR}/${IFACE}.state"
+	if [ -f "${STATE_FILE}" ]; then
+	    sqm_logger "SQM active on ${IFACE}, stopping it"
+	    "${SQM_LIB_DIR}/stop-sqm"
+	fi
+
         [ "$ACTION" = "start" ] && "${SQM_LIB_DIR}/start-sqm"
 }
 
