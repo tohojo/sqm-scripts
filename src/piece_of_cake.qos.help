@@ -1,3 +1,3 @@
 This just uses the cake qdisc as a replacement for htb as shaper and fq_codel as leaf qdisc
-It just does not came any simpler than this, in other words it truely is a "piece of cake"
+It just does not come any simpler than this, in other words it truely is a "piece of cake"
 See: http://www.bufferbloat.net/projects/codel/wiki/Cake for more information
