@@ -16,6 +16,8 @@
 . ${SQM_LIB_DIR}/defaults.sh || exit 1
 
 # INGRESS_CAKE_OPTS and EGRESS_CAKE_OPTS are defined in defaults.sh now
+QDISC=cake	# nothing else makes much sense here
+
 
 ipt_setup() {
 

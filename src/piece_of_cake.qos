@@ -16,6 +16,7 @@
 # to keep this as simple as possible we ignore the *_CAKE_OPTS from defaults.sh
 INGRESS_CAKE_OPTS="besteffort"
 EGRESS_CAKE_OPTS="besteffort"
+QDISC=cake	# nothing else makes much sense here
 
 sqm_logger "Starting piece_of_cake.qos"
 
