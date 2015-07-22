@@ -54,7 +54,7 @@ ipt_setup() {
 egress() {
 
     $TC qdisc del dev $IFACE root 2> /dev/null
-    $TC qdisc add dev $IFACE root $( get_stab_string ) $QDISC bandwidth ${UPLINK}kbit $( get_cake_lla_strin ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
+    $TC qdisc add dev $IFACE root $( get_stab_string ) $QDISC bandwidth ${UPLINK}kbit $( get_cake_lla_string ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
 
     #diffserv $IFACE
 }
