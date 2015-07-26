@@ -1,5 +1,12 @@
 #!/bin/sh
 
+# This script implements a 3 queue traffic classification system on egress and
+# single queue on ingress. It is built specifically for NAT/Masquerade gateways.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+
 [ -n "${IFACE}" ] || exit 1
 . ${SQM_LIB_DIR}/defaults.sh || exit 1
 
