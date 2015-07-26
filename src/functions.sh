@@ -39,7 +39,10 @@ do_modules() {
 	insmod sch_ingress
 	insmod act_mirred
 	insmod cls_fw
+  insmod cls_flow
+  insmod cls_u32
 	insmod sch_htb
+  insmod sch_hfsc
 }
 
 
@@ -166,7 +169,7 @@ fc_pppoe() {
 	    match u16 ${PPP_PROTO_IP6} 0xffff at 6 \
 	    match u16 0x0${2:2:2}0 0x0fc0 at 8 \
 	    flowid $3
-	    
+
 	prio=$(($prio + 1))
 }
 
@@ -177,7 +180,7 @@ fc_pppoe() {
 get_htb_quantum() {
 	CUR_QUANTUM=$( get_mtu $1 )
 	BANDWIDTH=$2
-	
+
 	if [ -z "${CUR_QUANTUM}" ]
 	then
 	CUR_QUANTUM=1500
@@ -221,29 +224,34 @@ get_mtu() {
 	echo ${CUR_MTU}
 }
 
-# FIXME should also calculate the limit
-# Frankly I think Xfq_codel can pretty much always run with high numbers of flows
-# now that it does fate sharing
-# But right now I'm trying to match the ns2 model behavior better
-# So SET the autoflow variable to 1 if you want the cablelabs behavior
-
 get_flows() {
-	if [ "$AUTOFLOW" -eq "1" ]
-	then
-		FLOWS=8
-		[ $1 -gt 999 ] && FLOWS=16
-		[ $1 -gt 2999 ] && FLOWS=32
-		[ $1 -gt 7999 ] && FLOWS=48
-		[ $1 -gt 9999 ] && FLOWS=64
-		[ $1 -gt 19999 ] && FLOWS=128
-		[ $1 -gt 39999 ] && FLOWS=256
-		[ $1 -gt 69999 ] && FLOWS=512
-		[ $1 -gt 99999 ] && FLOWS=1024
-		case $QDISC in
-			codel|ns2_codel|pie|*fifo|pfifo_fast) ;;
-			fq_codel|*fq_codel|sfq) echo flows $FLOWS ;;
-		esac
-	fi
+
+    if [ "${AUTOFLOW}" -eq "1" ]
+    then
+      case $QDISC in
+			     codel|ns2_codel|pie|*fifo|pfifo_fast) ;;
+           fq_codel|*fq_codel|sfq) echo flows $( get_flows_count ${1} ) ;;
+      esac
+    fi
+
+}
+
+get_flows_count() {
+
+    FLOWS=8
+	  [ $1 -gt 999 ] && FLOWS=16
+    [ $1 -gt 2999 ] && FLOWS=32
+	  [ $1 -gt 7999 ] && FLOWS=48
+    [ $1 -gt 9999 ] && FLOWS=64
+    [ $1 -gt 19999 ] && FLOWS=128
+    [ $1 -gt 39999 ] && FLOWS=256
+    [ $1 -gt 69999 ] && FLOWS=512
+    [ $1 -gt 99999 ] && FLOWS=1024
+    case $QDISC in
+      codel|ns2_codel|pie|*fifo|pfifo_fast) ;;
+      fq_codel|*fq_codel|sfq) echo $FLOWS ;;
+    esac
+
 }
 
 # set the target parameter, also try to only take well formed inputs
@@ -335,7 +343,7 @@ get_target() {
 adapt_target_to_slow_link() {
     CUR_LINK_KBPS=$1
     CUR_EXTENDED_TARGET_US=
-    MAX_PAKET_DELAY_IN_US_AT_1KBPS=$(( 1000 * 1000 *1540 * 8 / 1000 ))
+    MAX_PAKET_DELAY_IN_US_AT_1KBPS=$(( 1000 * 1000 * 1540 * 8 / 1000 ))
     CUR_EXTENDED_TARGET_US=$(( ${MAX_PAKET_DELAY_IN_US_AT_1KBPS} / ${CUR_LINK_KBPS} ))	# note this truncates the decimals
     # do not change anything for fast links
     [ "$CUR_EXTENDED_TARGET_US" -lt 5000 ] && CUR_EXTENDED_TARGET_US=5000
@@ -484,5 +492,22 @@ $TC filter add dev $interface protocol arp parent 1:0 prio $prio handle 500 fw f
 
 prio=$(($prio + 1))
 
+
+}
+
+eth_setup() {
+
+    ethtool -K $IFACE gso off
+    ethtool -K $IFACE tso off
+    ethtool -K $IFACE ufo off
+    ethtool -K $IFACE gro off
+
+    if [ -e /sys/class/net/$IFACE/queues/tx-0/byte_queue_limits ]
+    then
+       for i in /sys/class/net/$IFACE/queues/tx-*/byte_queue_limits
+       do
+          echo $(( 4 * $( get_mtu ${IFACE} ) )) > $i/limit_max
+       done
+    fi
 
 }

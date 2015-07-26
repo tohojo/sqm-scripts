@@ -1,0 +1,139 @@
+#!/bin/sh
+
+[ -n "${IFACE}" ] || exit 1
+. ${SQM_LIB_DIR}/defaults.sh || exit 1
+
+ipt_setup() {
+
+    ipt -t mangle -F QOS_MARK_${IFACE}
+    ipt -t mangle -X QOS_MARK_${IFACE}
+    ipt -t mangle -N QOS_MARK_${IFACE}
+
+    ipt -t mangle -F QOS_RULES_${IFACE}
+    ipt -t mangle -X QOS_RULES_${IFACE}
+    ipt -t mangle -N QOS_RULES_${IFACE}
+
+    ipt -t mangle -F QOS_RECLASS_${IFACE}
+    ipt -t mangle -X QOS_RECLASS_${IFACE}
+    ipt -t mangle -N QOS_RECLASS_${IFACE}
+
+    ipt -t mangle -A POSTROUTING -o ${IFACE} -g QOS_MARK_${IFACE}
+
+    ipt -t mangle -A QOS_MARK_${IFACE} -j CONNMARK \
+    --restore-mark --nfmask ${IPT_MASK} --ctmask ${IPT_MASK}
+    ipt -t mangle -A QOS_MARK_${IFACE} -m mark --mark 0x00${IPT_MASK_STRING} \
+    -j QOS_RULES_${IFACE}
+    ipt -t mangle -A QOS_MARK_${IFACE} -m mark --mark 0x01${IPT_MASK_STRING} \
+    -j QOS_RECLASS_${IFACE}
+
+    ipt -t mangle -A QOS_RULES_${IFACE} -p tcp -m multiport \
+    --dports 20,21,22,25,80,110,443,465,993,995 -j MARK --set-mark 0x01${IPT_MASK_STRING}
+    ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m multiport \
+    --dports 53,123 -j MARK --set-mark 0x01${IPT_MASK_STRING}
+    ipt -t mangle -A QOS_RULES_${IFACE} -p icmp -j MARK --set-mark 0x01${IPT_MASK_STRING}
+    ipt -t mangle -A QOS_RULES_${IFACE} -m mark --mark 0x00${IPT_MASK_STRING} \
+    -j MARK --set-mark 0x03${IPT_MASK_STRING}
+    ipt -t mangle -A QOS_RULES_${IFACE} -j CONNMARK \
+    --save-mark --nfmask ${IPT_MASK} --ctmask ${IPT_MASK}
+
+    ipt -t mangle -A QOS_RECLASS_${IFACE} -p tcp -m connbytes \
+    --connbytes 1125: --connbytes-dir original --connbytes-mode bytes \
+    -j MARK --set-mark 0x02${IPT_MASK_STRING}
+    ipt -t mangle -A QOS_RECLASS_${IFACE} -m mark --mark 0x02${IPT_MASK_STRING} -j CONNMARK \
+    --save-mark --nfmask ${IPT_MASK} --ctmask ${IPT_MASK}
+
+}
+
+egress() {
+
+    BULK=$(( ${UPLINK} * 30 / 100 ))
+    NORMAL=$(( ${UPLINK} * 70 / 100 ))
+    MAX=$(( ${UPLINK} * 95 / 100 ))
+
+    $TC qdisc del dev ${IFACE} root 2> /dev/null
+    $TC qdisc add dev ${IFACE} root handle 1: `get_stab_string` hfsc default 13
+
+    $TC class add dev ${IFACE} parent 1: classid 1:1 hfsc sc rate ${UPLINK}kbit \
+    ul rate ${UPLINK}kbit
+
+    $TC class add dev ${IFACE} parent 1:1 classid 1:11 hfsc rt rate ${MAX}kbit
+    $TC class add dev ${IFACE} parent 1:1 classid 1:12 hfsc ls rate ${NORMAL}kbit
+    $TC class add dev ${IFACE} parent 1:1 classid 1:13 hfsc ls rate ${BULK}kbit
+
+    $TC qdisc add dev ${IFACE} parent 1:11 handle 110: ${QDISC} \
+    `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` \
+    `get_quantum  300` `get_flows ${MAX}` ${EQDISC_OPTS}
+    $TC qdisc add dev ${IFACE} parent 1:12 handle 120: ${QDISC} \
+    `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` \
+    `get_quantum  300` `get_flows ${NORMAL}` ${EQDISC_OPTS}
+    $TC qdisc add dev ${IFACE} parent 1:13 handle 130: ${QDISC} \
+    `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` \
+    `get_quantum  300` `get_flows ${BULK}` ${EQDISC_OPTS}
+
+    $TC filter add dev ${IFACE} parent 110: handle 110 protocol all \
+    flow hash keys nfct-src,nfct-dst,nfct-proto,nfct-proto-src,nfct-proto-dst \
+    divisor `get_flows_count ${MAX}`
+    $TC filter add dev ${IFACE} parent 120: handle 120 protocol all \
+    flow hash keys nfct-src,nfct-dst,nfct-proto,nfct-proto-src,nfct-proto-dst \
+    divisor `get_flows_count ${NORMAL}`
+    $TC filter add dev ${IFACE} parent 130: handle 130 protocol all \
+    flow hash keys nfct-src,nfct-dst,nfct-proto,nfct-proto-src,nfct-proto-dst \
+    divisor `get_flows_count ${BULK}`
+
+    $TC filter add dev ${IFACE} parent 1:0 protocol all prio 1 u32 \
+    match mark 0x01 ${IPT_MASK} flowid 1:11
+    $TC filter add dev ${IFACE} parent 1:0 protocol all prio 2 u32 \
+    match mark 0x02 ${IPT_MASK} flowid 1:12
+    $TC filter add dev ${IFACE} parent 1:0 protocol all prio 2 u32 \
+    match mark 0x03 ${IPT_MASK} flowid 1:13
+
+}
+
+ingress() {
+
+    $TC qdisc del dev ${IFACE} handle ffff: ingress 2> /dev/null
+    $TC qdisc add dev ${IFACE} handle ffff: ingress
+
+    $TC qdisc del dev ${DEV} root 2> /dev/null
+    $TC qdisc add dev ${DEV} root handle 1: `get_stab_string` hfsc default 1
+
+    $TC class add dev ${DEV} parent 1: classid 1:1 hfsc sc rate ${DOWNLINK}kbit \
+    ul rate ${DOWNLINK}kbit
+
+    $TC qdisc add dev ${DEV} parent 1:1 handle 11: ${QDISC} `get_limit ${ILIMIT}` \
+    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum  1540` \
+    `get_flows ${DOWNLINK}` ${IQDISC_OPTS}
+
+    $TC filter add dev ${DEV} parent 11: handle 11 protocol all \
+    flow hash keys nfct-src,nfct-dst,nfct-proto,nfct-proto-src,nfct-proto-dst \
+    divisor `get_flows_count ${DOWNLINK}`
+
+    ifconfig ${DEV} up
+
+    $TC filter add dev ${IFACE} parent ffff: protocol all prio 1 u32 \
+    match u32 0 0 action mirred egress redirect dev ${DEV}
+
+}
+
+do_modules
+eth_setup
+ipt_setup
+
+if [ "$UPLINK" -ne 0 ];
+then
+    egress
+    logger "egress shaping activated"
+else
+    logger "egress shaping deactivated"
+    tc qdisc del dev ${IFACE} root 2> /dev/null
+fi
+
+if [ "$DOWNLINK" -ne 0 ];
+then
+    ingress
+    logger "ingress shaping activated"
+else
+    logger "ingress shaping deactivated"
+    tc qdisc del dev ${DEV} root 2> /dev/null
+    tc qdisc del dev ${IFACE} ingress 2> /dev/null
+fi
