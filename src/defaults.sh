@@ -10,7 +10,7 @@
 [ -z "$STAB_MTU" ] && STAB_MTU=2047
 [ -z "$STAB_MPU" ] && STAB_MPU=0
 [ -z "$STAB_TSIZE" ] && STAB_TSIZE=512
-[ -z "$AUTOFLOW" ] && AUTOFLOW=0
+[ -z "$AUTOFLOW" ] && AUTOFLOW=1
 [ -z "$LIMIT" ] && LIMIT=1001	# sane global default for *LIMIT for fq_codel on a small memory device
 [ -z "$ILIMIT" ] && ILIMIT=
 [ -z "$ELIMIT" ] && ELIMIT=
