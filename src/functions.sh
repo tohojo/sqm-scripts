@@ -120,17 +120,20 @@ verify_qdisc_list() {
 
     #sm: where to store which qdiscs are useable (ake do not cause an error when attached to an ifb)
     SQM_QDISC_STATE_DIR=${SQM_STATE_DIR}/USEABLE_QDISCS
+    SQM_QDISC_STATE_SUFFIX=".useable"
     [ -d "${SQM_QDISC_STATE_DIR}" ] || mkdir -p "${SQM_QDISC_STATE_DIR}"
 
     for I_QDISC in ${REQUESTED_QDISC_LIST}; do
     	CUR_QDISC=${I_QDISC}
+    	SQM_QDISC_STATE_FILE=${SQM_QDISC_STATE_DIR}/${CUR_QDISC}${SQM_QDISC_STATE_SUFFIX}
+    	
     	QDISC_VERIFIED=
 	QDISC_VERIFIED=$( verify_qdisc ${I_QDISC} ${TMP_IFB} )
 	# now mark this leaf qdisc as useable
 	if [ "${QDISC_VERIFIED}" = "1" ] ; then
-	    touch ${SQM_QDISC_STATE_DIR}/${CUR_QDISC}
+	    touch ${SQM_QDISC_STATE_FILE}
 	else
-	    [ -f "${SQM_QDISC_STATE_DIR}/${CUR_QDISC}" ] && rm ${SQM_QDISC_STATE_DIR}/${CUR_QDISC}
+	    [ -f "${SQM_QDISC_STATE_FILE}" ] && rm ${SQM_QDISC_STATE_FILE}
 	fi
     done
 }
