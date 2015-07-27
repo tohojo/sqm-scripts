@@ -1,3 +1,4 @@
-This uses the cake qdisc as a replacement for htb as shaper and fq_codel as leaf qdisc
-this exercises cake's diffserv profile(s) as different "layers" of priority
+This uses the cake qdisc as a replacement for htb as shaper and fq_codel as leaf qdisc.
+This exercises cake's diffserv profile(s) as different "layers" of priority.
+This script requires that cake is selected as qdisc.
 See: http://www.bufferbloat.net/projects/codel/wiki/Cake for more information

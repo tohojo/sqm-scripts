@@ -76,10 +76,28 @@ ifb_name() {
 # if required
 create_new_ifb_for_if() {
     NEW_IFB=$(ifb_name $1)
-    sqm_logger "trying to create new IFB: ${NEW_IFB}"
-    $IP link add name ${NEW_IFB} type ifb #>/dev/null 2>&1	# better be verbose
+    NEW_IFB=$( create_ifb ${NEW_IFB} )
+#    sqm_logger "trying to create new IFB: ${NEW_IFB}"
+#    $IP link add name ${NEW_IFB} type ifb #>/dev/null 2>&1	# better be verbose
     echo ${NEW_IFB}
 }
+
+
+create_ifb() {
+    CUR_IFB=${1}
+    sqm_logger "trying to create new IFB: ${CUR_IFB}"
+    $IP link add name ${CUR_IFB} type ifb #>/dev/null 2>&1	# better be verbose
+    echo ${CUR_IFB}
+}
+
+delete_ifb() {
+    CUR_IFB=${1}
+    sqm_logger "trying to delete IFB: ${CUR_IFB}"
+    $IP link set dev ${CUR_IFB} down
+    $IP link delete ${CUR_IFB} type ifb
+    sqm_logger "${CUR_IFB} interface deleted"
+}
+
 
 # the best match is either the IFB already associated with the current interface or a new named IFB
 get_ifb_for_if() {
@@ -91,6 +109,53 @@ get_ifb_for_if() {
     echo ${CUR_IFB}
 }
 
+
+
+
+#sm: try to verify the list of available leaf qdiscs (ignore "pure" shapers as htb, hfsc, and tbf)
+verify_qdisc_list() {
+    [ -z "${2}" ] && TMP_IFB="TMP_IFB_4_SQM"
+    REQUESTED_QDISC_LIST="${1}"
+    [ -z "${REQUESTED_QDISC_LIST}" ] && sqm_logger "Empty list of QDISCs, what is up?"
+
+    #sm: where to store which qdiscs are useable (ake do not cause an error when attached to an ifb)
+    SQM_QDISC_STATE_DIR=${SQM_STATE_DIR}/USEABLE_QDISCS
+    [ -d "${SQM_QDISC_STATE_DIR}" ] || mkdir -p "${SQM_QDISC_STATE_DIR}"
+
+    for I_QDISC in ${REQUESTED_QDISC_LIST}; do
+    	CUR_QDISC=${I_QDISC}
+    	QDISC_VERIFIED=
+	QDISC_VERIFIED=$( verify_qdisc ${I_QDISC} ${TMP_IFB} )
+	# now mark this leaf qdisc as useable
+	if [ "${QDISC_VERIFIED}" = "1" ] ; then
+	    touch ${SQM_QDISC_STATE_DIR}/${CUR_QDISC}
+	else
+	    [ -f "${SQM_QDISC_STATE_DIR}/${CUR_QDISC}" ] && rm ${SQM_QDISC_STATE_DIR}/${CUR_QDISC}
+	fi
+    done
+}
+
+#sm: try to actualy use the requested (leaf) qdisc and reoport success as 1
+#	this might require to insmod the qdisc to be on the save side, but refrain until proven necessary
+verify_qdisc() {
+    REQUESTED_QDISC=${1}
+    [ -z "${REQUESTED_QDISC}" ] && sqm_logger "Empty QDISC, what is up?"
+    [ -z "${2}" ] && TMP_IFB="TMP_IFB_4_SQM"
+    CUR_IFB=$( create_ifb ${TMP_IFB} )
+    QDISC_VERIFIED=
+
+    #sqm_logger "Does ${REQUESTED_QDISC} exist in this system?"
+    QDISC_EXISTS_IF_EMPTY=$( tc qdisc replace dev ${TMP_IFB} root ${REQUESTED_QDISC} 2>&1 )
+    #sqm_logger "${QDISC_EXISTS_IF_EMPTY}"
+    [ -z "${QDISC_EXISTS_IF_EMPTY}" ] && QDISC_VERIFIED=1
+    [ -z "${QDISC_EXISTS_IF_EMPTY}" ] && sqm_logger "QDISC ${REQUESTED_QDISC} is useable."
+    [ -z "${QDISC_VERIFIED}" ] && sqm_logger "QDISC: ${REQUESTED_QDISC} is NOT useable."
+
+    #clean up
+    delete_ifb ${TMP_IFB}
+
+    echo ${QDISC_VERIFIED}
+}
 
 
 get_htb_adsll_string() {

@@ -22,6 +22,10 @@
 [ -n "$IFACE" ] || exit 1
 . ${SQM_LIB_DIR}/defaults.sh || exit 1
 
+sqm_logger "Starting ${SCRIPT}"
+QDISC_IS_VALID=$( verify_qdisc ${QDISC} )
+[ -z "${QDISC_IS_VALID}" ] && exit 1
+
 ipt_setup() {
 
 ipt -t mangle -N QOS_MARK_${IFACE}

@@ -15,8 +15,14 @@
 [ -n "$IFACE" ] || exit 1
 . ${SQM_LIB_DIR}/defaults.sh || exit 1
 
+sqm_logger "Starting ${SCRIPT}"
+
 # INGRESS_CAKE_OPTS and EGRESS_CAKE_OPTS are defined in defaults.sh now
 QDISC=cake	# nothing else makes much sense here
+QDISC_IS_VALID=$( verify_qdisc ${QDISC} )
+[ -z "${QDISC_IS_VALID}" ] && exit 1
+
+
 
 
 ipt_setup() {
@@ -56,7 +62,7 @@ ipt_setup() {
 egress() {
 
     $TC qdisc del dev $IFACE root 2> /dev/null
-    $TC qdisc add dev $IFACE root $( get_stab_string ) $QDISC bandwidth ${UPLINK}kbit $( get_cake_lla_string ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
+    $TC qdisc add dev $IFACE root $( get_stab_string ) cake bandwidth ${UPLINK}kbit $( get_cake_lla_string ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
 
     #diffserv $IFACE
 }
@@ -74,10 +80,10 @@ ingress() {
 	sqm_logger "Do not perform DSCP based filtering on ingress. (1-tier classification)"
 	# Revert to no dscp based filtering
 	INGRESS_CAKE_OPTS="besteffort"
-	$TC qdisc add dev $DEV root $( get_stab_string ) $QDISC bandwidth ${DOWNLINK}kbit $( get_cake_lla_string ) ${INGRESS_CAKE_OPTS} ${IQDISC_OPTS}
+	$TC qdisc add dev $DEV root $( get_stab_string ) cake bandwidth ${DOWNLINK}kbit $( get_cake_lla_string ) ${INGRESS_CAKE_OPTS} ${IQDISC_OPTS}
     else
 	sqm_logger "Perform DSCP based filtering on ingress. (multi-tier classification)"
-	$TC qdisc add dev $DEV root $( get_stab_string) $QDISC bandwidth ${DOWNLINK}kbit $( get_cake_lla_string ) $INGRESS_CAKE_OPTS ${IQDISC_OPTS}
+	$TC qdisc add dev $DEV root $( get_stab_string) cake bandwidth ${DOWNLINK}kbit $( get_cake_lla_string ) $INGRESS_CAKE_OPTS ${IQDISC_OPTS}
     fi
 
     ip link set dev $DEV up
