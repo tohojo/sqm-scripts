@@ -98,18 +98,18 @@ ipt_setup
 
 if [ "${UPLINK}" -ne 0 ];
 then
-	egress
-	sqm_logger "egress shaping activated"
+    egress
+    sqm_logger "egress shaping activated"
 else
-	sqm_logger "egress shaping deactivated"
-	tc qdisc del dev ${IFACE} root 2> /dev/null
+    sqm_logger "egress shaping deactivated"
+    tc qdisc del dev ${IFACE} root 2> /dev/null
 fi
 if [ "${DOWNLINK}" -ne 0 ];
 then
-	ingress
-	sqm_logger "ingress shaping activated"
+    ingress
+    sqm_logger "ingress shaping activated"
 else
-	sqm_logger "ingress shaping deactivated"
-	tc qdisc del dev ${DEV} root 2> /dev/null
-	tc qdisc del dev ${IFACE} ingress 2> /dev/null
+    sqm_logger "ingress shaping deactivated"
+    tc qdisc del dev ${DEV} root 2> /dev/null
+    tc qdisc del dev ${IFACE} ingress 2> /dev/null
 fi

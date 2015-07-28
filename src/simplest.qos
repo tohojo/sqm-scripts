@@ -18,10 +18,10 @@ sqm_logger "Starting ${SCRIPT}"
 
 egress() {
 
-LQ="quantum `get_htb_quantum $IFACE ${UPLINK}`"
+    LQ="quantum `get_htb_quantum $IFACE ${UPLINK}`"
 
-$TC qdisc del dev $IFACE root 2>/dev/null
-case $QDISC in
+    $TC qdisc del dev $IFACE root 2>/dev/null
+    case $QDISC in
 	cake*)
 	    $TC qdisc add dev $IFACE root `get_stab_string` cake bandwidth ${UPLINK}kbit besteffort `get_cake_lla_string` ${EQDISC_OPTS}
 	    ;;
@@ -31,20 +31,20 @@ case $QDISC in
 	    $TC class add dev $IFACE parent 1:1 classid 1:10 htb $LQ rate ${UPLINK}kbit ceil ${UPLINK}kbit prio 0 `get_htb_adsll_string`
 	    $TC qdisc add dev $IFACE parent 1:10 handle 110: $QDISC `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_flows ${UPLINK}` ${EQDISC_OPTS}
 	    ;;
-esac
+    esac
 
 }
 
 
 ingress() {
-sqm_logger "ingress"
-$TC qdisc del dev $IFACE handle ffff: ingress 2>/dev/null
-$TC qdisc add dev $IFACE handle ffff: ingress
+    sqm_logger "ingress"
+    $TC qdisc del dev $IFACE handle ffff: ingress 2>/dev/null
+    $TC qdisc add dev $IFACE handle ffff: ingress
 
-LQ="quantum `get_htb_quantum $IFACE ${DOWNLINK}`"
+    LQ="quantum `get_htb_quantum $IFACE ${DOWNLINK}`"
 
-$TC qdisc del dev $DEV root 2>/dev/null
-case $QDISC in
+    $TC qdisc del dev $DEV root 2>/dev/null
+    case $QDISC in
 	cake*)
 	    $TC qdisc add dev $DEV root `get_stab_string` cake bandwidth ${DOWNLINK}kbit besteffort `get_cake_lla_string` ${IQDISC_OPTS}
 	    ;;
@@ -60,14 +60,14 @@ case $QDISC in
 	    #$TC qdisc add dev $DEV parent 1:10 handle 110: $QDISC limit $LIMIT $ECN interval 20ms target 3ms `get_flows ${DOWNLINK}`
 	    $TC qdisc add dev $DEV parent 1:10 handle 110: $QDISC `get_limit ${ILIMIT}` `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_flows ${DOWNLINK}` ${IQDISC_OPTS}
 	    ;;
-esac
+    esac
 
-ip link set dev $DEV up
+    ip link set dev $DEV up
 
-# redirect all IP packets arriving in $IFACE to ifb0
+    # redirect all IP packets arriving in $IFACE to ifb0
 
-$TC filter add dev $IFACE parent ffff: protocol all prio 10 u32 \
-  match u32 0 0 flowid 1:1 action mirred egress redirect dev $DEV
+    $TC filter add dev $IFACE parent ffff: protocol all prio 10 u32 \
+        match u32 0 0 flowid 1:1 action mirred egress redirect dev $DEV
 
 }
 
@@ -75,20 +75,20 @@ do_modules
 
 if [ "$UPLINK" -ne 0 ];
 then
-	egress
-	sqm_logger "egress shaping activated"
+    egress
+    sqm_logger "egress shaping activated"
 else
-	sqm_logger "egress shaping deactivated"
-	tc qdisc del dev $IFACE root 2> /dev/null
+    sqm_logger "egress shaping deactivated"
+    tc qdisc del dev $IFACE root 2> /dev/null
 fi
 if [ "$DOWNLINK" -ne 0 ];
 then
-	ingress
-	sqm_logger "ingress shaping activated"
+    ingress
+    sqm_logger "ingress shaping activated"
 else
-	sqm_logger "ingress shaping deactivated"
-	tc qdisc del dev $DEV root 2> /dev/null
-	tc qdisc del dev $IFACE ingress 2> /dev/null
+    sqm_logger "ingress shaping deactivated"
+    tc qdisc del dev $DEV root 2> /dev/null
+    tc qdisc del dev $IFACE ingress 2> /dev/null
 fi
 
 

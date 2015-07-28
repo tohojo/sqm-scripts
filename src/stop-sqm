@@ -21,19 +21,19 @@ CUR_IFB=$( get_ifb_associated_with_if ${IFACE} )
 [ -z "$CUR_IFB" ] && CUR_IFB=$( ifb_name ${IFACE} )
 
 sqm_stop() {
-	tc qdisc del dev $IFACE ingress 2> /dev/null
-	tc qdisc del dev $IFACE root 2> /dev/null
-	[ -n "$CUR_IFB" ] && tc qdisc del dev $CUR_IFB root 2> /dev/null
-        [ -n "$CUR_IFB" ] && sqm_logger "${0}: ${CUR_IFB} shaper deleted"
+    tc qdisc del dev $IFACE ingress 2> /dev/null
+    tc qdisc del dev $IFACE root 2> /dev/null
+    [ -n "$CUR_IFB" ] && tc qdisc del dev $CUR_IFB root 2> /dev/null
+    [ -n "$CUR_IFB" ] && sqm_logger "${0}: ${CUR_IFB} shaper deleted"
 }
 
 ipt_stop() {
-	[ -n "$CUR_IFB" ] && ipt -t mangle -D POSTROUTING -o $CUR_IFB -m mark --mark 0x00 -g QOS_MARK_${IFACE}
-	ipt -t mangle -D POSTROUTING -o $IFACE -m mark --mark 0x00 -g QOS_MARK_${IFACE}
-	ipt -t mangle -D PREROUTING -i vtun+ -p tcp -j MARK --set-mark 0x2
-	ipt -t mangle -D OUTPUT -p udp -m multiport --ports 123,53 -j DSCP --set-dscp-class AF42
-	ipt -t mangle -F QOS_MARK_${IFACE}
-	ipt -t mangle -X QOS_MARK_${IFACE}
+    [ -n "$CUR_IFB" ] && ipt -t mangle -D POSTROUTING -o $CUR_IFB -m mark --mark 0x00 -g QOS_MARK_${IFACE}
+    ipt -t mangle -D POSTROUTING -o $IFACE -m mark --mark 0x00 -g QOS_MARK_${IFACE}
+    ipt -t mangle -D PREROUTING -i vtun+ -p tcp -j MARK --set-mark 0x2
+    ipt -t mangle -D OUTPUT -p udp -m multiport --ports 123,53 -j DSCP --set-dscp-class AF42
+    ipt -t mangle -F QOS_MARK_${IFACE}
+    ipt -t mangle -X QOS_MARK_${IFACE}
 }
 
 
