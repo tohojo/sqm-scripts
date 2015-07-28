@@ -22,9 +22,8 @@
 [ -n "$IFACE" ] || exit 1
 . ${SQM_LIB_DIR}/defaults.sh || exit 1
 
+verify_qdisc $QDISC || exit 1
 sqm_logger "Starting ${SCRIPT}"
-QDISC_IS_VALID=$( verify_qdisc ${QDISC} )
-[ -z "${QDISC_IS_VALID}" ] && exit 1
 
 ipt_setup() {
 

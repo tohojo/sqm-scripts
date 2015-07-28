@@ -76,26 +76,24 @@ ifb_name() {
 # if required
 create_new_ifb_for_if() {
     NEW_IFB=$(ifb_name $1)
-    NEW_IFB=$( create_ifb ${NEW_IFB} )
-#    sqm_logger "trying to create new IFB: ${NEW_IFB}"
-#    $IP link add name ${NEW_IFB} type ifb #>/dev/null 2>&1	# better be verbose
-    echo ${NEW_IFB}
+    create_ifb ${NEW_IFB}
+    echo $NEW_IFB
+    return $?
 }
 
 
 create_ifb() {
     CUR_IFB=${1}
-    sqm_logger "trying to create new IFB: ${CUR_IFB}"
     $IP link add name ${CUR_IFB} type ifb #>/dev/null 2>&1	# better be verbose
-    echo ${CUR_IFB}
+    ret=$?
+    return $?
 }
 
 delete_ifb() {
     CUR_IFB=${1}
-    sqm_logger "trying to delete IFB: ${CUR_IFB}"
     $IP link set dev ${CUR_IFB} down
     $IP link delete ${CUR_IFB} type ifb
-    sqm_logger "${CUR_IFB} interface deleted"
+    return $?
 }
 
 
@@ -112,52 +110,28 @@ get_ifb_for_if() {
 
 
 
-#sm: try to verify the list of available leaf qdiscs (ignore "pure" shapers as htb, hfsc, and tbf)
-verify_qdisc_list() {
-    [ -z "${2}" ] && TMP_IFB="TMP_IFB_4_SQM"
-    REQUESTED_QDISC_LIST="${1}"
-    [ -z "${REQUESTED_QDISC_LIST}" ] && sqm_logger "Empty list of QDISCs, what is up?"
-
-    #sm: where to store which qdiscs are useable (ake do not cause an error when attached to an ifb)
-    SQM_QDISC_STATE_DIR=${SQM_STATE_DIR}/USEABLE_QDISCS
-    SQM_QDISC_STATE_SUFFIX=".useable"
-    [ -d "${SQM_QDISC_STATE_DIR}" ] || mkdir -p "${SQM_QDISC_STATE_DIR}"
-
-    for I_QDISC in ${REQUESTED_QDISC_LIST}; do
-    	CUR_QDISC=${I_QDISC}
-    	SQM_QDISC_STATE_FILE=${SQM_QDISC_STATE_DIR}/${CUR_QDISC}${SQM_QDISC_STATE_SUFFIX}
-    	
-    	QDISC_VERIFIED=
-	QDISC_VERIFIED=$( verify_qdisc ${I_QDISC} ${TMP_IFB} )
-	# now mark this leaf qdisc as useable
-	if [ "${QDISC_VERIFIED}" = "1" ] ; then
-	    touch ${SQM_QDISC_STATE_FILE}
-	else
-	    [ -f "${SQM_QDISC_STATE_FILE}" ] && rm ${SQM_QDISC_STATE_FILE}
-	fi
-    done
-}
-
-#sm: try to actualy use the requested (leaf) qdisc and reoport success as 1
-#	this might require to insmod the qdisc to be on the save side, but refrain until proven necessary
+# Verify that a qdisc works, and optionally that it is part of a set of
+# supported qdiscs. If passed a $2, this function will first check if $1 is in
+# that (space-separated) list and return an error if it's not.
 verify_qdisc() {
-    REQUESTED_QDISC=${1}
-    [ -z "${REQUESTED_QDISC}" ] && sqm_logger "Empty QDISC, what is up?"
-    [ -z "${2}" ] && TMP_IFB="TMP_IFB_4_SQM"
-    CUR_IFB=$( create_ifb ${TMP_IFB} )
-    QDISC_VERIFIED=
-
-    #sqm_logger "Does ${REQUESTED_QDISC} exist in this system?"
-    QDISC_EXISTS_IF_EMPTY=$( tc qdisc replace dev ${TMP_IFB} root ${REQUESTED_QDISC} 2>&1 )
-    #sqm_logger "${QDISC_EXISTS_IF_EMPTY}"
-    [ -z "${QDISC_EXISTS_IF_EMPTY}" ] && QDISC_VERIFIED=1
-    [ -z "${QDISC_EXISTS_IF_EMPTY}" ] && sqm_logger "QDISC ${REQUESTED_QDISC} is useable."
-    [ -z "${QDISC_VERIFIED}" ] && sqm_logger "QDISC: ${REQUESTED_QDISC} is NOT useable."
-
-    #clean up
-    delete_ifb ${TMP_IFB}
-
-    echo ${QDISC_VERIFIED}
+    local qdisc=$1
+    local supported="$2"
+    local not=
+    local ifb=TMP_IFB_4_SQM
+    if [ -n "$supported" ]; then
+        local found=0
+        for q in $supported; do
+            [ "$qdisc" = "$q" ] && found=1
+        done
+        [ "$found" -eq "1" ] || return 1
+    fi
+    create_ifb $ifb || return 1
+    $TC qdisc replace dev $ifb root $qdisc >/dev/null 2>&1
+    res=$?
+    [ "$res" = "0" ] || not="NOT "
+    sqm_logger "QDISC $qdisc is ${not}useable."
+    delete_ifb $ifb
+    return $res
 }
 
 
@@ -234,7 +208,7 @@ fc_pppoe() {
 	    match u16 ${PPP_PROTO_IP6} 0xffff at 6 \
 	    match u16 0x0${2:2:2}0 0x0fc0 at 8 \
 	    flowid $3
-	    
+
 	prio=$(($prio + 1))
 }
 
@@ -245,7 +219,7 @@ fc_pppoe() {
 get_htb_quantum() {
 	CUR_QUANTUM=$( get_mtu $1 )
 	BANDWIDTH=$2
-	
+
 	if [ -z "${CUR_QUANTUM}" ]
 	then
 	CUR_QUANTUM=1500

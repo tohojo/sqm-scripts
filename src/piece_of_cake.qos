@@ -13,10 +13,8 @@
 
 . ${SQM_LIB_DIR}/defaults.sh || exit 1
 
+verify_qdisc $QDISC "cake" || exit 1
 sqm_logger "Starting ${SCRIPT}"
-QDISC=cake	# nothing else makes much sense here
-QDISC_IS_VALID=$( verify_qdisc ${QDISC} )
-[ -z "${QDISC_IS_VALID}" ] && exit 1
 
 # to keep this as simple as possible we ignore the *_CAKE_OPTS from defaults.sh
 INGRESS_CAKE_OPTS="besteffort"
@@ -64,5 +62,3 @@ else
 	tc qdisc del dev ${DEV} root 2> /dev/null
 	tc qdisc del dev ${IFACE} ingress 2> /dev/null
 fi
-
-

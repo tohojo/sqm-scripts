@@ -10,22 +10,11 @@
 . /lib/functions.sh
 
 . /etc/sqm/sqm.conf
-. ${SQM_LIB_DIR}/functions.sh	# this should work since all variables are now assigned in defaults.sh
 
 ACTION="${1:-start}"
 RUN_IFACE="$2"
 
-
-#sm: only verify this list once per runtime, unless someone wipes the strate directory
-SQM_QDISC_STATE_DIR=${SQM_STATE_DIR}/USEABLE_QDISCS
-if [ -d "${SQM_QDISC_STATE_DIR}" ]; then
-    sqm_logger "Nothing to do"
-else
-    IP=$( which ip )     # this lives in defaults.sh, but we can not source this here
-    verify_qdisc_list "fq_codel codel pie sfq cake"
-    IP=                  # make sure to return to the default in defaults.sh
-fi
-
+[ -d "${SQM_QDISC_STATE_DIR}" ] || ${SQM_LIB_DIR}/update-available-qdiscs
 
 # Stopping all active interfaces
 if [ "$ACTION" = "stop" -a -z "$RUN_IFACE" ]; then

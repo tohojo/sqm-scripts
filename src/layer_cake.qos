@@ -15,12 +15,10 @@
 [ -n "$IFACE" ] || exit 1
 . ${SQM_LIB_DIR}/defaults.sh || exit 1
 
+verify_qdisc $QDISC "cake" || exit 1
 sqm_logger "Starting ${SCRIPT}"
 
 # INGRESS_CAKE_OPTS and EGRESS_CAKE_OPTS are defined in defaults.sh now
-QDISC=cake	# nothing else makes much sense here
-QDISC_IS_VALID=$( verify_qdisc ${QDISC} )
-[ -z "${QDISC_IS_VALID}" ] && exit 1
 
 
 
@@ -114,5 +112,3 @@ else
 	tc qdisc del dev ${DEV} root 2> /dev/null
 	tc qdisc del dev ${IFACE} ingress 2> /dev/null
 fi
-
-
