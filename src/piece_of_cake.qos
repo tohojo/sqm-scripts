@@ -13,6 +13,7 @@
 
 . ${SQM_LIB_DIR}/defaults.sh || exit 1
 
+QDISC=cake
 verify_qdisc $QDISC "cake" || exit 1
 sqm_logger "Starting ${SCRIPT}"
 
