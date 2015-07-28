@@ -5,25 +5,6 @@
 
 [ -d "${SQM_QDISC_STATE_DIR}" ] || mkdir -p "${SQM_QDISC_STATE_DIR}"
 
-KERNEL_MOD_DIR=/lib/modules/$(uname -r)/kernel/net/sched
-[ -d "$KERNEL_MOD_DIR" ] || KERNEL_MOD_DIR=/lib/modules/$(uname -r) # openwrt
-
-EXCLUDED="netem ingress"
-is_excluded() {
-    for e in $EXCLUDED; do
-        [ "$1" = "$e" ] && return 0
-    done
-    return 1
-}
-
-for modfile in $KERNEL_MOD_DIR/sch_*; do
-    [ -f $modfile ] || continue
-    mod=$(basename $modfile .ko)
-    mod=${mod%.ko.gz}
-    qdisc=${mod#sch_}
-    is_excluded $qdisc || touch ${SQM_QDISC_STATE_DIR}/$qdisc
-done
-
 TC=$(which tc)
 IP=$(which ip)
 
