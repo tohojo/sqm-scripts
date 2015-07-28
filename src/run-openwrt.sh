@@ -54,7 +54,7 @@ run_sqm_scripts() {
 	export SQUASH_DSCP=$(config_get "$section" squash_dscp)
 	export SQUASH_INGRESS=$(config_get "$section" squash_ingress)
 
-	export QDISC=$(config_get "$section" verified_qdisc)
+	export QDISC=$(config_get "$section" qdisc)
 	export SCRIPT=$(config_get "$section" script)
 
 	#sm: only stop-sqm if there is something running
