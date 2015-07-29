@@ -1,6 +1,7 @@
 PREFIX:=/usr
 DESTDIR:=
 PLATFORM:=linux
+LUCI_DIR:=$(DESTDIR)$(PREFIX)/lib/lua/luci
 
 all:
 	@echo "Run 'make install' to install."
@@ -38,3 +39,11 @@ install-lib:
 		src/*.qos src/*.help $(DESTDIR)$(PREFIX)/lib/sqm
 	install -m 0744  src/start-sqm src/stop-sqm src/update-available-qdiscs \
 		$(DESTDIR)$(PREFIX)/lib/sqm
+
+.PHONY: install-luci
+install-luci:
+	install -m 0755 -d $(LUCI_DIR)/controller $(LUCI_DIR)/model/cbi
+	install -m 0644 luci/sqm-controller.lua $(LUCI_DIR)/controller/sqm.lua
+	install -m 0644 luci/sqm-cbi.lua $(LUCI_DIR)/model/cbi/sqm.lua
+	install -m 0755 -d $(DESTDIR)/etc/uci-defaults
+	install -m 0755 luci/uci-defaults-sqm $(DESTDIR)/etc/uci-defaults/luci-sqm
