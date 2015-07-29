@@ -42,6 +42,16 @@ do_modules() {
     insmod sch_htb
 }
 
+# Write a state file to the filename given as $1. The remaining arguments are
+# variable names that should be written to the state file.
+write_state_file() {
+    local filename=$1
+    shift
+    for var in "$@"; do
+        val=$(eval echo '$'$var)
+        echo "$var=\"$val\""
+    done > $filename
+}
 
 
 #sqm_logger "${0} IPT_MASK: ${IPT_MASK_STRING}"
