@@ -9,13 +9,10 @@
 #
 #       Copyright (C) 2012-5 Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller
 
-[ -n "$IFACE" ] || exit 1
 
-. ${SQM_LIB_DIR}/defaults.sh || exit 1
-
+. ${SQM_LIB_DIR}/defaults.sh
 QDISC=cake
-verify_qdisc $QDISC "cake" || exit 1
-sqm_logger "Starting ${SCRIPT}"
+
 
 # to keep this as simple as possible we ignore the *_CAKE_OPTS from defaults.sh
 INGRESS_CAKE_OPTS="besteffort"
@@ -44,22 +41,29 @@ ingress() {
 	match u32 0 0 flowid 1:1 action mirred egress redirect dev $DEV
 }
 
-do_modules
+sqm_start() {
+    [ -n "$IFACE" ] || return 1
+    verify_qdisc $QDISC "cake" || return 1
+    sqm_logger "Starting ${SCRIPT}"
 
-if [ "${UPLINK}" -ne 0 ];
-then
-    egress
-    sqm_logger "egress shaping activated"
-else
-    sqm_logger "egress shaping deactivated"
-    tc qdisc del dev ${IFACE} root 2> /dev/null
-fi
-if [ "${DOWNLINK}" -ne 0 ];
-then
-    ingress
-    sqm_logger "ingress shaping activated"
-else
-    sqm_logger "ingress shaping deactivated"
-    tc qdisc del dev ${DEV} root 2> /dev/null
-    tc qdisc del dev ${IFACE} ingress 2> /dev/null
-fi
+    do_modules
+
+    if [ "${UPLINK}" -ne 0 ];
+    then
+        egress
+        sqm_logger "egress shaping activated"
+    else
+        sqm_logger "egress shaping deactivated"
+        $TC qdisc del dev ${IFACE} root 2> /dev/null
+    fi
+    if [ "${DOWNLINK}" -ne 0 ];
+    then
+        ingress
+        sqm_logger "ingress shaping activated"
+    else
+        sqm_logger "ingress shaping deactivated"
+        $TC qdisc del dev ${DEV} root 2> /dev/null
+        $TC qdisc del dev ${IFACE} ingress 2> /dev/null
+    fi
+    return 0
+}

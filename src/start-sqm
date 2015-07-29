@@ -31,8 +31,15 @@ if [ "${ENABLED:-1}" -ne "1" ]; then
     exit 0
 fi
 
+if [ ! -f "${SQM_LIB_DIR}/$SCRIPT" ]; then
+    sqm_logger "SQM script ${SCRIPT} not found!"
+    exit 1
+fi
+
+. "${SQM_LIB_DIR}/$SCRIPT"
+
 sqm_logger "${0}: Starting ${IFACE}"
 sqm_logger "${0}: Queue Setup Script: ${SCRIPT}"
-[ -f "${SQM_LIB_DIR}/$SCRIPT" ] && { . "${SQM_LIB_DIR}/$SCRIPT" ; write_state_file ${STATE_FILE} ${ALL_SQM_VARS}; }
+sqm_start && write_state_file ${STATE_FILE} ${ALL_SQM_VARS}
 
 exit 0

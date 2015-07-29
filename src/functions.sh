@@ -185,11 +185,23 @@ get_cake_lla_string() {
 
 
 sqm_stop() {
-    $TC qdisc del dev $IFACE ingress
-    $TC qdisc del dev $IFACE root
-    $TC qdisc del dev $DEV root
-}
+    $TC qdisc del dev $IFACE ingress 2> /dev/null
+    $TC qdisc del dev $IFACE root 2> /dev/null
+    [ -n "$CUR_IFB" ] && $TC qdisc del dev $CUR_IFB root 2> /dev/null
+    [ -n "$CUR_IFB" ] && sqm_logger "${0}: ${CUR_IFB} shaper deleted"
 
+    [ -n "$CUR_IFB" ] && ipt -t mangle -D POSTROUTING -o $CUR_IFB -m mark --mark 0x00 -g QOS_MARK_${IFACE}
+    ipt -t mangle -D POSTROUTING -o $IFACE -m mark --mark 0x00 -g QOS_MARK_${IFACE}
+    ipt -t mangle -D PREROUTING -i vtun+ -p tcp -j MARK --set-mark 0x2
+    ipt -t mangle -D OUTPUT -p udp -m multiport --ports 123,53 -j DSCP --set-dscp-class AF42
+    ipt -t mangle -F QOS_MARK_${IFACE}
+    ipt -t mangle -X QOS_MARK_${IFACE}
+
+
+    [ -n "$CUR_IFB" ] && $IP link set dev ${CUR_IFB} down
+    [ -n "$CUR_IFB" ] && $IP link delete ${CUR_IFB} type ifb
+    [ -n "$CUR_IFB" ] && sqm_logger "${0}: ${CUR_IFB} interface deleted"
+}
 # Note this has side effects on the prio variable
 # and depends on the interface global too
 

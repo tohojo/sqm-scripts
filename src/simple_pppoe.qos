@@ -24,9 +24,8 @@
 #    (this should help cut down the number of OPs per packet considerably)
 
 
-[ -n "$IFACE" ] || exit 1
 
-. ${SQM_LIB_DIR}/defaults.sh || exit 1
+. ${SQM_LIB_DIR}/defaults.sh
 
 #sqm_logger IPT_MASK: ${IPT_MASK_STRING}
 ipt_setup() {
@@ -363,28 +362,34 @@ ingress() {
 
 }
 
-do_modules
-ipt_setup
+sqm_start() {
+    [ -n "$IFACE" ] || return 1
+    verify_qdisc $QDISC || return 1
+    sqm_logger "Starting ${SCRIPT}"
 
-if [ "$UPLINK" -ne 0 ];
-then
-    egress
-    sqm_logger "egress shaping activated"
-else
-    sqm_logger "egress shaping deactivated"
-    tc qdisc del dev $IFACE root 2> /dev/null
-fi
-if [ "$DOWNLINK" -ne 0 ];
-then
-    ingress
-    sqm_logger "ingress shaping activated"
-else
-    sqm_logger "ingress shaping deactivated"
-    tc qdisc del dev $DEV root 2> /dev/null
-    tc qdisc del dev $IFACE ingress 2> /dev/null
-fi
+    do_modules
+    ipt_setup
 
+    if [ "$UPLINK" -ne 0 ];
+    then
+        egress
+        sqm_logger "egress shaping activated"
+    else
+        sqm_logger "egress shaping deactivated"
+        $TC qdisc del dev $IFACE root 2> /dev/null
+    fi
+    if [ "$DOWNLINK" -ne 0 ];
+    then
+        ingress
+        sqm_logger "ingress shaping activated"
+    else
+        sqm_logger "ingress shaping deactivated"
+        $TC qdisc del dev $DEV root 2> /dev/null
+        $TC qdisc del dev $IFACE ingress 2> /dev/null
+    fi
 
+    return 0
+}
 
 # References:
 # This alternate shaper attempts to go for 1/u performance in a clever way
