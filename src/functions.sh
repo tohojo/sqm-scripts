@@ -39,7 +39,10 @@ do_modules() {
     insmod sch_ingress
     insmod act_mirred
     insmod cls_fw
+    insmod cls_flow
+    insmod cls_u32
     insmod sch_htb
+    insmod sch_hfsc
 }
 
 # Write a state file to the filename given as $1. The remaining arguments are
@@ -285,14 +288,18 @@ get_mtu() {
     echo ${CUR_MTU}
 }
 
-# FIXME should also calculate the limit
-# Frankly I think Xfq_codel can pretty much always run with high numbers of flows
-# now that it does fate sharing
-# But right now I'm trying to match the ns2 model behavior better
-# So SET the autoflow variable to 1 if you want the cablelabs behavior
+# Set the autoflow variable to 1 if you want to limit the number of flows
+# otherwise the default of 1024 will be used for all Xfq_codel qdiscs.
 
 get_flows() {
-    if [ "$AUTOFLOW" -eq "1" ]
+    case $QDISC in
+        codel|ns2_codel|pie|*fifo|pfifo_fast) ;;
+        fq_codel|*fq_codel|sfq) echo flows $( get_flows_count ${1} ) ;;
+    esac
+}
+
+get_flows_count() {
+    if [ "${AUTOFLOW}" -eq "1" ]
     then
         FLOWS=8
         [ $1 -gt 999 ] && FLOWS=16
@@ -304,8 +311,13 @@ get_flows() {
         [ $1 -gt 69999 ] && FLOWS=512
         [ $1 -gt 99999 ] && FLOWS=1024
         case $QDISC in
-            codel|ns2_codel|pie|*fifo|pfifo_fast) ;;
-            fq_codel|*fq_codel|sfq) echo flows $FLOWS ;;
+          codel|ns2_codel|pie|*fifo|pfifo_fast) ;;
+          fq_codel|*fq_codel|sfq) echo $FLOWS ;;
+        esac
+    else
+        case $QDISC in
+          codel|ns2_codel|pie|*fifo|pfifo_fast) ;;
+          fq_codel|*fq_codel|sfq) echo 1024 ;;
         esac
     fi
 }
@@ -544,4 +556,19 @@ diffserv_pppoe() {
 
 
     prio=$(($prio + 1))
+}
+
+eth_setup() {
+    ethtool -K $IFACE gso off
+    ethtool -K $IFACE tso off
+    ethtool -K $IFACE ufo off
+    ethtool -K $IFACE gro off
+
+    if [ -e /sys/class/net/$IFACE/queues/tx-0/byte_queue_limits ]
+    then
+       for i in /sys/class/net/$IFACE/queues/tx-*/byte_queue_limits
+       do
+          echo $(( 4 * $( get_mtu ${IFACE} ) )) > $i/limit_max
+       done
+    fi
 }
