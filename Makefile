@@ -12,7 +12,8 @@ install: install-$(PLATFORM)
 .PHONY: install-openwrt
 
 install-openwrt: install-lib
-	install -m 0755 -d $(DESTDIR)/etc/hotplug.d/iface $(DESTDIR)/etc/{config,init.d}
+	install -m 0755 -d $(DESTDIR)/etc/hotplug.d/iface $(DESTDIR)/etc/config \
+		$(DESTDIR)/etc/init.d
 	install -m 0755 platform/openwrt/sqm-hotplug $(DESTDIR)/etc/hotplug.d/iface/11-sqm
 	install -m 0755 platform/openwrt/sqm-init $(DESTDIR)/etc/init.d/sqm
 	install -m 0644 platform/openwrt/sqm-uci $(DESTDIR)/etc/config/sqm
