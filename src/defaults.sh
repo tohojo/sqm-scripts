@@ -28,7 +28,8 @@ ALL_SQM_VARS="IFACE UPLINK DOWNLINK SCRIPT ENABLED QDISC LLAM LINKLAYER OVERHEAD
 [ -z "$TC" ] && TC=$(which tc)
 #[ -z "$TC" ] && TC="sqm_logger tc"# this redirects all tc calls into the log
 [ -z "$IP" ] && IP=$(which ip)
-[ -z "$INSMOD" ] && INSMOD=$(which insmod)
+# Try modprobe first, fall back to insmod
+[ -z "$INSMOD" ] && INSMOD=$(which modprobe) || INSMOD=$(which insmod)
 [ -z "$TARGET" ] && TARGET="5ms"
 [ -z "$IPT_MASK" ] && IPT_MASK="0xff"
 [ -z "$IPT_MASK_STRING" ] && IPT_MASK_STRING="/${IPT_MASK}"	# for set-mark
