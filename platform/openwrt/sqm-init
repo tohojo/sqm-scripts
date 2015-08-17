@@ -21,3 +21,9 @@ stop()
 {
 /usr/lib/sqm/run.sh stop
 }
+
+boot()
+{
+# We are being run through hotplug scripts, don't do anything at boot
+return 0
+}
