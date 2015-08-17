@@ -60,7 +60,6 @@ run_sqm_scripts() {
 	#sm: only stop-sqm if there is something running
 	CUR_STATE_FILE="${SQM_STATE_DIR}/${IFACE}.state"
 	if [ -f "${CUR_STATE_FILE}" ]; then
-	    sqm_logger "SQM active on ${IFACE}, stopping it"
 	    "${SQM_LIB_DIR}/stop-sqm"
 	fi
 
