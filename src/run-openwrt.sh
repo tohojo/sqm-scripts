@@ -19,7 +19,9 @@ RUN_IFACE="$2"
 # Stopping all active interfaces
 if [ "$ACTION" = "stop" -a -z "$RUN_IFACE" ]; then
     for f in ${SQM_STATE_DIR}/*.state; do
-        [ -f "$f" ] && IFACE=$(basename $f .state) ${SQM_LIB_DIR}/stop-sqm
+        # Source the state file prior to stopping; we need some of the variables
+        # saved in there, most notably $IFACE and $SCRIPT.
+        [ -f "$f" ] && ( . $f; ${SQM_LIB_DIR}/stop-sqm )
     done
     exit 0
 fi
