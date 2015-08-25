@@ -4,27 +4,27 @@ START=50
 
 reload()
 {
-/usr/lib/sqm/run.sh start
+    start
 }
 
 restart()
 {
-reload
+    reload
 }
 
 start()
 {
-reload
+    /usr/lib/sqm/run.sh start
 }
 
 stop()
 {
-/usr/lib/sqm/run.sh stop
+    /usr/lib/sqm/run.sh stop
 }
 
 boot()
 {
-# We are being run through hotplug scripts, don't do anything at boot
-logger -t SQM -s "sqm-scripts do nothing at boot, waiting for hotplug events."
-return 0
+    # We are being run through hotplug scripts, don't do anything at boot
+    logger -t SQM -s "sqm-scripts do nothing at boot, waiting for hotplug events."
+    return 0
 }
