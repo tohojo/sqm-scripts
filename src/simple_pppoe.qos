@@ -367,6 +367,8 @@ sqm_start() {
     verify_qdisc $QDISC || return 1
     sqm_logger "Starting ${SCRIPT}"
 
+    [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
+
     do_modules
     ipt_setup
 
