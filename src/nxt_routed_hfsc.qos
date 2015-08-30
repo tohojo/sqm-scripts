@@ -115,6 +115,7 @@ ingress() {
 
 sqm_start() {
     [ -n "${IFACE}" ] || return 1
+    verify_qdisc "hfsc" || return 1
     verify_qdisc ${QDISC} || return 1
     sqm_logger "Starting ${SCRIPT}"
 
