@@ -122,16 +122,18 @@ get_ifb_for_if() {
 }
 
 
-
-
 # Verify that a qdisc works, and optionally that it is part of a set of
 # supported qdiscs. If passed a $2, this function will first check if $1 is in
 # that (space-separated) list and return an error if it's not.
+#sm: note the ingress qdisc is different in that it requires
+# tc qdisc replace dev tmp_ifb ingress instead of "root ingress"
 verify_qdisc() {
     local qdisc=$1
     local supported="$2"
     local not=
     local ifb=TMP_IFB_4_SQM
+    local root_string="root"	# this works for most qdiscs
+    
     if [ -n "$supported" ]; then
         local found=0
         for q in $supported; do
@@ -140,7 +142,13 @@ verify_qdisc() {
         [ "$found" -eq "1" ] || return 1
     fi
     create_ifb $ifb || return 1
-    $TC qdisc replace dev $ifb root $qdisc >/dev/null 2>&1
+    case $qdisc in
+	#ingress is special
+	ingress) root_string="" ;;
+    esac
+    sqm_logger "verify_qdisc root_string: $root_string"
+
+    $TC qdisc replace dev $ifb $root_string $qdisc >/dev/null 2>&1
     res=$?
     [ "$res" = "0" ] || not="NOT "
     sqm_logger "QDISC $qdisc is ${not}useable."
