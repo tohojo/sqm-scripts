@@ -364,13 +364,13 @@ ingress() {
 
 sqm_start() {
     [ -n "$IFACE" ] || return 1
+    do_modules
     verify_qdisc "htb" || return 1
     verify_qdisc $QDISC || return 1
     sqm_logger "Starting ${SCRIPT}"
 
     [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
 
-    do_modules
     ipt_setup
 
     if [ "$UPLINK" -ne 0 ];
