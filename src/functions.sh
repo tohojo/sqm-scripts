@@ -146,7 +146,6 @@ verify_qdisc() {
 	#ingress is special
 	ingress) root_string="" ;;
     esac
-    sqm_logger "verify_qdisc root_string: $root_string"
 
     $TC qdisc replace dev $ifb $root_string $qdisc >/dev/null 2>&1
     res=$?
