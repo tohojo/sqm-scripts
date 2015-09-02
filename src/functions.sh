@@ -33,17 +33,9 @@ ipt() {
 }
 
 do_modules() {
-    #sm: module autoloading should have taken care of this, but better safe than sorry.
-    #sm: unfortunatelly syslog still reports $INSMOD's output to the log
-    ${INSMOD} act_ipt > /dev/null 2>&1
-    ${INSMOD} sch_$QDISC > /dev/null 2>&1
-    ${INSMOD} sch_ingress > /dev/null 2>&1
-    ${INSMOD} act_mirred > /dev/null 2>&1
-    ${INSMOD} cls_fw > /dev/null 2>&1
-    ${INSMOD} cls_flow > /dev/null 2>&1
-    ${INSMOD} cls_u32 > /dev/null 2>&1
-    ${INSMOD} sch_htb > /dev/null 2>&1
-    ${INSMOD} sch_hfsc > /dev/null 2>&1
+    for m in $ALL_MODULES; do
+        ${INSMOD} $m 2>/dev/null
+    done
 }
 
 # Write a state file to the filename given as $1. The remaining arguments are

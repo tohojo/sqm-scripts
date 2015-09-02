@@ -3,6 +3,9 @@
 # This is used for writing the state file
 ALL_SQM_VARS="IFACE UPLINK DOWNLINK SCRIPT ENABLED QDISC LLAM LINKLAYER OVERHEAD STAB_MTU STAB_MPU STAB_TSIZE AUTOFLOW ILIMIT ELIMIT TARGET ITARGET ETARGET IECN EECN SQUASH_DSCP SQUASH_INGRESS IQDISC_OPTS EQDISC_OPTS INGRESS_CAKE_OPTS EGRESS_CAKE_OPTS"
 
+# These are the modules that do_modules() will attempt to load
+ALL_MODULES="act_ipt sch_$QDISC sch_ingress act_mirred cls_fw cls_flow cls_u32 sch_htb sch_hfsc"
+
 [ -z "$UPLINK" ] && UPLINK=2302
 [ -z "$DOWNLINK" ] && DOWNLINK=14698
 [ -z "$IFACE" ] && IFACE=eth0
