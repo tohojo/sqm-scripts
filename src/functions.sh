@@ -75,7 +75,7 @@ get_ifb_associated_with_if() {
 	if [ ! -z "${TMP}" ];
 	then
 	    #sm: oops, there is output but we failed to properly parse it? Ask for a user report
-	    sqm_logger "----- CUT HERE -----"
+	    sqm_logger "#---- CUT HERE ----#"
 	    sqm_logger "get_ifb_associated_with_if failed to extrect the ifb name from:"
 	    sqm_logger $( tc -p filter show parent ffff: dev ${CUR_IF} )
 	    sqm_logger "Please report this as an issue at https://github.com/tohojo/sqm-scripts"
