@@ -66,7 +66,8 @@ write_state_file() {
 get_ifb_associated_with_if() {
     local CUR_IF=$1
     # CUR_IFB=$( tc -p filter show parent ffff: dev ${CUR_IF} | grep -o -e ifb'[[:digit:]]\+' )
-    local CUR_IFB=$( tc -p filter show parent ffff: dev ${CUR_IF} | grep -o -e ifb'[^)]\+' )    # my editor's syntax coloration is limitied so I need a single quote in this line (between eiditor and s)
+    #local CUR_IFB=$( tc -p filter show parent ffff: dev ${CUR_IF} | grep -o -e ifb'[^)]\+' )    # my editor's syntax coloration is limitied so I need a single quote in this line (between eiditor and s)
+    local CUR_IFB=$( tc -p filter show parent ffff: dev ${CUR_IF} | grep -o -E ifb'[^)\ ]+' )    # my editor's syntax coloration is limitied so I need a single quote in this line (between eiditor and s)
     sqm_logger "ifb associated with interface ${CUR_IF}: ${CUR_IFB}"
     #sm: we could not detect an associated IFB for CUR_IF
     if [ -z "${CUR_IFB}" ]; 
