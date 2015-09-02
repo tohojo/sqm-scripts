@@ -64,24 +64,41 @@ write_state_file() {
 
 # find the ifb device associated with a specific interface, return nothing of no ifb is associated with IF
 get_ifb_associated_with_if() {
-    CUR_IF=$1
+    local CUR_IF=$1
     # CUR_IFB=$( tc -p filter show parent ffff: dev ${CUR_IF} | grep -o -e ifb'[[:digit:]]\+' )
-    CUR_IFB=$( tc -p filter show parent ffff: dev ${CUR_IF} | grep -o -e ifb'[^)]\+' )    # my editor's syntax coloration is limitied so I need a single quote in this line (between eiditor and s)
+    local CUR_IFB=$( tc -p filter show parent ffff: dev ${CUR_IF} | grep -o -e ifb'[^)]\+' )    # my editor's syntax coloration is limitied so I need a single quote in this line (between eiditor and s)
     sqm_logger "ifb associated with interface ${CUR_IF}: ${CUR_IFB}"
+    #sm: we could not detect an associated IFB for CUR_IF
+    if [ -z "${CUR_IFB}" ]; 
+    then
+	local TMP=$( tc -p filter show parent ffff: dev ${CUR_IF} )
+	if [ ! -z "${TMP}" ];
+	then
+	    #sm: oops, there is output but we failed to properly parse it? Ask for a user report
+	    sqm_logger "----- CUT HERE -----"
+	    sqm_logger "get_ifb_associated_with_if failed to extrect the ifb name from:"
+	    sqm_logger $( tc -p filter show parent ffff: dev ${CUR_IF} )
+	    sqm_logger "Please report this as an issue at https://github.com/tohojo/sqm-scripts"
+	    sqm_logger "Please copy and paste everything below the cut-here line into your issue report, thanks."
+	else
+	    sqm_logger "Currently no ifb is associated with ${CUR_IF}, this is normal during starting of the sqm system."
+	fi
+    fi
+    
     echo ${CUR_IFB}
 }
 
 ifb_name() {
-    CUR_IF=$1
-    MAX_IF_NAME_LENGTH=15
-    IFB_PREFIX="ifb4"
-    NEW_IFB="${IFB_PREFIX}${CUR_IF}"
-    IFB_NAME_LENGTH=${#NEW_IFB}
+    local CUR_IF=$1
+    local MAX_IF_NAME_LENGTH=15
+    local IFB_PREFIX="ifb4"
+    local NEW_IFB="${IFB_PREFIX}${CUR_IF}"
+    local IFB_NAME_LENGTH=${#NEW_IFB}
     # IFB names can only be 15 chararcters, so we chop of excessive characters
     # at the start of the interface name
     if [ ${IFB_NAME_LENGTH} -gt ${MAX_IF_NAME_LENGTH} ];
     then
-        OVERLIMIT=$(( ${#NEW_IFB} - ${MAX_IF_NAME_LENGTH} ))
+        local OVERLIMIT=$(( ${#NEW_IFB} - ${MAX_IF_NAME_LENGTH} ))
         NEW_IFB=${IFB_PREFIX}${CUR_IF:${OVERLIMIT}:$(( ${MAX_IF_NAME_LENGTH} - ${#IFB_PREFIX} ))}
     fi
     echo ${NEW_IFB}
@@ -89,22 +106,23 @@ ifb_name() {
 
 # if required
 create_new_ifb_for_if() {
-    NEW_IFB=$(ifb_name $1)
+    local NEW_IFB=$(ifb_name $1)
     create_ifb ${NEW_IFB}
     echo $NEW_IFB
     return $?
 }
 
 
+#sm TODO: report failures
 create_ifb() {
-    CUR_IFB=${1}
+    local CUR_IFB=${1}
     $IP link add name ${CUR_IFB} type ifb #>/dev/null 2>&1    # better be verbose
     ret=$?
     return $?
 }
 
 delete_ifb() {
-    CUR_IFB=${1}
+    local CUR_IFB=${1}
     $IP link set dev ${CUR_IFB} down
     $IP link delete ${CUR_IFB} type ifb
     return $?
@@ -113,9 +131,9 @@ delete_ifb() {
 
 # the best match is either the IFB already associated with the current interface or a new named IFB
 get_ifb_for_if() {
-    CUR_IF=$1
+    local CUR_IF=$1
     # if an ifb is already associated return that
-    CUR_IFB=$( get_ifb_associated_with_if ${CUR_IF} )
+    local CUR_IFB=$( get_ifb_associated_with_if ${CUR_IF} )
     [ -z "$CUR_IFB" ] && CUR_IFB=$( create_new_ifb_for_if ${CUR_IF} )
     [ -z "$CUR_IFB" ] && sqm_logger "Could not find existing IFB for ${CUR_IF}, nor create a new IFB instead..."
     echo ${CUR_IFB}
