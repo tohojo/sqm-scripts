@@ -13,10 +13,6 @@ sqm_logger() {
     fi
 }
 
-insmod() {
-    lsmod | grep -q ^$1 || $INSMOD $1
-}
-
 ipt() {
     d=$(echo $* | sed s/-A/-D/g)
     [ "$d" != "$*" ] && {
