@@ -11,8 +11,15 @@ sqm_logger() {
     else
         echo "$@" >&2
     fi
+    #sm: slightly dangerous as this will keep adding to the file
+    if [ ! -z "${SQM_DEBUG_OUTPUT_FQN}" ]; 
+    then
+	[ -f "${SQM_DEBUG_OUTPUT_FQN}" ] || touch ${SQM_DEBUG_OUTPUT_FQN}
+	[ -f "${SQM_DEBUG_OUTPUT_FQN}" ] && echo "$@" >> ${SQM_DEBUG_OUTPUT_FQN}
+    fi
 }
 
+#sm: ipt needs a toggle to show the outputs for debugging (as do all users of > /dev/null 2>&1 and friends)
 ipt() {
     d=$(echo $* | sed s/-A/-D/g)
     [ "$d" != "$*" ] && {
