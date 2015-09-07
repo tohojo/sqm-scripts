@@ -40,6 +40,9 @@
 if [ "$SQM_DEBUG" == 1 ] 
 then
     SQM_DEBUG_LOG=${SQM_STATE_DIR}/${IFACE}.debug.log
+    OUTPUT_TARGET=${SQM_DEBUG_LOG}
+else
+    OUTPUT_TARGET="/dev/null"
 fi
 
 

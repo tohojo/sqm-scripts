@@ -19,21 +19,24 @@ sqm_logger() {
 ipt() {
     d=$(echo $* | sed s/-A/-D/g)
     [ "$d" != "$*" ] && {
-        iptables $d > /dev/null 2>&1
-        ip6tables $d > /dev/null 2>&1
+	[ "${SQM_DEBUG}" == 1 ] && echo "iptables arguments: ${d}" >> ${SQM_DEBUG_LOG}
+        iptables $d >> ${OUTPUT_TARGET} 2>&1
+        ip6tables $d >> ${OUTPUT_TARGET} 2>&1
     }
     d=$(echo $* | sed s/-I/-D/g)
     [ "$d" != "$*" ] && {
-        iptables $d > /dev/null 2>&1
-        ip6tables $d > /dev/null 2>&1
+	[ "${SQM_DEBUG}" == 1 ] && echo "iptables arguments: ${d}" >> ${SQM_DEBUG_LOG}
+        iptables $d >> ${OUTPUT_TARGET} 2>&1
+        ip6tables $d >> ${OUTPUT_TARGET} 2>&1
     }
-    iptables $* > /dev/null 2>&1
-    ip6tables $* > /dev/null 2>&1
+    [ "${SQM_DEBUG}" == 1 ] && echo "iptables arguments: $*" >> ${SQM_DEBUG_LOG}
+    iptables $* >> ${OUTPUT_TARGET} 2>&1
+    ip6tables $* >> ${OUTPUT_TARGET} 2>&1
 }
 
 do_modules() {
     for m in $ALL_MODULES; do
-        ${INSMOD} $m 2>/dev/null
+        ${INSMOD} $m 2>>${OUTPUT_TARGET}
     done
 }
 
@@ -157,7 +160,7 @@ verify_qdisc() {
 	ingress) root_string="" ;;
     esac
 
-    $TC qdisc replace dev $ifb $root_string $qdisc >/dev/null 2>&1
+    $TC qdisc replace dev $ifb $root_string $qdisc >>${OUTPUT_TARGET} 2>&1
     res=$?
     [ "$res" = "0" ] || not="NOT "
     sqm_logger "QDISC $qdisc is ${not}useable."
@@ -206,9 +209,9 @@ get_cake_lla_string() {
 
 
 sqm_stop() {
-    $TC qdisc del dev $IFACE ingress 2> /dev/null
-    $TC qdisc del dev $IFACE root 2> /dev/null
-    [ -n "$CUR_IFB" ] && $TC qdisc del dev $CUR_IFB root 2> /dev/null
+    $TC qdisc del dev $IFACE ingress 2>> ${OUTPUT_TARGET}
+    $TC qdisc del dev $IFACE root 2>> ${OUTPUT_TARGET}
+    [ -n "$CUR_IFB" ] && $TC qdisc del dev $CUR_IFB root 2>> ${OUTPUT_TARGET}
     [ -n "$CUR_IFB" ] && sqm_logger "${0}: ${CUR_IFB} shaper deleted"
 
     [ -n "$CUR_IFB" ] && ipt -t mangle -D POSTROUTING -o $CUR_IFB -m mark --mark 0x00 -g QOS_MARK_${IFACE}
