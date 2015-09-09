@@ -21,7 +21,7 @@ if [ "$ACTION" = "stop" -a -z "$RUN_IFACE" ]; then
     for f in ${SQM_STATE_DIR}/*.state; do
         # Source the state file prior to stopping; we need the $IFACE and
         # $SCRIPT variables saved in there.
-        [ -f "$f" ] && ( . $f; IFACE=$IFACE SCRIPT=$SCRIPT ${SQM_LIB_DIR}/stop-sqm )
+        [ -f "$f" ] && ( . $f; IFACE=$IFACE SCRIPT=$SCRIPT SQM_DEBUG=$SQM_DEBUG SQM_DEBUG_LOG=$SQM_DEBUG_LOG OUTPUT_TARGET=$OUTPUT_TARGET ${SQM_LIB_DIR}/stop-sqm )
     done
     exit 0
 fi
