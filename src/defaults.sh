@@ -24,19 +24,7 @@
 [ -z "$EQDISC_OPTS" ] && EQDISC_OPTS=""
 [ -z "$TC" ] && TC=$(which tc)
 #[ -z "$TC" ] && TC="sqm_logger tc"# this redirects all tc calls into the log
-
-# on openwrt busybox can offer its own /sbin/ip which we should only take 
-# if the real /usr/sbin/ip does not "stand up"
-if [ -z "$IP" ] 
-then
-    if [ -e "/usr/sbin/ip "]
-    then
-	IP=/usr/sbin/ip.
-    else
-	IP=$(which ip)
-    fi         
-fi
-
+[ -z "$IP" ] && IP=$(which ip)
 # Try modprobe first, fall back to insmod
 [ -z "$INSMOD" ] && INSMOD=$(which modprobe) || INSMOD=$(which insmod)
 [ -z "$TARGET" ] && TARGET="5ms"
