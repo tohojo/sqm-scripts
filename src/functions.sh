@@ -12,7 +12,7 @@ sqm_logger() {
         echo "$@" >&2
     fi
     #sm: slightly dangerous as this will keep adding to the log file
-    [ "${SQM_DEBUG}" == 1 ] && echo "$@" >> ${SQM_DEBUG_LOG}
+    [ -z "${SQM_DEBUG}" -a "${SQM_DEBUG}" == 1 ] && echo "$@" >> ${SQM_DEBUG_LOG}
 }
 
 #sm: ipt needs a toggle to show the outputs for debugging (as do all users of > /dev/null 2>&1 and friends)
