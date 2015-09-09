@@ -31,7 +31,7 @@ if [ -z "$IP" ]
 then
     if [ -e "/usr/sbin/ip "]
     then
-	IP=/usr/sbin/ip.
+	IP=/usr/sbin/ip
     else
 	IP=$(which ip)
     fi         
