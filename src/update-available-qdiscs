@@ -6,7 +6,13 @@
 [ -d "${SQM_QDISC_STATE_DIR}" ] || mkdir -p "${SQM_QDISC_STATE_DIR}"
 
 TC=$(which tc)
-IP=$(which ip)
+# busybox can offer its own /sbin/ip which we should only take if the real ip does not "stand up"
+if [ -e "/usr/sbin/ip "]
+then
+    IP=/usr/sbin/ip 
+else
+    IP=$(which ip)
+fi
 
 for qdisc in $SQM_CHECK_QDISCS; do
     [ -f ${SQM_QDISC_STATE_DIR}/$qdisc ] && continue
