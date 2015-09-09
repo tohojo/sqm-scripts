@@ -81,7 +81,7 @@ ingress() {
 	$TC qdisc add dev $DEV root $( get_stab_string) cake bandwidth ${DOWNLINK}kbit $( get_cake_lla_string ) $INGRESS_CAKE_OPTS ${IQDISC_OPTS}
     fi
 
-    ip link set dev $DEV up
+    $IP link set dev $DEV up
 
     # redirect all IP packets arriving in $IFACE to ifb0
 

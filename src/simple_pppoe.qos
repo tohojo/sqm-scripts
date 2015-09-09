@@ -353,7 +353,7 @@ ingress() {
 
     fi
 
-    ip link set dev $DEV up
+    $IP link set dev $DEV up
 
     # redirect all IP packets arriving in $IFACE to ifb0
 
