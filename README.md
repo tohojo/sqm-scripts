@@ -9,3 +9,29 @@ http://www.bufferbloat.net/projects/cerowrt/wiki/Smart_Queue_Management
 OpenWrt, there are packages available in the ceropackages repository:
 https://github.com/dtaht/ceropackages-3.10 and in openwrt nightly
 builds.
+
+## "Installing" the current development version from git
+
+1.) Make a local clone of the git repository:
+
+`git clone https://github.com/tohojo/sqm-scripts`
+
+2.) Change into the new directory:
+
+`cd ./sqm-scripts`
+
+3.) Create a directory containing the distribution files (PLATFORM is either linux or openwrt.):
+
+`make install PLATFORM=openwrt DESTDIR=./$your_distribution_directory_here`
+
+4.) Then just copy the contents of ./$your_distribution_directory_here onto the to be sqm'd computer. 
+
+`cd ./$your_distribution_directory_here`
+
+5.) Note for openwrt this will overwrite your specific /etc/config/sqm, so make sure to conserve your configuration file before. For openwrt this can be achieved by locally deleting the defaulf confg file in $your_distribution_directory_here first:
+
+`rm -r etc/config`
+
+6.) Now, update to the current state:
+
+`scp -r ./* $USER@YOUR.SQM.HOSTNAME:/`
