@@ -28,6 +28,7 @@ ipt_setup() {
     #Classify known interactive services in the NORMAL queue.
     ipt -t mangle -A QOS_RULES_${IFACE} -p tcp -m multiport \
     --dports 20,21,22,25,80,110,443,465,993,995 -j MARK --set-mark 0x02${IPT_MASK_STRING}
+    ipt -t mangle -A QOS_RULES_${IFACE} -p icmp -j MARK --set-mark 0x02${IPT_MASK_STRING}
     #Assign DNS and NTP to PRIORITY.
     ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m multiport \
     --dports 53,123 -j MARK --set-mark 0x01${IPT_MASK_STRING}
@@ -36,6 +37,52 @@ ipt_setup() {
     -j MARK --set-mark 0x03${IPT_MASK_STRING}
     ipt -t mangle -A QOS_RULES_${IFACE} -j CONNMARK \
     --save-mark --nfmask ${IPT_MASK} --ctmask ${IPT_MASK}
+
+    #DSCP Individual packet override.
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class EF \
+    -j MARK --set-mark 0x01${IPT_MASK_STRING}
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class AF41 \
+    -j MARK --set-mark 0x01${IPT_MASK_STRING}
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class AF42 \
+    -j MARK --set-mark 0x01${IPT_MASK_STRING}
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class AF43 \
+    -j MARK --set-mark 0x01${IPT_MASK_STRING}
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class CS6 \
+    -j MARK --set-mark 0x01${IPT_MASK_STRING}
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class CS5 \
+    -j MARK --set-mark 0x01${IPT_MASK_STRING}
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class CS4 \
+    -j MARK --set-mark 0x01${IPT_MASK_STRING}
+
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class AF31 \
+    -j MARK --set-mark 0x02${IPT_MASK_STRING}
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class AF32 \
+    -j MARK --set-mark 0x02${IPT_MASK_STRING}
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class AF33 \
+    -j MARK --set-mark 0x02${IPT_MASK_STRING}
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class AF21 \
+    -j MARK --set-mark 0x02${IPT_MASK_STRING}
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class AF22 \
+    -j MARK --set-mark 0x02${IPT_MASK_STRING}
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class AF23 \
+    -j MARK --set-mark 0x02${IPT_MASK_STRING}
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class CS3 \
+    -j MARK --set-mark 0x02${IPT_MASK_STRING}
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class CS2 \
+    -j MARK --set-mark 0x02${IPT_MASK_STRING}
+
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class AF11 \
+    -j MARK --set-mark 0x03${IPT_MASK_STRING}
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class AF12 \
+    -j MARK --set-mark 0x03${IPT_MASK_STRING}
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class AF13 \
+    -j MARK --set-mark 0x03${IPT_MASK_STRING}
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class CS1 \
+    -j MARK --set-mark 0x03${IPT_MASK_STRING}
+
+    #Reclass of large packets.
+    ipt -t mangle -A QOS_MARK_${IFACE} -m mark --mark 0x01${IPT_MASK_STRING} \
+    -m length --length 90:0xffff -j MARK --set-mark 0x02${IPT_MASK_STRING}
 }
 
 egress() {
@@ -107,8 +154,7 @@ ingress() {
     flow hash keys nfct-src,nfct-dst,nfct-proto,nfct-proto-src,nfct-proto-dst \
     divisor `get_flows_count ${DOWNLINK}`
 
-    
-    $IP link set dev ${DEV} up
+    ip link set dev ${DEV} up
 
     $TC filter add dev ${IFACE} parent ffff: protocol all prio 1 u32 \
     match u32 0 0 action mirred egress redirect dev ${DEV}
@@ -124,6 +170,8 @@ sqm_start() {
     eth_setup
     ipt_setup
 
+    [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
+
     if [ "${UPLINK}" -ne 0 ];
     then
         egress
@@ -134,7 +182,6 @@ sqm_start() {
     fi
     if [ "${DOWNLINK}" -ne 0 ];
     then
-	verify_qdisc ingress "ingress" || return 1
         ingress
         sqm_logger "ingress shaping activated"
     else
