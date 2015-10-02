@@ -12,6 +12,7 @@
 
 . /etc/sqm/sqm.conf
 . ${SQM_LIB_DIR}/functions.sh
+. ${SQM_LIB_DIR}/defaults.sh    #sm: this should allow debugging output for sqm_logger...
 STATE_FILE="${SQM_STATE_DIR}/${IFACE}.state"
 
 sqm_logger "${0}: Stopping ${IFACE}"
