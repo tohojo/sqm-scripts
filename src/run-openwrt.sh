@@ -59,6 +59,10 @@ run_sqm_scripts() {
     export QDISC=$(config_get "$section" qdisc)
     export SCRIPT=$(config_get "$section" script)
 
+
+    #sm: if SQM_DEBUG was passed in via the command line make it available to the other scripts
+    [ -z "$SQM_DEBUG" ] && export SQM_DEBUG
+
     #sm: only stop-sqm if there is something running
     CUR_STATE_FILE="${SQM_STATE_DIR}/${IFACE}.state"
     if [ -f "${CUR_STATE_FILE}" ]; then
