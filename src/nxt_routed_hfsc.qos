@@ -10,12 +10,12 @@
 . ${SQM_LIB_DIR}/defaults.sh
 
 #PRIORITY traffic is guaranteed 30% of the bandwidth and capped to max 30%.
-PRIO=$(( ${UPLINK} * 30 / 100 ))
+PRIO=$(( ${UPLINK} * 40 / 100 ))
 #NORMAL is given a link share target of 50% without guarantee resulting in
-#a 2.5:1 bandwidth allocation vs BULK which is given a target of 20%.
+#a 2:1 bandwidth allocation vs BULK which is given a target of 20%.
 #Starvation is avoided by capping the PRIORITY queue. HFSC corner cases are
 #mitigated by using the same LS+RT curve on PRIORITY.
-NORMAL=$(( ${UPLINK} * 50 / 100 ))
+NORMAL=$(( ${UPLINK} * 40 / 100 ))
 BULK=$(( ${UPLINK} * 20 / 100 ))
 
 #Maximum delay of a single packet transmit in the priority queue.
