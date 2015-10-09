@@ -42,11 +42,12 @@ ipt_setup() {
 
     #Classify known interactive services in the NORMAL queue.
     ipt -t mangle -A QOS_RULES_${IFACE} -p tcp -m multiport \
-    --dports 20,21,22,25,80,110,443,465,993,995 -j MARK --set-mark 0x02${IPT_MASK_STRING}
+    --ports ftp,ssh,http,https,smtp,smtps,pop3,pop3s,imap,imaps \
+    -j MARK --set-mark 0x02${IPT_MASK_STRING}
     ipt -t mangle -A QOS_RULES_${IFACE} -p icmp -j MARK --set-mark 0x02${IPT_MASK_STRING}
     #Assign DNS and NTP to PRIORITY.
     ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m multiport \
-    --dports 53,123 -j MARK --set-mark 0x01${IPT_MASK_STRING}
+    --ports domain,time,ntp -j MARK --set-mark 0x01${IPT_MASK_STRING}
     #Everything else is marked for BULK.
     ipt -t mangle -A QOS_RULES_${IFACE} -m mark --mark 0x00${IPT_MASK_STRING} \
     -j MARK --set-mark 0x03${IPT_MASK_STRING}
