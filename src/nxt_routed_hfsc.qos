@@ -9,6 +9,21 @@
 
 . ${SQM_LIB_DIR}/defaults.sh
 
+#PRIORITY traffic is guaranteed 30% of the bandwidth and capped to max 30%.
+PRIO=$(( ${UPLINK} * 30 / 100 ))
+#NORMAL is given a link share target of 50% without guarantee resulting in
+#a 2.5:1 bandwidth allocation vs BULK which is given a target of 20%.
+#Starvation is avoided by capping the PRIORITY queue. HFSC corner cases are
+#mitigated by using the same LS+RT curve on PRIORITY.
+NORMAL=$(( ${UPLINK} * 50 / 100 ))
+BULK=$(( ${UPLINK} * 20 / 100 ))
+
+#Maximum delay of a single packet transmit in the priority queue.
+#Value in 1/10th ms.
+MAX_PDELAY_PRIO=10
+#Derived maximum single packet size in the priority queue.
+MAX_PSIZE_PRIO=$(( ${PRIO} * ${MAX_PDELAY_PRIO} / 8 / 10 ))
+
 ipt_setup() {
     ipt -t mangle -F QOS_MARK_${IFACE}
     ipt -t mangle -X QOS_MARK_${IFACE}
@@ -82,19 +97,11 @@ ipt_setup() {
 
     #Reclass of large packets.
     ipt -t mangle -A QOS_MARK_${IFACE} -m mark --mark 0x01${IPT_MASK_STRING} \
-    -m length --length 90:0xffff -j MARK --set-mark 0x02${IPT_MASK_STRING}
+    -m length --length ${MAX_PSIZE_PRIO}:0xffff \
+    -j MARK --set-mark 0x02${IPT_MASK_STRING}
 }
 
 egress() {
-    #PRIORITY traffic is guaranteed 30% of the bandwidth and capped to max 30%.
-    PRIO=$(( ${UPLINK} * 30 / 100 ))
-    #NORMAL is given a link share target of 50% without guarantee resulting in
-    #a 2.5:1 bandwidth allocation vs BULK which is given a target of 20%.
-    #Starvation is avoided by capping the PRIORITY queue. HFSC corner cases are
-    #mitigated by using the same LS+RT curve on PRIORITY.
-    NORMAL=$(( ${UPLINK} * 50 / 100 ))
-    BULK=$(( ${UPLINK} * 20 / 100 ))
-
     $TC qdisc del dev ${IFACE} root 2> /dev/null
     $TC qdisc add dev ${IFACE} root handle 1: `get_stab_string` hfsc default 13
 
