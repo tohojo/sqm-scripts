@@ -111,7 +111,7 @@ egress() {
     $TC class add dev ${IFACE} parent 1:1 classid 1:11 hfsc sc rate ${PRIO}kbit \
     ul rate ${PRIO}kbit
     $TC class add dev ${IFACE} parent 1:1 classid 1:12 hfsc sc rate ${NORMAL}kbit
-    $TC class add dev ${IFACE} parent 1:1 classid 1:13 hfsc ls rate ${BULK}kbit
+    $TC class add dev ${IFACE} parent 1:1 classid 1:13 hfsc sc rate ${BULK}kbit
 
     $TC qdisc add dev ${IFACE} parent 1:11 handle 110: ${QDISC} \
     `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` \
