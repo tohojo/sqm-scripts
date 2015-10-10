@@ -108,8 +108,7 @@ egress() {
     $TC class add dev ${IFACE} parent 1: classid 1:1 hfsc sc rate ${UPLINK}kbit \
     ul rate ${UPLINK}kbit
 
-    $TC class add dev ${IFACE} parent 1:1 classid 1:11 hfsc sc rate ${PRIO}kbit \
-    ul rate ${PRIO}kbit
+    $TC class add dev ${IFACE} parent 1:1 classid 1:11 hfsc sc rate ${PRIO}kbit
     $TC class add dev ${IFACE} parent 1:1 classid 1:12 hfsc sc rate ${NORMAL}kbit
     $TC class add dev ${IFACE} parent 1:1 classid 1:13 hfsc sc rate ${BULK}kbit
 
