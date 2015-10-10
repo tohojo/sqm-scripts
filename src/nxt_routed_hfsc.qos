@@ -9,18 +9,16 @@
 
 . ${SQM_LIB_DIR}/defaults.sh
 
-#PRIORITY traffic is guaranteed 30% of the bandwidth and capped to max 30%.
+#PRIORITY traffic is guaranteed 40% of the bandwidth and capped to max 30%.
 PRIO=$(( ${UPLINK} * 40 / 100 ))
-#NORMAL is given a link share target of 50% without guarantee resulting in
+#NORMAL is given a link share target of 40% with guarantee resulting in
 #a 2:1 bandwidth allocation vs BULK which is given a target of 20%.
-#Starvation is avoided by capping the PRIORITY queue. HFSC corner cases are
-#mitigated by using the same LS+RT curve on PRIORITY.
 NORMAL=$(( ${UPLINK} * 40 / 100 ))
 BULK=$(( ${UPLINK} * 20 / 100 ))
 
 #Maximum delay of a single packet transmit in the priority queue.
-#Value in 1/10th ms.
-MAX_PDELAY_PRIO=10
+#Value in 1/10th ms. Default set to 0.9 ms.
+MAX_PDELAY_PRIO=9
 #Derived maximum single packet size in the priority queue.
 MAX_PSIZE_PRIO=$(( ${PRIO} * ${MAX_PDELAY_PRIO} / 8 / 10 ))
 
@@ -44,7 +42,8 @@ ipt_setup() {
     ipt -t mangle -A QOS_RULES_${IFACE} -p tcp -m multiport \
     --ports ftp,ssh,http,https,smtp,smtps,pop3,pop3s,imap,imaps \
     -j MARK --set-mark 0x02${IPT_MASK_STRING}
-    ipt -t mangle -A QOS_RULES_${IFACE} -p icmp -j MARK --set-mark 0x02${IPT_MASK_STRING}
+    ipt -t mangle -A QOS_RULES_${IFACE} -p icmp \
+    -j MARK --set-mark 0x02${IPT_MASK_STRING}
     #Assign DNS and NTP to PRIORITY.
     ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m multiport \
     --ports domain,time,ntp -j MARK --set-mark 0x01${IPT_MASK_STRING}
@@ -111,7 +110,7 @@ egress() {
 
     $TC class add dev ${IFACE} parent 1:1 classid 1:11 hfsc sc rate ${PRIO}kbit \
     ul rate ${PRIO}kbit
-    $TC class add dev ${IFACE} parent 1:1 classid 1:12 hfsc ls rate ${NORMAL}kbit
+    $TC class add dev ${IFACE} parent 1:1 classid 1:12 hfsc sc rate ${NORMAL}kbit
     $TC class add dev ${IFACE} parent 1:1 classid 1:13 hfsc ls rate ${BULK}kbit
 
     $TC qdisc add dev ${IFACE} parent 1:11 handle 110: ${QDISC} \
