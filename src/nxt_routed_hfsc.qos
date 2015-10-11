@@ -9,16 +9,16 @@
 
 . ${SQM_LIB_DIR}/defaults.sh
 
-#PRIORITY traffic is guaranteed 40% of the bandwidth and capped to max 30%.
-PRIO=$(( ${UPLINK} * 40 / 100 ))
-#NORMAL is given a link share target of 40% with guarantee resulting in
-#a 2:1 bandwidth allocation vs BULK which is given a target of 20%.
-NORMAL=$(( ${UPLINK} * 40 / 100 ))
+#PRIORITY traffic is guaranteed 30% of the bandwidth.
+PRIO=$(( ${UPLINK} * 30 / 100 ))
+#NORMAL is given a link share target of 50% with guarantee resulting in
+#a 2.5:1 bandwidth allocation vs BULK which is given a target of 20%.
+NORMAL=$(( ${UPLINK} * 50 / 100 ))
 BULK=$(( ${UPLINK} * 20 / 100 ))
 
 #Maximum delay of a single packet transmit in the priority queue.
-#Value in 1/10th ms. Default set to 0.9 ms.
-MAX_PDELAY_PRIO=9
+#Value in 1/10th ms. Default set to 1 ms.
+MAX_PDELAY_PRIO=10
 #Derived maximum single packet size in the priority queue.
 MAX_PSIZE_PRIO=$(( ${PRIO} * ${MAX_PDELAY_PRIO} / 8 / 10 ))
 
