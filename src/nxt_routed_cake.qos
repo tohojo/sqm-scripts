@@ -77,7 +77,7 @@ ipt_setup() {
 
 egress() {
     $TC qdisc del dev ${IFACE} root 2> /dev/null
-    $TC qdisc add dev ${IFACE} root $( get_stab_string ) cake \
+    $TC qdisc add dev ${IFACE} root $( get_stab_string ) ${QDISC} \
     bandwidth ${UPLINK}kbit \
     $( get_cake_lla_string ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
 }
@@ -87,7 +87,7 @@ ingress() {
     $TC qdisc add dev ${IFACE} handle ffff: ingress
 
     $TC qdisc del dev ${DEV} root 2> /dev/null
-    $TC qdisc add dev ${DEV} root $( get_stab_string ) cake \
+    $TC qdisc add dev ${DEV} root $( get_stab_string ) ${QDISC} \
     bandwidth ${DOWNLINK}kbit \
     $( get_cake_lla_string ) ${INGRESS_CAKE_OPTS} ${IQDISC_OPTS}
 
