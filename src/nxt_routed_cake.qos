@@ -12,7 +12,7 @@
 QDISC=cake
 EGRESS_CAKE_OPTS="diffserv4"
 INGRESS_CAKE_OPTS="besteffort"
-STREAM_BYTE_THRESHOLD=20000000
+STREAM_BYTE_THRESHOLD=10000000
 
 ipt_setup() {
     ipt -t mangle -F QOS_MARK_${IFACE}
@@ -28,29 +28,39 @@ ipt_setup() {
     ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class CS0 \
     -j QOS_RULES_${IFACE}
 
-    #Classify known interactive services as AF11.
-    ipt -t mangle -A QOS_RULES_${IFACE} -p tcp -m multiport \
-    --ports ftp,ssh,http,https,smtp,smtps,pop3,pop3s,imap,imaps \
-    -j DSCP --set-dscp-class AF11
+    #Everything is downgraded to CS1.
+    ipt -t mangle -A QOS_RULES_${IFACE} -m dscp --dscp-class CS0 \
+    -j DSCP --set-dscp-class CS1
 
-    ipt -t mangle -A QOS_RULES_${IFACE} -p icmp \
-    -j DSCP --set-dscp-class AF11
+    #Classify known interactive services as CS0.
+    ipt -t mangle -A QOS_RULES_${IFACE} -p tcp -m multiport \
+    --ports ftp,http,https,smtp,smtps,pop3,pop3s,imap,imaps \
+    -j DSCP --set-dscp-class CS0
+
+    ipt -t mangle -A QOS_RULES_${IFACE} -p icmp -j DSCP --set-dscp-class CS0
 
     #SSH traffic assigned to CS2.
     ipt -t mangle -A QOS_RULES_${IFACE} -p tcp -m multiport \
     --ports ssh -j DSCP --set-dscp-class CS2
 
-    #Reclass of streaming AF11 traffic to AF21.
+    #Reclass of streaming HTTP/HTTPS traffic to AF31.
     #Uses STREAM_BYTE_THRESHOLD as cutoff point.
-    ipt -t mangle -A QOS_RULES_${IFACE} -m dscp --dscp-class AF11 \
-    -m connbytes --connbytes ${STREAM_BYTE_THRESHOLD}: --connbytes-dir both \
-    --connbytes-mode bytes -j DSCP --set-dscp-class AF21
+    ipt -t mangle -A QOS_RULES_${IFACE} -p tcp -m multiport \
+    --ports http,https -m connbytes --connbytes ${STREAM_BYTE_THRESHOLD}: \
+    --connbytes-dir both --connbytes-mode bytes -j DSCP --set-dscp-class AF31
+
+    #Reclass of other streaming traffic to AF11.
+    #Uses STREAM_BYTE_THRESHOLD as cutoff point.
+    ipt -t mangle -A QOS_RULES_${IFACE} -p tcp -m multiport \
+    --ports ftp,ssh,smtp,smtps,pop3,pop3s,imap,imaps -m connbytes \
+    --connbytes ${STREAM_BYTE_THRESHOLD}: --connbytes-dir both \
+    --connbytes-mode bytes -j DSCP --set-dscp-class AF11
 
     #Assign DNS and NTP to EF.
     ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m multiport \
     --ports domain,time,ntp -j DSCP --set-dscp-class EF
 
-    #Rules for VOIP.
+    #Rules for VOIP/VideoConf.
     ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m multiport \
     --ports 3478:3497,5298,16384:16387,16393:16402,59437:59581 \
     -j DSCP --set-dscp-class EF
@@ -63,10 +73,6 @@ ipt_setup() {
     --ports sip,sip-tls -j DSCP --set-dscp-class CS5
     ipt -t mangle -A QOS_RULES_${IFACE} -p tcp -m multiport \
     --ports sip,sip-tls -j DSCP --set-dscp-class CS5
-
-    #Everything else is marked with CS1.
-    ipt -t mangle -A QOS_RULES_${IFACE} -m dscp --dscp-class CS0 \
-    -j DSCP --set-dscp-class CS1
 }
 
 egress() {
