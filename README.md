@@ -12,13 +12,17 @@ builds.
 
 ## "Installing" the current development version from git
 
-1.) Make a local clone of the git repository:
+0.) Make a local clone of the git repository (if you have not already):
 
 `git clone https://github.com/tohojo/sqm-scripts`
 
-2.) Change into the new directory:
+1.) Change into the new directory:
 
 `cd ./sqm-scripts`
+
+2.) Make sure the source is updated:
+
+`git pull`
 
 3.) Create a directory containing the distribution files (PLATFORM is either linux or openwrt.):
 
