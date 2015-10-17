@@ -12,7 +12,7 @@
 QDISC=cake
 EGRESS_CAKE_OPTS="diffserv4"
 INGRESS_CAKE_OPTS="besteffort"
-STREAM_BYTE_THRESHOLD=10000000
+STREAM_BYTE_THRESHOLD=20000000
 
 ipt_setup() {
     ipt -t mangle -F QOS_MARK_${IFACE}
@@ -49,6 +49,20 @@ ipt_setup() {
     #Assign DNS and NTP to EF.
     ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m multiport \
     --ports domain,time,ntp -j DSCP --set-dscp-class EF
+
+    #Rules for VOIP.
+    ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m multiport \
+    --ports 3478:3497,5298,16384:16387,16393:16402,59437:59581 \
+    -j DSCP --set-dscp-class EF
+    ipt -t mangle -A QOS_RULES_${IFACE} -p tcp -m multiport \
+    --ports 4244,5222,5223,5228,5242,5269,5298,8010 \
+    -j DSCP --set-dscp-class EF
+
+    #Rules for SIP.
+    ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m multiport \
+    --ports sip,sip-tls -j DSCP --set-dscp-class CS5
+    ipt -t mangle -A QOS_RULES_${IFACE} -p tcp -m multiport \
+    --ports sip,sip-tls -j DSCP --set-dscp-class CS5
 
     #Everything else is marked with CS1.
     ipt -t mangle -A QOS_RULES_${IFACE} -m dscp --dscp-class CS0 \
