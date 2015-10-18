@@ -29,17 +29,21 @@ ipt_setup() {
     ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class CS0 \
     -j QOS_RULES_${IFACE}
 
-    #SSH traffic assigned to CS2.
+    #Assign SSH to CS2.
     ipt -t mangle -A QOS_RULES_${IFACE} -p tcp -m multiport \
     --ports ssh -j DSCP --set-dscp-class CS2
 
-    #OpenVPN traffic to CS1.
+    #Assign OpenVPN to CS1.
     ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m multiport \
     --ports openvpn -j DSCP --set-dscp-class CS1
 
-    #Assign DNS and NTP to EF.
+    #Assign DNS to AF21.
     ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m multiport \
-    --ports domain,time,ntp -j DSCP --set-dscp-class EF
+    --ports domain -j DSCP --set-dscp-class AF21
+
+    #Assign NTP to EF.
+    ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m multiport \
+    --ports time,ntp -j DSCP --set-dscp-class EF
 
     #Reclass of TCP streaming traffic to AF31.
     #Uses TCP_STREAM_BYTE_THRESHOLD as cutoff point.
