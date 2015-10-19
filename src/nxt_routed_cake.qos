@@ -29,9 +29,9 @@ ipt_setup() {
     ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class CS0 \
     -j QOS_RULES_${IFACE}
 
-    #Assign SSH to CS2.
+    #Assign SSH to AF21.
     ipt -t mangle -A QOS_RULES_${IFACE} -p tcp -m multiport \
-    --ports ssh -j DSCP --set-dscp-class CS2
+    --ports ssh -j DSCP --set-dscp-class AF21
 
     #Assign OpenVPN to CS1.
     ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m multiport \
