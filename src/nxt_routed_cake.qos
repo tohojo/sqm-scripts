@@ -51,11 +51,11 @@ ipt_setup() {
     -m connbytes --connbytes ${TCP_STREAM_PKT_THRESHOLD}: \
     --connbytes-dir both --connbytes-mode packets -j DSCP --set-dscp-class AF31
 
-    #Reclass of UDP streaming traffic to AF41.
+    #Reclass of UDP streaming traffic to EF.
     #Uses UDP_STREAM_PKT_THRESHOLD as cutoff point.
     ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m dscp --dscp-class CS0 \
     -m connbytes --connbytes ${UDP_STREAM_PKT_THRESHOLD}: \
-    --connbytes-dir both --connbytes-mode packets -j DSCP --set-dscp-class AF41
+    --connbytes-dir both --connbytes-mode packets -j DSCP --set-dscp-class EF
 }
 
 egress() {
