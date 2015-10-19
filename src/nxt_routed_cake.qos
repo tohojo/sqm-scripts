@@ -12,8 +12,8 @@
 QDISC=cake
 EGRESS_CAKE_OPTS="diffserv4"
 INGRESS_CAKE_OPTS="besteffort"
-TCP_STREAM_BYTE_THRESHOLD=1000000
-UDP_STREAM_BYTE_THRESHOLD=5000
+TCP_STREAM_PKT_THRESHOLD=500
+UDP_STREAM_PKT_THRESHOLD=10
 
 ipt_setup() {
     ipt -t mangle -F QOS_MARK_${IFACE}
@@ -37,25 +37,25 @@ ipt_setup() {
     ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m multiport \
     --ports openvpn -j DSCP --set-dscp-class CS1
 
-    #Assign DNS to AF21.
+    #Assign DNS to EF.
     ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m multiport \
-    --ports domain -j DSCP --set-dscp-class AF21
+    --ports domain -j DSCP --set-dscp-class EF
 
     #Assign NTP to EF.
     ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m multiport \
     --ports time,ntp -j DSCP --set-dscp-class EF
 
     #Reclass of TCP streaming traffic to AF31.
-    #Uses TCP_STREAM_BYTE_THRESHOLD as cutoff point.
+    #Uses TCP_STREAM_PKT_THRESHOLD as cutoff point.
     ipt -t mangle -A QOS_RULES_${IFACE} -p tcp -m dscp --dscp-class CS0 \
-    -m connbytes --connbytes ${TCP_STREAM_BYTE_THRESHOLD}: \
-    --connbytes-dir both --connbytes-mode bytes -j DSCP --set-dscp-class AF31
+    -m connbytes --connbytes ${TCP_STREAM_PKT_THRESHOLD}: \
+    --connbytes-dir both --connbytes-mode packets -j DSCP --set-dscp-class AF31
 
-    #Reclass of UDP streaming traffic to EF.
-    #Uses UDP_STREAM_BYTE_THRESHOLD as cutoff point.
+    #Reclass of UDP streaming traffic to AF41.
+    #Uses UDP_STREAM_PKT_THRESHOLD as cutoff point.
     ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m dscp --dscp-class CS0 \
-    -m connbytes --connbytes ${UDP_STREAM_BYTE_THRESHOLD}: \
-    --connbytes-dir both --connbytes-mode bytes -j DSCP --set-dscp-class EF
+    -m connbytes --connbytes ${UDP_STREAM_PKT_THRESHOLD}: \
+    --connbytes-dir both --connbytes-mode packets -j DSCP --set-dscp-class AF41
 }
 
 egress() {
