@@ -37,9 +37,9 @@ ipt_setup() {
     ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m multiport \
     --ports openvpn -j DSCP --set-dscp-class CS1
 
-    #Assign DNS to EF.
+    #Assign DNS to AF21.
     ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m multiport \
-    --ports domain -j DSCP --set-dscp-class EF
+    --ports domain -j DSCP --set-dscp-class AF21
 
     #Assign NTP to EF.
     ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m multiport \
