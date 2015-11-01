@@ -26,11 +26,6 @@ ipt_setup() {
 
     ipt -t mangle -A POSTROUTING -o ${IFACE} -g QOS_MARK_${IFACE}
 
-    ipt -t mangle -A QOS_MARK_${IFACE} -m mark --mark 0x00${IPT_MASK_STRING} \
-    -j CONNMARK --restore-mark --nfmask ${IPT_MASK} --ctmask ${IPT_MASK}
-    ipt -t mangle -A QOS_MARK_${IFACE} -m mark ! --mark 0x00${IPT_MASK_STRING} \
-    -j CONNMARK --save-mark --nfmask ${IPT_MASK} --ctmask ${IPT_MASK}
-
     ipt -t mangle -A QOS_MARK_${IFACE} -m mark --mark 0x01${IPT_MASK_STRING} \
     -j DSCP --set-dscp-class EF
     ipt -t mangle -A QOS_MARK_${IFACE} -m mark --mark 0x02${IPT_MASK_STRING} \
