@@ -436,7 +436,7 @@ get_target() {
 adapt_target_to_slow_link() {
     CUR_LINK_KBPS=$1
     CUR_EXTENDED_TARGET_US=
-    MAX_PAKET_DELAY_IN_US_AT_1KBPS=$(( 1000 * 1000 *1540 * 8 / 1000 ))
+    MAX_PAKET_DELAY_IN_US_AT_1KBPS=$(( 1000 * 1000 * 33 * 53 * 8 / 1000 ))	# for ATM the worst case expansion including overhead seems to be 33 clls of 53 bytes each
     CUR_EXTENDED_TARGET_US=$(( ${MAX_PAKET_DELAY_IN_US_AT_1KBPS} / ${CUR_LINK_KBPS} ))    # note this truncates the decimals
     # do not change anything for fast links
     [ "$CUR_EXTENDED_TARGET_US" -lt 5000 ] && CUR_EXTENDED_TARGET_US=5000
@@ -453,7 +453,7 @@ adapt_interval_to_slow_link() {
     CUR_TARGET_US=$1
     case ${QDISC} in
         *codel)
-            CUR_EXTENDED_INTERVAL_US=$(( (100 - 5) * 1000 + ${CUR_TARGET_US} ))
+            CUR_EXTENDED_INTERVAL_US=$(( (100 - 5) * 1000 + ${CUR_TARGET_US} ))	# Note this is not following codel theory to well as target should be 5-10% of interval and the simple addition does not conserve that relationship
             echo "interval ${CUR_EXTENDED_INTERVAL_US}us"
             ;;
         pie)
