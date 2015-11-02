@@ -67,9 +67,9 @@ for _, iface in ipairs(ifaces) do
 --     if iface:is_up() then
 --	n:value(iface:name())
 --     end
-	if iface ~= "lo" then 
-		n:value(iface) 
-	end
+   if not (iface == "lo" or iface:match("^ifb.*")) then
+      n:value(iface)
+   end
 end
 n.rmempty = false
 
