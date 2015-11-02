@@ -18,7 +18,7 @@ function index()
 	if not nixio.fs.access("/etc/config/sqm") then
 		return
 	end
-	
+
 	local page
 
 	page = entry({"admin", "network", "sqm"}, cbi("sqm"), _("SQM QoS"))

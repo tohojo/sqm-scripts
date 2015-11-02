@@ -24,10 +24,10 @@ local run_path = "/tmp/run/sqm/available_qdiscs"
 
 m = Map("sqm", translate("Smart Queue Management"),
 	translate("With <abbr title=\"Smart Queue Management\">SQM</abbr> you " ..
-		"can enable traffic shaping, better mixing (Fair Queueing)," ..
-		" active queue length management (AQM) " ..
-		" and prioritisation on one " ..
-		"network interface."))
+                  "can enable traffic shaping, better mixing (Fair Queueing)," ..
+                  " active queue length management (AQM) " ..
+                  " and prioritisation on one " ..
+                  "network interface."))
 
 s = m:section(TypedSection, "queue", translate("Queues"))
 s:tab("tab_basic", translate("Basic Settings"))
@@ -49,27 +49,20 @@ e.rmempty = false
 --     the implementation was inpired/lifted from 
 --     https://github.com/openwrt/luci/blob/master/applications/luci-app-minidlna/luasrc/model/cbi/minidlna.lua
 function e.write(self, section, value)
-    if value == "1" then
-	luci.sys.init.enable("sqm")
-	m.message = translate("The SQM GUI has just enabled the sqm initscript on your behalf. Remember to disable the sqm initscript manually under System Startup menu in case this change was not wished for.")
---	luci.sys.call("/etc/init.d/sqm start >/dev/null")
---    else
---	luci.sys.call("/etc/init.d/sqm stop >/dev/null")
---	luci.sys.init.disable("sqm")
-    end
-    return Flag.write(self, section, value)
+	if value == "1" then
+		luci.sys.init.enable("sqm")
+		m.message = translate("The SQM GUI has just enabled the sqm initscript on your behalf. Remember to disable the sqm initscript manually under System Startup menu in case this change was not wished for.")
+	end
+	return Flag.write(self, section, value)
 end
 -- TODO: inform the user what we just did...
 
 n = s:taboption("tab_basic", ListValue, "interface", translate("Interface name"))
 -- sm lifted from luci-app-wol, the original implementation failed to show pppoe-ge00 type interface names
 for _, iface in ipairs(ifaces) do
---     if iface:is_up() then
---	n:value(iface:name())
---     end
-   if not (iface == "lo" or iface:match("^ifb.*")) then
-      n:value(iface)
-   end
+	if not (iface == "lo" or iface:match("^ifb.*")) then
+		n:value(iface)
+	end
 end
 n.rmempty = false
 
@@ -89,9 +82,9 @@ c = s:taboption("tab_qdisc", ListValue, "qdisc", translate("Queuing disciplines 
 c:value("fq_codel", "fq_codel ("..translate("default")..")")
 
 if fs.stat(run_path) then
-  for file in fs.dir(run_path) do
-    c:value( file )
-  end
+	for file in fs.dir(run_path) do
+		c:value( file )
+	end
 end
 c.default = "fq_codel"
 c.rmempty = false
@@ -101,13 +94,13 @@ c.rmempty = false
 local qos_desc = ""
 sc = s:taboption("tab_qdisc", ListValue, "script", translate("Queue setup script"))
 for file in fs.dir(path) do
-  if string.find(file, ".qos$") then
-    sc:value(file)
-  end
-  if string.find(file, ".qos.help$") then
-    fh = io.open(path .. "/" .. file, "r")
-    qos_desc = qos_desc .. "<p><b>" .. file:gsub(".help$", "") .. ":</b><br />" .. fh:read("*a") .. "</p>"
-  end
+	if string.find(file, ".qos$") then
+		sc:value(file)
+	end
+	if string.find(file, ".qos.help$") then
+		fh = io.open(path .. "/" .. file, "r")
+		qos_desc = qos_desc .. "<p><b>" .. file:gsub(".help$", "") .. ":</b><br />" .. fh:read("*a") .. "</p>"
+	end
 end
 sc.default = "simple.qos"
 sc.rmempty = false
@@ -189,7 +182,6 @@ ll = s:taboption("tab_linklayer", ListValue, "linklayer", translate("Which link 
 ll:value("none", "none ("..translate("default")..")")
 ll:value("ethernet", "Ethernet with overhead: select for e.g. VDSL2.")
 ll:value("atm", "ATM: select for e.g. ADSL1, ADSL2, ADSL2+.")
--- ll:value("adsl")	-- reduce the options
 ll.default = "none"
 
 po = s:taboption("tab_linklayer", Value, "overhead", translate("Per Packet Overhead (byte):"))
@@ -198,14 +190,12 @@ po.default = 0
 po.isnumber = true
 po.rmempty = true
 po:depends("linklayer", "ethernet")
--- po:depends("linklayer", "adsl")
 po:depends("linklayer", "atm")
 
 
 adll = s:taboption("tab_linklayer", Flag, "linklayer_advanced", translate("Show Advanced Linklayer Options, (only needed if MTU > 1500). Advanced options will only be used as long as this box is checked."))
 adll.rmempty = true
 adll:depends("linklayer", "ethernet")
--- adll:depends("linklayer", "adsl")
 adll:depends("linklayer", "atm")
 
 smtu = s:taboption("tab_linklayer", Value, "tcMTU", translate("Maximal Size for size and rate calculations, tcMTU (byte); needs to be >= interface MTU + overhead:"))
