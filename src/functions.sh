@@ -19,20 +19,40 @@ sqm_logger() {
 ipt() {
     d=$(echo $* | sed s/-A/-D/g)
     [ "$d" != "$*" ] && {
-	[ "${SQM_DEBUG}" == 1 ] && echo "iptables arguments: ${d}" >> ${SQM_DEBUG_LOG}
+	[ "${SQM_DEBUG}" == 1 ] && echo "iptables ${d}" >> ${SQM_DEBUG_LOG}
         iptables $d >> ${OUTPUT_TARGET} 2>&1
+	[ "${SQM_DEBUG}" == 1 ] && echo "ip6tables ${d}" >> ${SQM_DEBUG_LOG}
         ip6tables $d >> ${OUTPUT_TARGET} 2>&1
     }
     d=$(echo $* | sed s/-I/-D/g)
     [ "$d" != "$*" ] && {
-	[ "${SQM_DEBUG}" == 1 ] && echo "iptables arguments: ${d}" >> ${SQM_DEBUG_LOG}
+	[ "${SQM_DEBUG}" == 1 ] && echo "iptables ${d}" >> ${SQM_DEBUG_LOG}
         iptables $d >> ${OUTPUT_TARGET} 2>&1
+	[ "${SQM_DEBUG}" == 1 ] && echo "ip6tables ${d}" >> ${SQM_DEBUG_LOG}
         ip6tables $d >> ${OUTPUT_TARGET} 2>&1
     }
-    [ "${SQM_DEBUG}" == 1 ] && echo "iptables arguments: $*" >> ${SQM_DEBUG_LOG}
+    [ "${SQM_DEBUG}" == 1 ] && echo "iptables $*" >> ${SQM_DEBUG_LOG}
     iptables $* >> ${OUTPUT_TARGET} 2>&1
+    [ "${SQM_DEBUG}" == 1 ] && echo "ip6tables ${d}" >> ${SQM_DEBUG_LOG}
     ip6tables $* >> ${OUTPUT_TARGET} 2>&1
 }
+
+#sm: wrapper to call tc to allow debug logging 
+tc_wrapper() {
+    tc_args=$*
+#    sqm_logger "$tc_args"
+    [ "${SQM_DEBUG}" == 1 ] && echo "${TC_BINARY} $*" >> ${SQM_DEBUG_LOG}
+    ${TC_BINARY} $* >> ${OUTPUT_TARGET} 2>&1
+}
+
+#sm: wrapper to call tc to allow debug logging 
+ip_wrapper() {
+    ip_args=$*
+#    sqm_logger "$ip_args"
+    [ "${SQM_DEBUG}" == 1 ] && echo "${IP_BINARY} $*" >> ${SQM_DEBUG_LOG}
+    ${IP_BINARY} $* >> ${OUTPUT_TARGET} 2>&1
+}
+
 
 do_modules() {
     for m in $ALL_MODULES; do
@@ -59,20 +79,20 @@ write_state_file() {
 # find the ifb device associated with a specific interface, return nothing of no ifb is associated with IF
 get_ifb_associated_with_if() {
     local CUR_IF=$1
-    # CUR_IFB=$( tc -p filter show parent ffff: dev ${CUR_IF} | grep -o -e ifb'[[:digit:]]\+' )
-    #local CUR_IFB=$( tc -p filter show parent ffff: dev ${CUR_IF} | grep -o -e ifb'[^)]\+' )    # my editor's syntax coloration is limitied so I need a single quote in this line (between eiditor and s)
-    local CUR_IFB=$( tc -p filter show parent ffff: dev ${CUR_IF} | grep -o -E ifb'[^)\ ]+' )    # my editor's syntax coloration is limitied so I need a single quote in this line (between eiditor and s)
+    # CUR_IFB=$( $TC -p filter show parent ffff: dev ${CUR_IF} | grep -o -e ifb'[[:digit:]]\+' )
+    #local CUR_IFB=$( $TC -p filter show parent ffff: dev ${CUR_IF} | grep -o -e ifb'[^)]\+' )    # my editor's syntax coloration is limitied so I need a single quote in this line (between eiditor and s)
+    local CUR_IFB=$( $TC -p filter show parent ffff: dev ${CUR_IF} | grep -o -E ifb'[^)\ ]+' )    # my editor's syntax coloration is limitied so I need a single quote in this line (between eiditor and s)
     sqm_logger "ifb associated with interface ${CUR_IF}: ${CUR_IFB}"
     #sm: we could not detect an associated IFB for CUR_IF
     if [ -z "${CUR_IFB}" ]; 
     then
-	local TMP=$( tc -p filter show parent ffff: dev ${CUR_IF} )
+	local TMP=$( $TC -p filter show parent ffff: dev ${CUR_IF} )
 	if [ ! -z "${TMP}" ];
 	then
 	    #sm: oops, there is output but we failed to properly parse it? Ask for a user report
 	    sqm_logger "#---- CUT HERE ----#"
 	    sqm_logger "get_ifb_associated_with_if failed to extrect the ifb name from:"
-	    sqm_logger $( tc -p filter show parent ffff: dev ${CUR_IF} )
+	    sqm_logger $( $TC_BINARY -p filter show parent ffff: dev ${CUR_IF} )
 	    sqm_logger "Please report this as an issue at https://github.com/tohojo/sqm-scripts"
 	    sqm_logger "Please copy and paste everything below the cut-here line into your issue report, thanks."
 	else
@@ -160,7 +180,7 @@ verify_qdisc() {
 	ingress) root_string="" ;;
     esac
 
-    $TC qdisc replace dev $ifb $root_string $qdisc >>${OUTPUT_TARGET} 2>&1
+    $TC qdisc replace dev $ifb $root_string $qdisc #>>${OUTPUT_TARGET} 2>&1
     res=$?
     [ "$res" = "0" ] || not="NOT "
     sqm_logger "QDISC $qdisc is ${not}useable."
@@ -209,9 +229,9 @@ get_cake_lla_string() {
 
 
 sqm_stop() {
-    $TC qdisc del dev $IFACE ingress 2>> ${OUTPUT_TARGET}
-    $TC qdisc del dev $IFACE root 2>> ${OUTPUT_TARGET}
-    [ -n "$CUR_IFB" ] && $TC qdisc del dev $CUR_IFB root 2>> ${OUTPUT_TARGET}
+    $TC qdisc del dev $IFACE ingress #2>> ${OUTPUT_TARGET}
+    $TC qdisc del dev $IFACE root #2>> ${OUTPUT_TARGET}
+    [ -n "$CUR_IFB" ] && $TC qdisc del dev $CUR_IFB root #2>> ${OUTPUT_TARGET}
     [ -n "$CUR_IFB" ] && sqm_logger "${0}: ${CUR_IFB} shaper deleted"
 
     [ -n "$CUR_IFB" ] && ipt -t mangle -D POSTROUTING -o $CUR_IFB -m mark --mark 0x00 -g QOS_MARK_${IFACE}
