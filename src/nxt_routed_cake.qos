@@ -12,17 +12,11 @@
 QDISC=cake
 EGRESS_CAKE_OPTS="diffserv4"
 INGRESS_CAKE_OPTS="squash"
-TCP_STREAM_PKT_THRESHOLD=500
-UDP_STREAM_PKT_THRESHOLD=10
 
 ipt_setup() {
     ipt -t mangle -F QOS_MARK_${IFACE}
     ipt -t mangle -X QOS_MARK_${IFACE}
     ipt -t mangle -N QOS_MARK_${IFACE}
-
-    ipt -t mangle -F QOS_RULES_${IFACE}
-    ipt -t mangle -X QOS_RULES_${IFACE}
-    ipt -t mangle -N QOS_RULES_${IFACE}
 
     ipt -t mangle -A POSTROUTING -o ${IFACE} -g QOS_MARK_${IFACE}
 
@@ -34,33 +28,6 @@ ipt_setup() {
     -j DSCP --set-dscp-class AF11
     ipt -t mangle -A QOS_MARK_${IFACE} -m mark --mark 0x04${IPT_MASK_STRING} \
     -j DSCP --set-dscp-class CS1
-
-    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class CS0 \
-    -j QOS_RULES_${IFACE}
-
-    #Assign SSH to AF21.
-    ipt -t mangle -A QOS_RULES_${IFACE} -p tcp -m multiport \
-    --ports ssh -j DSCP --set-dscp-class AF21
-
-    #Assign DNS to AF21.
-    ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m multiport \
-    --ports domain -j DSCP --set-dscp-class AF21
-
-    #Assign NTP to EF.
-    ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m multiport \
-    --ports time,ntp -j DSCP --set-dscp-class EF
-
-    #Reclass of TCP streaming traffic to AF31.
-    #Uses TCP_STREAM_PKT_THRESHOLD as cutoff point.
-    ipt -t mangle -A QOS_RULES_${IFACE} -p tcp -m dscp --dscp-class CS0 \
-    -m connbytes --connbytes ${TCP_STREAM_PKT_THRESHOLD}: \
-    --connbytes-dir both --connbytes-mode packets -j DSCP --set-dscp-class AF31
-
-    #Reclass of UDP streaming traffic to EF.
-    #Uses UDP_STREAM_PKT_THRESHOLD as cutoff point.
-    ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m dscp --dscp-class CS0 \
-    -m connbytes --connbytes ${UDP_STREAM_PKT_THRESHOLD}: \
-    --connbytes-dir both --connbytes-mode packets -j DSCP --set-dscp-class EF
 }
 
 egress() {
