@@ -19,7 +19,6 @@ start()
 
 stop()
 {
-<<<<<<< HEAD
     /usr/lib/sqm/run.sh stop
 }
 
@@ -29,7 +28,3 @@ boot()
     logger -t SQM -s "sqm-scripts do nothing at boot, waiting for hotplug events."
     return 0
 }
-=======
-/usr/lib/sqm/run.sh stop
-}
->>>>>>> parent of 85bfc4c... Don't run at boot on openwrt.
