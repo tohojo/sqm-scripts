@@ -93,8 +93,6 @@ sqm_stop() {
     ipt -t mangle -D POSTROUTING -o ${IFACE} -g QOS_MARK_${IFACE}
     ipt -t mangle -F QOS_MARK_${IFACE}
     ipt -t mangle -X QOS_MARK_${IFACE}
-    ipt -t mangle -F QOS_RULES_${IFACE}
-    ipt -t mangle -X QOS_RULES_${IFACE}
 
     [ -n "$CUR_IFB" ] && $IP link set dev ${CUR_IFB} down
     [ -n "$CUR_IFB" ] && $IP link delete ${CUR_IFB} type ifb
