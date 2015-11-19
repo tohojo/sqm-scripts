@@ -10,7 +10,7 @@
 . ${SQM_LIB_DIR}/defaults.sh
 
 QDISC=cake
-EGRESS_CAKE_OPTS="squash diffserv4"
+EGRESS_CAKE_OPTS="wash diffserv4"
 INGRESS_CAKE_OPTS="squash"
 
 ipt_setup() {
