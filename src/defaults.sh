@@ -38,6 +38,7 @@
 [ -z "$EGRESS_CAKE_OPTS" ] && EGRESS_CAKE_OPTS="diffserv4"
 
 #sm: allow more verbose logging?
+[ -z "$SQM_VERBOSITY" ] && SQM_VERBOSITY=1	#0: none, 1: normal, 2: verbose, 11: too much
 [ -z "$SQM_DEBUG" ] && SQM_DEBUG=0
 if [ "$SQM_DEBUG" == 1 ] 
 then
