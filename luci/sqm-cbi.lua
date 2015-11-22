@@ -75,6 +75,21 @@ ul = s:taboption("tab_basic", Value, "upload", translate("Upload speed (kbit/s) 
 ul.datatype = "and(uinteger,min(0))"
 ul.rmempty = false
 
+dbl = s:taboption("tab_basic", Flag, "debug_logging", translate("Create log file for this SQM instance under /var/run/sqm/${Inerface_name}.debug.log. Make sure to delete log files manually."))
+dbl.rmempty = false
+
+
+verb = s:taboption("tab_basic", ListValue, "verbosity", translate("Verbosity of SQM's output into the system log."))
+verb:value("0", "none")
+verb:value("1", "normal ("..translate("default")..")")
+verb:value("2", "verbose")
+verb:value("11", "too much")
+verb.default = "1"
+verb.rmempty = true
+
+
+
+
 -- QDISC
 
 local val_qdisc_name = ""
