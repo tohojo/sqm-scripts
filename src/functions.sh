@@ -42,7 +42,7 @@ ipt() {
 #sm: wrapper to call tc to allow debug logging 
 tc_wrapper() {
     tc_args=$*
-#    sqm_logger "$tc_args"
+    [ "$SQM_VERBOSITY" -gt "$VERBOSITY_VERBOSE" ] && sqm_logger "tc arguments: $tc_args"
     [ "${SQM_DEBUG}" == 1 ] && echo "${TC_BINARY} $*" >> ${SQM_DEBUG_LOG}
     ${TC_BINARY} $* >> ${OUTPUT_TARGET} 2>&1
 }
@@ -50,7 +50,7 @@ tc_wrapper() {
 #sm: wrapper to call tc to allow debug logging 
 ip_wrapper() {
     ip_args=$*
-#    sqm_logger "$ip_args"
+    [ "$SQM_VERBOSITY" -gt "$VERBOSITY_VERBOSE" ] && sqm_logger "ip arguments: $ip_args"
     [ "${SQM_DEBUG}" == 1 ] && echo "${IP_BINARY} $*" >> ${SQM_DEBUG_LOG}
     ${IP_BINARY} $* >> ${OUTPUT_TARGET} 2>&1
 }
@@ -58,7 +58,7 @@ ip_wrapper() {
 
 do_modules() {
     for m in $ALL_MODULES; do
-        ${INSMOD} $m 2>>${OUTPUT_TARGET}
+        [ -d /sys/modules/${m} ] && ${INSMOD} $m 2>>${OUTPUT_TARGET}
     done
 }
 
@@ -74,17 +74,13 @@ write_state_file() {
 }
 
 
-#sqm_logger "${0} IPT_MASK: ${IPT_MASK_STRING}"
-
-
-
 # find the ifb device associated with a specific interface, return nothing of no ifb is associated with IF
 get_ifb_associated_with_if() {
     local CUR_IF=$1
     # CUR_IFB=$( $TC -p filter show parent ffff: dev ${CUR_IF} | grep -o -e ifb'[[:digit:]]\+' )
     #local CUR_IFB=$( $TC -p filter show parent ffff: dev ${CUR_IF} | grep -o -e ifb'[^)]\+' )    # my editor's syntax coloration is limitied so I need a single quote in this line (between eiditor and s)
     local CUR_IFB=$( $TC -p filter show parent ffff: dev ${CUR_IF} | grep -o -E ifb'[^)\ ]+' )    # my editor's syntax coloration is limitied so I need a single quote in this line (between eiditor and s)
-    sqm_logger "ifb associated with interface ${CUR_IF}: ${CUR_IFB}"
+    [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "ifb associated with interface ${CUR_IF}: ${CUR_IFB}"
     #sm: we could not detect an associated IFB for CUR_IF
     if [ -z "${CUR_IFB}" ]; 
     then
@@ -98,10 +94,9 @@ get_ifb_associated_with_if() {
 	    sqm_logger "Please report this as an issue at https://github.com/tohojo/sqm-scripts"
 	    sqm_logger "Please copy and paste everything below the cut-here line into your issue report, thanks."
 	else
-	    sqm_logger "Currently no ifb is associated with ${CUR_IF}, this is normal during starting of the sqm system."
+	    [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "Currently no ifb is associated with ${CUR_IF}, this is normal during starting of the sqm system."
 	fi
     fi
-    
     echo ${CUR_IFB}
 }
 
@@ -133,7 +128,7 @@ create_new_ifb_for_if() {
 #sm TODO: report failures
 create_ifb() {
     local CUR_IFB=${1}
-    $IP link add name ${CUR_IFB} type ifb #>/dev/null 2>&1    # better be verbose
+    $IP link add name ${CUR_IFB} type ifb
     ret=$?
     return $?
 }
@@ -198,7 +193,7 @@ get_htb_adsll_string() {
         # HTB defaults to MTU 1600 and an implicit fixed TSIZE of 256, but HTB as of around 3.10.0
         # does not actually use a table in the kernel
         ADSLL="mpu ${STAB_MPU} linklayer ${LINKLAYER} overhead ${OVERHEAD} mtu ${STAB_MTU}"
-        sqm_logger "ADSLL: ${ADSLL}"
+        [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "ADSLL: ${ADSLL}"
     fi
     echo ${ADSLL}
 }
@@ -208,7 +203,7 @@ get_stab_string() {
     if [ "${LLAM}" = "tc_stab" -a "$LINKLAYER" != "none" ];
     then
         STABSTRING="stab mtu ${STAB_MTU} tsize ${STAB_TSIZE} mpu ${STAB_MPU} overhead ${OVERHEAD} linklayer ${LINKLAYER}"
-        sqm_logger "STAB: ${STABSTRING}"
+        [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "STAB: ${STABSTRING}"
     fi
     echo ${STABSTRING}
 }
@@ -224,7 +219,7 @@ get_cake_lla_string() {
         fi
 
         STABSTRING="${STABSTRING} overhead ${OVERHEAD}"
-        sqm_logger "cake link layer adjustments: ${STABSTRING}"
+        [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "cake link layer adjustments: ${STABSTRING}"
     fi
     echo ${STABSTRING}
 }
@@ -234,7 +229,7 @@ sqm_stop() {
     $TC qdisc del dev $IFACE ingress #2>> ${OUTPUT_TARGET}
     $TC qdisc del dev $IFACE root #2>> ${OUTPUT_TARGET}
     [ -n "$CUR_IFB" ] && $TC qdisc del dev $CUR_IFB root #2>> ${OUTPUT_TARGET}
-    [ -n "$CUR_IFB" ] && sqm_logger "${0}: ${CUR_IFB} shaper deleted"
+    [ -n "$CUR_IFB" -a "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "${0}: ${CUR_IFB} shaper deleted"
 
     [ -n "$CUR_IFB" ] && ipt -t mangle -D POSTROUTING -o $CUR_IFB -m mark --mark 0x00 -g QOS_MARK_${IFACE}
     ipt -t mangle -D POSTROUTING -o $IFACE -m mark --mark 0x00${IPT_MASK_STRING} -g QOS_MARK_${IFACE}
@@ -321,7 +316,7 @@ get_htb_quantum() {
         CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
     fi
 
-    #sqm_logger "CUR_HTB_QUANTUM: ${CUR_QUANTUM}, BANDWIDTH: ${BANDWIDTH}"
+    [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "CUR_HTB_QUANTUM: ${CUR_QUANTUM}, BANDWIDTH: ${BANDWIDTH}"
 
     echo $CUR_QUANTUM
 }
@@ -331,7 +326,7 @@ get_htb_quantum() {
 # but I fear we actually need the wire size of the whole thing not so much the MTU
 get_mtu() {
     CUR_MTU=$(cat /sys/class/net/$1/mtu)
-    #sqm_logger "IFACE: ${1} MTU: ${CUR_MTU}"
+    [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "IFACE: ${1} MTU: ${CUR_MTU}"
     echo ${CUR_MTU}
 }
 
@@ -407,7 +402,7 @@ get_target() {
                     TMP_INTERVAL_STRING=$( adapt_interval_to_slow_link $TMP_TARGET_US )
                     CUR_TARGET_STRING="target ${TMP_TARGET_US}us ${TMP_INTERVAL_STRING}"
                     AUTO_TARGET="1"
-                    sqm_logger "get_target defaulting to auto."
+                    [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "get_target defaulting to auto."
                 else
                     sqm_logger "required link bandwidth in kbps not passed to get_target()."
                 fi
@@ -433,7 +428,7 @@ get_target() {
                     then
                         CUR_TARGET_STRING=""    # return nothing so the default target is not over-ridden...
                         AUTO_TARGET="1"
-                        #sqm_logger "get_target using qdisc default, no explicit target string passed."
+                        [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "get_target using qdisc default, no explicit target string passed."
                     else
                         sqm_logger "required link bandwidth in kbps not passed to get_target()."
                     fi
@@ -507,7 +502,7 @@ get_limit() {
         *) sqm_logger "${QDISC} does not support a limit"
            ;;
     esac
-    sqm_logger "get_limit: $1 CURLIMIT: ${CURLIMIT}"
+    [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "get_limit: $1 CURLIMIT: ${CURLIMIT}"
 
     if [ ! -z "$CURLIMIT" ]
     then
@@ -543,7 +538,7 @@ get_ecn() {
             sqm_logger "ecn value $1 not handled"
             ;;
     esac
-    #sqm_logger "get_ECN: $1 CURECN: ${CURECN} IECN: ${IECN} EECN: ${EECN}"
+    [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "get_ECN: $1 CURECN: ${CURECN} IECN: ${IECN} EECN: ${EECN}"
     echo ${CURECN}
 
 }
