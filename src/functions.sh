@@ -4,15 +4,17 @@
 #
 #       Copyright (C) 2012-4 Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller
 
-#improve the logread output
+#improve the logread output, but allow silencing it, if verbosity is set to 0
 sqm_logger() {
-    if [ "$SQM_SYSLOG" -eq "1" ]; then
-        logger -t SQM -s "$*"
-    else
-        echo "$@" >&2
+    if [ "$SQM_VERBOSITY" -gt "$VERBOSITY_SILENT" ] ; then
+	if [ "$SQM_SYSLOG" -eq "1" ]; then
+    	    logger -t SQM -s "$*"
+	else
+    	    echo "$@" >&2
+	fi
+	#sm: slightly dangerous as this will keep adding to the log file
+	[ -n "${SQM_DEBUG}" -a "${SQM_DEBUG}" == 1 ] && echo "$@" >> ${SQM_DEBUG_LOG}
     fi
-    #sm: slightly dangerous as this will keep adding to the log file
-    [ -n "${SQM_DEBUG}" -a "${SQM_DEBUG}" == 1 ] && echo "$@" >> ${SQM_DEBUG_LOG}
 }
 
 #sm: ipt needs a toggle to show the outputs for debugging (as do all users of > /dev/null 2>&1 and friends)
