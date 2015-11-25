@@ -17,18 +17,18 @@ STATE_FILE="${SQM_STATE_DIR}/${IFACE}.state"
 [ -d "${SQM_STATE_DIR}" ] || mkdir -p "${SQM_STATE_DIR}"
 
 if [ -f "${STATE_FILE}" ]; then
-    sqm_logger "SQM already activated on ${IFACE}."
+    [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "SQM already activated on ${IFACE}."
     exit 1
 fi
 
 # in case of spurious hotplug events, try double check whether the interface is really up
 if [ ! -d /sys/class/net/${IFACE} ] ; then
-    sqm_logger "${IFACE} does currently not exist, not even trying to start SQM on nothing."
+    [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "${IFACE} does currently not exist, not even trying to start SQM on nothing."
     exit 1
 fi
 
 if [ "${ENABLED:-1}" -ne "1" ]; then
-    sqm_logger "SQM config disabled on ${IFACE}."
+    [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "SQM config disabled on ${IFACE}."
     exit 0
 fi
 
@@ -39,8 +39,7 @@ fi
 
 . "${SQM_LIB_DIR}/$SCRIPT"
 
-sqm_logger "${0}: Starting ${IFACE}"
-sqm_logger "${0}: Queue Setup Script: ${SCRIPT}"
+sqm_logger "${0}: $( date ): Starting SQM on ${IFACE}, using Queue Setup Script: ${SCRIPT}"
 sqm_start && write_state_file ${STATE_FILE} ${ALL_SQM_VARS}
 
 exit 0
