@@ -180,7 +180,7 @@ verify_qdisc() {
     $TC qdisc replace dev $ifb $root_string $qdisc #>>${OUTPUT_TARGET} 2>&1
     res=$?
     [ "$res" = "0" ] || not="NOT "
-    sqm_logger "QDISC $qdisc is ${not}useable."
+    [ "$res" != "0" -o "(" "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ")" ] && sqm_logger "QDISC $qdisc is ${not}useable."
     delete_ifb $ifb
     return $res
 }
