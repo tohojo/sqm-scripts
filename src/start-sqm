@@ -39,7 +39,8 @@ fi
 
 . "${SQM_LIB_DIR}/$SCRIPT"
 
-sqm_logger "${0}: $( date ): Starting SQM script: ${SCRIPT} on ${IFACE}, in: ${DOWNLINK} Kbps, out: ${UPLINK} Kbps"
+[ "${SQM_DEBUG}" == 1 ] && echo -e "\n$( date ): Starting SQM script: ${SCRIPT} on ${IFACE}, in: ${DOWNLINK} Kbps, out: ${UPLINK} Kbps" >> ${SQM_DEBUG_LOG}
+sqm_logger "${0}: Starting SQM script: ${SCRIPT} on ${IFACE}, in: ${DOWNLINK} Kbps, out: ${UPLINK} Kbps"
 sqm_start && write_state_file ${STATE_FILE} ${ALL_SQM_VARS}
 
 exit 0

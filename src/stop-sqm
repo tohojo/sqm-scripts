@@ -15,7 +15,8 @@
 . ${SQM_LIB_DIR}/defaults.sh    #sm: this should allow debugging output for sqm_logger...
 STATE_FILE="${SQM_STATE_DIR}/${IFACE}.state"
 
-sqm_logger "${0}: $( date ): Stopping SQM on ${IFACE}"
+[ "${SQM_DEBUG}" == 1 ] && echo -e "\n\n\n$( date ): Stopping SQM on ${IFACE}" >> ${SQM_DEBUG_LOG}
+sqm_logger "${0}: Stopping SQM on ${IFACE}"
 
 # make sure to only delete the ifb associated with the current interface
 CUR_IFB=$( get_ifb_associated_with_if ${IFACE} )
