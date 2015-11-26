@@ -80,11 +80,13 @@ dbl.rmempty = false
 
 
 verb = s:taboption("tab_basic", ListValue, "verbosity", translate("Verbosity of SQM's output into the system log."))
-verb:value("0", "none")
-verb:value("1", "normal ("..translate("default")..")")
-verb:value("2", "verbose")
-verb:value("11", "too much")
-verb.default = "1"
+verb:value("0", "silent")
+verb:value("1", "error")
+verb:value("2", "warning")
+verb:value("5", "info ("..translate("default")..")")
+verb:value("8", "debug")
+verb:value("10", "trace")
+verb.default = "5"
 verb.rmempty = true
 
 
