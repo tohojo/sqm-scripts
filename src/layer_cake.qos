@@ -24,7 +24,7 @@ ipt_setup() {
 
     ipt -t mangle -N QOS_MARK_${IFACE}
 
-    sqm_debug cake does all the diffserv work - no need for iptables rules
+    sqm_debug "cake does all the diffserv work - no need for iptables rules"
 
     # Turn it on. Preserve classification if already performed
 
