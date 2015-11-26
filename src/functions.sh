@@ -18,7 +18,7 @@ sqm_logger() {
 	fi
     fi
     #sm: slightly dangerous as this will keep adding to the log file
-    [ -n "${SQM_DEBUG}" -a "${SQM_DEBUG}" == 1 ] && echo "$(date)" "$@" >> ${SQM_DEBUG_LOG}
+    [ -n "${SQM_DEBUG}" -a "${SQM_DEBUG}" == 1 ] && echo "$@" >> ${SQM_DEBUG_LOG}
 }
 
 sqm_error() { sqm_logger $VERBOSITY_ERROR ERROR: "$@"; }
