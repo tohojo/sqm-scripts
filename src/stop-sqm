@@ -15,6 +15,7 @@
 . ${SQM_LIB_DIR}/defaults.sh
 STATE_FILE="${SQM_STATE_DIR}/${IFACE}.state"
 
+sqm_trace; sqm_trace "$(date): Stopping." # Add some space and a date stamp to verbose log output and log files to separate runs
 sqm_log "Stopping SQM on ${IFACE}"
 
 # make sure to only delete the ifb associated with the current interface
