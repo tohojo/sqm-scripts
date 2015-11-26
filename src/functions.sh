@@ -18,7 +18,11 @@ sqm_logger() {
 	fi
     fi
     #sm: slightly dangerous as this will keep adding to the log file
-    [ -n "${SQM_DEBUG}" -a "${SQM_DEBUG}" == 1 ] && echo "$@" >> ${SQM_DEBUG_LOG}
+    if [ -n "${SQM_DEBUG}" -a "${SQM_DEBUG}" == 1 ]; then
+        if [ "$SQM_VERBOSITY" -ge "$LEVEL" -o "$LEVEL" -eq "$VERBOSITY_TRACE" ]; then
+            echo "$@" >> ${SQM_DEBUG_LOG}
+        fi
+    fi
 }
 
 sqm_error() { sqm_logger $VERBOSITY_ERROR ERROR: "$@"; }
