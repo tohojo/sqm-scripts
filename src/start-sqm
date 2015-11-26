@@ -17,30 +17,30 @@ STATE_FILE="${SQM_STATE_DIR}/${IFACE}.state"
 [ -d "${SQM_STATE_DIR}" ] || mkdir -p "${SQM_STATE_DIR}"
 
 if [ -f "${STATE_FILE}" ]; then
-    [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "SQM already activated on ${IFACE}."
+    sqm_logger "SQM already activated on ${IFACE}." "${VERBOSITY_VERBOSE}"
     exit 1
 fi
 
 # in case of spurious hotplug events, try double check whether the interface is really up
 if [ ! -d /sys/class/net/${IFACE} ] ; then
-    [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "${IFACE} does currently not exist, not even trying to start SQM on nothing."
+    sqm_logger "${IFACE} does currently not exist, not even trying to start SQM on nothing." "${VERBOSITY_VERBOSE}"
     exit 1
 fi
 
 if [ "${ENABLED:-1}" -ne "1" ]; then
-    [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "SQM config disabled on ${IFACE}."
+    sqm_logger "SQM config disabled on ${IFACE}." "${VERBOSITY_VERBOSE}"
     exit 0
 fi
 
 if [ ! -f "${SQM_LIB_DIR}/$SCRIPT" ]; then
-    sqm_logger "SQM script ${SCRIPT} not found!"
+    sqm_logger "SQM script ${SCRIPT} not found!" "${VERBOSITY_NORMAL}"
     exit 1
 fi
 
 . "${SQM_LIB_DIR}/$SCRIPT"
 
-[ "${SQM_DEBUG}" == 1 ] && echo -e "\n$( date ): Starting SQM script: ${SCRIPT} on ${IFACE}, in: ${DOWNLINK} Kbps, out: ${UPLINK} Kbps" >> ${SQM_DEBUG_LOG}
-sqm_logger "${0}: Starting SQM script: ${SCRIPT} on ${IFACE}, in: ${DOWNLINK} Kbps, out: ${UPLINK} Kbps"
+[ "${SQM_DEBUG}" == 1 ] && echo -e "\n\n\n$( date ): Starting SQM script: ${SCRIPT} on ${IFACE}, in: ${DOWNLINK} Kbps, out: ${UPLINK} Kbps\n" >> ${SQM_DEBUG_LOG}
+sqm_logger "${0}: Starting SQM script: ${SCRIPT} on ${IFACE}, in: ${DOWNLINK} Kbps, out: ${UPLINK} Kbps" "${VERBOSITY_NORMAL}"
 sqm_start && write_state_file ${STATE_FILE} ${ALL_SQM_VARS}
 
 exit 0
