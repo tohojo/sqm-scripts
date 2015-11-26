@@ -55,14 +55,15 @@ run_sqm_scripts() {
     export TARGET=$(config_get "$section" target)
     export SQUASH_DSCP=$(config_get "$section" squash_dscp)
     export SQUASH_INGRESS=$(config_get "$section" squash_ingress)
-    export SQM_VERBOSITY=$(config_get "$section" verbosity)
 
     export QDISC=$(config_get "$section" qdisc)
     export SCRIPT=$(config_get "$section" script)
 
 
-    #sm: if SQM_DEBUG was passed in via the command line make it available to the other scripts
+    #sm: if SQM_DEBUG or SQM_VERBOSITY were passed in via the command line make them available to the other scripts
+    #	this allows to override sqm's log level as set in the GUI for quick debugging without GUI accesss.
     [ -n "$SQM_DEBUG" ] && export SQM_DEBUG || export SQM_DEBUG=$(config_get "$section" debug_logging)
+    [ -n "$SQM_VERBOSITY" ] && export SQM_VERBOSITY || export SQM_VERBOSITY=$(config_get "$section" verbosity)
 
     #sm: only stop-sqm if there is something running
     CUR_STATE_FILE="${SQM_STATE_DIR}/${IFACE}.state"
