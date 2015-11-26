@@ -56,7 +56,6 @@ ipt() {
 #sm: wrapper to call tc to allow debug logging
 tc_wrapper() {
     tc_args=$*
-    sqm_debug "tc arguments: $tc_args"
     sqm_trace "${TC_BINARY} $*"
     ${TC_BINARY} $* >> ${OUTPUT_TARGET} 2>&1
 }
@@ -64,7 +63,6 @@ tc_wrapper() {
 #sm: wrapper to call tc to allow debug logging
 ip_wrapper() {
     ip_args=$*
-    sqm_debug "ip arguments: $ip_args"
     sqm_trace "${IP_BINARY} $*"
     ${IP_BINARY} $* >> ${OUTPUT_TARGET} 2>&1
 }
