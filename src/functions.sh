@@ -31,37 +31,37 @@ sqm_trace() { sqm_logger $VERBOSITY_TRACE "$@"; }
 ipt() {
     d=$(echo $* | sed s/-A/-D/g)
     [ "$d" != "$*" ] && {
-	[ "${SQM_DEBUG}" == 1 ] && echo "iptables ${d}" >> ${SQM_DEBUG_LOG}
+	sqm_trace "iptables ${d}"
         iptables $d >> ${OUTPUT_TARGET} 2>&1
-	[ "${SQM_DEBUG}" == 1 ] && echo "ip6tables ${d}" >> ${SQM_DEBUG_LOG}
+	sqm_trace "ip6tables ${d}"
         ip6tables $d >> ${OUTPUT_TARGET} 2>&1
     }
     d=$(echo $* | sed s/-I/-D/g)
     [ "$d" != "$*" ] && {
-	[ "${SQM_DEBUG}" == 1 ] && echo "iptables ${d}" >> ${SQM_DEBUG_LOG}
+	sqm_trace "iptables ${d}"
         iptables $d >> ${OUTPUT_TARGET} 2>&1
-	[ "${SQM_DEBUG}" == 1 ] && echo "ip6tables ${d}" >> ${SQM_DEBUG_LOG}
+	sqm_trace "ip6tables ${d}"
         ip6tables $d >> ${OUTPUT_TARGET} 2>&1
     }
-    [ "${SQM_DEBUG}" == 1 ] && echo "iptables $*" >> ${SQM_DEBUG_LOG}
+    sqm_trace "iptables $*"
     iptables $* >> ${OUTPUT_TARGET} 2>&1
-    [ "${SQM_DEBUG}" == 1 ] && echo "ip6tables ${d}" >> ${SQM_DEBUG_LOG}
+    sqm_trace "ip6tables ${d}"
     ip6tables $* >> ${OUTPUT_TARGET} 2>&1
 }
 
-#sm: wrapper to call tc to allow debug logging 
+#sm: wrapper to call tc to allow debug logging
 tc_wrapper() {
     tc_args=$*
     [ "$SQM_VERBOSITY" -gt "$VERBOSITY_VERBOSE" ] && sqm_logger "tc arguments: $tc_args"
-    [ "${SQM_DEBUG}" == 1 ] && echo "${TC_BINARY} $*" >> ${SQM_DEBUG_LOG}
+    sqm_trace "${TC_BINARY} $*"
     ${TC_BINARY} $* >> ${OUTPUT_TARGET} 2>&1
 }
 
-#sm: wrapper to call tc to allow debug logging 
+#sm: wrapper to call tc to allow debug logging
 ip_wrapper() {
     ip_args=$*
     [ "$SQM_VERBOSITY" -gt "$VERBOSITY_VERBOSE" ] && sqm_logger "ip arguments: $ip_args"
-    [ "${SQM_DEBUG}" == 1 ] && echo "${IP_BINARY} $*" >> ${SQM_DEBUG_LOG}
+    sqm_trace "${IP_BINARY} $*"
     ${IP_BINARY} $* >> ${OUTPUT_TARGET} 2>&1
 }
 
@@ -92,7 +92,7 @@ get_ifb_associated_with_if() {
     local CUR_IFB=$( $TC -p filter show parent ffff: dev ${CUR_IF} | grep -o -E ifb'[^)\ ]+' )    # my editor's syntax coloration is limitied so I need a single quote in this line (between eiditor and s)
     [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "ifb associated with interface ${CUR_IF}: ${CUR_IFB}"
     #sm: we could not detect an associated IFB for CUR_IF
-    if [ -z "${CUR_IFB}" ]; 
+    if [ -z "${CUR_IFB}" ];
     then
 	local TMP=$( $TC -p filter show parent ffff: dev ${CUR_IF} )
 	if [ ! -z "${TMP}" ];
@@ -173,7 +173,7 @@ verify_qdisc() {
     local not=
     local ifb=TMP_IFB_4_SQM
     local root_string="root"	# this works for most qdiscs
-    
+
     if [ -n "$supported" ]; then
         local found=0
         for q in $supported; do
