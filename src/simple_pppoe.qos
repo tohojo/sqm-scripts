@@ -27,7 +27,7 @@
 
 . ${SQM_LIB_DIR}/defaults.sh
 
-#sqm_logger IPT_MASK: ${IPT_MASK_STRING}
+#sqm_debug IPT_MASK: ${IPT_MASK_STRING}
 ipt_setup() {
 
     ipt -t mangle -N QOS_MARK_${IFACE}
@@ -46,10 +46,10 @@ ipt_setup() {
 
     if [ "$SQUASH_DSCP" = "1" ]
     then
-        sqm_logger "Squashing differentiated services code points (DSCP) from ingress."
+        sqm_debug "Squashing differentiated services code points (DSCP) from ingress."
         ipt -t mangle -I PREROUTING -i $IFACE -m dscp ! --dscp 0 -j DSCP --set-dscp-class be
     else
-        sqm_logger "Keeping differentiad services code points (DSCP) from ingress."
+        sqm_debug "Keeping differentiad services code points (DSCP) from ingress."
         ipt -t mangle -A PREROUTING -i $IFACE -m mark --mark 0x00${IPT_MASK_STRING} -g QOS_MARK_${IFACE}
     fi
 
@@ -319,7 +319,7 @@ ingress() {
 
     if [ "$SQUASH_INGRESS" = "1" ]
     then
-        sqm_logger "Do not perform DSCP based filtering on ingress. (1-tier classification)"
+        sqm_debug "Do not perform DSCP based filtering on ingress. (1-tier classification)"
         # Revert to no dscp based filtering
         $TC qdisc del dev $DEV root 2>/dev/null
         $TC qdisc add dev $DEV root handle 1: `get_stab_string` htb default 10
@@ -328,7 +328,7 @@ ingress() {
         $TC qdisc add dev $DEV parent 1:10 handle 110: $QDISC `get_limit ${ILIMIT}` `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_flows ${DOWNLINK}` ${IQDISC_OPTS}
 
     else
-        sqm_logger "Perform DSCP based filtering on ingress. (3-tier classification)"
+        sqm_debug "Perform DSCP based filtering on ingress. (3-tier classification)"
         $TC qdisc add dev $DEV root handle 1: `get_stab_string` htb default 12
         $TC class add dev $DEV parent 1: classid 1:1 htb $LQ ${HTB_BURSTS} rate ${CEIL}kbit ceil ${CEIL}kbit `get_htb_adsll_string`
         $TC class add dev $DEV parent 1:1 classid 1:10 htb $LQ ${HTB_BURSTS} rate ${CEIL}kbit ceil ${CEIL}kbit prio 0 `get_htb_adsll_string`
@@ -367,7 +367,7 @@ sqm_start() {
     do_modules
     verify_qdisc "htb" || return 1
     verify_qdisc $QDISC || return 1
-    sqm_logger "Starting ${SCRIPT}"
+    sqm_debug "Starting ${SCRIPT}"
 
     [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
 
@@ -376,18 +376,18 @@ sqm_start() {
     if [ "$UPLINK" -ne 0 ];
     then
         egress
-        sqm_logger "egress shaping activated"
+        sqm_debug "egress shaping activated"
     else
-        sqm_logger "egress shaping deactivated"
+        sqm_debug "egress shaping deactivated"
         $TC qdisc del dev $IFACE root 2> /dev/null
     fi
     if [ "$DOWNLINK" -ne 0 ];
     then
 	verify_qdisc ingress "ingress" || return 1
         ingress
-        sqm_logger "ingress shaping activated"
+        sqm_debug "ingress shaping activated"
     else
-        sqm_logger "ingress shaping deactivated"
+        sqm_debug "ingress shaping deactivated"
         $TC qdisc del dev $DEV root 2> /dev/null
         $TC qdisc del dev $IFACE ingress 2> /dev/null
     fi

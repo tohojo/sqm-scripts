@@ -20,14 +20,14 @@ EGRESS_CAKE_OPTS="besteffort"
 
 
 egress() {
-    sqm_logger "egress"
+    sqm_debug "egress"
     $TC qdisc del dev $IFACE root 2>/dev/null
     $TC qdisc add dev $IFACE root $( get_stab_string ) cake bandwidth ${UPLINK}kbit $( get_cake_lla_string ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
 }
 
 
 ingress() {
-    sqm_logger "ingress"
+    sqm_debug "ingress"
     $TC qdisc del dev $IFACE handle ffff: ingress 2>/dev/null
     $TC qdisc add dev $IFACE handle ffff: ingress
     $TC qdisc del dev $DEV root 2>/dev/null
@@ -45,7 +45,7 @@ sqm_start() {
     [ -n "$IFACE" ] || return 1
     do_modules
     verify_qdisc $QDISC "cake" || return 1
-    sqm_logger "Starting ${SCRIPT}"
+    sqm_debug "Starting ${SCRIPT}"
 
     [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
 
@@ -53,18 +53,18 @@ sqm_start() {
     if [ "${UPLINK}" -ne 0 ];
     then
         egress
-        sqm_logger "egress shaping activated"
+        sqm_debug "egress shaping activated"
     else
-        sqm_logger "egress shaping deactivated"
+        sqm_debug "egress shaping deactivated"
         $TC qdisc del dev ${IFACE} root 2> /dev/null
     fi
     if [ "${DOWNLINK}" -ne 0 ];
     then
 	verify_qdisc ingress "ingress" || return 1
         ingress
-        sqm_logger "ingress shaping activated"
+        sqm_debug "ingress shaping activated"
     else
-        sqm_logger "ingress shaping deactivated"
+        sqm_debug "ingress shaping deactivated"
         $TC qdisc del dev ${DEV} root 2> /dev/null
         $TC qdisc del dev ${IFACE} ingress 2> /dev/null
     fi

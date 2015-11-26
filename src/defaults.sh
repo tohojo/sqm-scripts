@@ -24,7 +24,6 @@
 [ -z "$EQDISC_OPTS" ] && EQDISC_OPTS=""
 [ -z "$TC" ] && TC=tc_wrapper
 [ -z "$TC_BINARY" ] && TC_BINARY=$(which tc)
-#[ -z "$TC" ] && TC="sqm_logger tc"# this redirects all tc calls into the log
 [ -z "$IP" ] && IP=ip_wrapper
 [ -z "$IP_BINARY" ] && IP_BINARY=$(which ip)
 # Try modprobe first, fall back to insmod

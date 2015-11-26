@@ -119,7 +119,7 @@ sqm_start() {
     do_modules
     verify_qdisc "hfsc" || return 1
     verify_qdisc ${QDISC} || return 1
-    sqm_logger "Starting ${SCRIPT}"
+    sqm_debug "Starting ${SCRIPT}"
 
     eth_setup
     ipt_setup
@@ -127,18 +127,18 @@ sqm_start() {
     if [ "${UPLINK}" -ne 0 ];
     then
         egress
-        sqm_logger "egress shaping activated"
+        sqm_debug "egress shaping activated"
     else
-        sqm_logger "egress shaping deactivated"
+        sqm_debug "egress shaping deactivated"
         $TC qdisc del dev ${IFACE} root 2> /dev/null
     fi
     if [ "${DOWNLINK}" -ne 0 ];
     then
 	verify_qdisc ingress "ingress" || return 1
         ingress
-        sqm_logger "ingress shaping activated"
+        sqm_debug "ingress shaping activated"
     else
-        sqm_logger "ingress shaping deactivated"
+        sqm_debug "ingress shaping deactivated"
         $TC qdisc del dev ${DEV} root 2> /dev/null
         $TC qdisc del dev ${IFACE} ingress 2> /dev/null
     fi
@@ -150,7 +150,7 @@ sqm_stop() {
     $TC qdisc del dev ${IFACE} ingress 2> /dev/null
     $TC qdisc del dev ${IFACE} root 2> /dev/null
     [ -n "$CUR_IFB" ] && $TC qdisc del dev ${CUR_IFB} root 2> /dev/null
-    [ -n "$CUR_IFB" ] && sqm_logger "${0}: ${CUR_IFB} shaper deleted"
+    [ -n "$CUR_IFB" ] && sqm_debug "${0}: ${CUR_IFB} shaper deleted"
 
     ipt -t mangle -D POSTROUTING -o ${IFACE} -g QOS_MARK_${IFACE}
     ipt -t mangle -F QOS_MARK_${IFACE}
@@ -160,5 +160,5 @@ sqm_stop() {
 
     [ -n "$CUR_IFB" ] && $IP link set dev ${CUR_IFB} down
     [ -n "$CUR_IFB" ] && $IP link delete ${CUR_IFB} type ifb
-    [ -n "$CUR_IFB" ] && sqm_logger "${0}: ${CUR_IFB} interface deleted"
+    [ -n "$CUR_IFB" ] && sqm_debug "${0}: ${CUR_IFB} interface deleted"
 }

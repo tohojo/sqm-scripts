@@ -52,7 +52,7 @@ ipt() {
 #sm: wrapper to call tc to allow debug logging
 tc_wrapper() {
     tc_args=$*
-    [ "$SQM_VERBOSITY" -gt "$VERBOSITY_VERBOSE" ] && sqm_logger "tc arguments: $tc_args"
+    sqm_debug "tc arguments: $tc_args"
     sqm_trace "${TC_BINARY} $*"
     ${TC_BINARY} $* >> ${OUTPUT_TARGET} 2>&1
 }
@@ -60,7 +60,7 @@ tc_wrapper() {
 #sm: wrapper to call tc to allow debug logging
 ip_wrapper() {
     ip_args=$*
-    [ "$SQM_VERBOSITY" -gt "$VERBOSITY_VERBOSE" ] && sqm_logger "ip arguments: $ip_args"
+    sqm_debug "ip arguments: $ip_args"
     sqm_trace "${IP_BINARY} $*"
     ${IP_BINARY} $* >> ${OUTPUT_TARGET} 2>&1
 }
@@ -90,7 +90,7 @@ get_ifb_associated_with_if() {
     # CUR_IFB=$( $TC -p filter show parent ffff: dev ${CUR_IF} | grep -o -e ifb'[[:digit:]]\+' )
     #local CUR_IFB=$( $TC -p filter show parent ffff: dev ${CUR_IF} | grep -o -e ifb'[^)]\+' )    # my editor's syntax coloration is limitied so I need a single quote in this line (between eiditor and s)
     local CUR_IFB=$( $TC -p filter show parent ffff: dev ${CUR_IF} | grep -o -E ifb'[^)\ ]+' )    # my editor's syntax coloration is limitied so I need a single quote in this line (between eiditor and s)
-    [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "ifb associated with interface ${CUR_IF}: ${CUR_IFB}"
+    sqm_debug "ifb associated with interface ${CUR_IF}: ${CUR_IFB}"
     #sm: we could not detect an associated IFB for CUR_IF
     if [ -z "${CUR_IFB}" ];
     then
@@ -98,13 +98,13 @@ get_ifb_associated_with_if() {
 	if [ ! -z "${TMP}" ];
 	then
 	    #sm: oops, there is output but we failed to properly parse it? Ask for a user report
-	    sqm_logger "#---- CUT HERE ----#"
-	    sqm_logger "get_ifb_associated_with_if failed to extrect the ifb name from:"
-	    sqm_logger $( $TC_BINARY -p filter show parent ffff: dev ${CUR_IF} )
-	    sqm_logger "Please report this as an issue at https://github.com/tohojo/sqm-scripts"
-	    sqm_logger "Please copy and paste everything below the cut-here line into your issue report, thanks."
+	    sqm_error "#---- CUT HERE ----#"
+	    sqm_error "get_ifb_associated_with_if failed to extrect the ifb name from:"
+	    sqm_error $( $TC_BINARY -p filter show parent ffff: dev ${CUR_IF} )
+	    sqm_error "Please report this as an issue at https://github.com/tohojo/sqm-scripts"
+	    sqm_error "Please copy and paste everything below the cut-here line into your issue report, thanks."
 	else
-	    [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "Currently no ifb is associated with ${CUR_IF}, this is normal during starting of the sqm system."
+	    sqm_debug "Currently no ifb is associated with ${CUR_IF}, this is normal during starting of the sqm system."
 	fi
     fi
     echo ${CUR_IFB}
@@ -157,7 +157,7 @@ get_ifb_for_if() {
     # if an ifb is already associated return that
     local CUR_IFB=$( get_ifb_associated_with_if ${CUR_IF} )
     [ -z "$CUR_IFB" ] && CUR_IFB=$( create_new_ifb_for_if ${CUR_IF} )
-    [ -z "$CUR_IFB" ] && sqm_logger "Could not find existing IFB for ${CUR_IF}, nor create a new IFB instead..."
+    [ -z "$CUR_IFB" ] && sqm_warn "Could not find existing IFB for ${CUR_IF}, nor create a new IFB instead..."
     echo ${CUR_IFB}
 }
 
@@ -190,7 +190,7 @@ verify_qdisc() {
     $TC qdisc replace dev $ifb $root_string $qdisc #>>${OUTPUT_TARGET} 2>&1
     res=$?
     [ "$res" = "0" ] || not="NOT "
-    [ "$res" != "0" -o "(" "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ")" ] && sqm_logger "QDISC $qdisc is ${not}useable."
+    sqm_debug "QDISC $qdisc is ${not}useable."
     delete_ifb $ifb
     return $res
 }
@@ -203,7 +203,7 @@ get_htb_adsll_string() {
         # HTB defaults to MTU 1600 and an implicit fixed TSIZE of 256, but HTB as of around 3.10.0
         # does not actually use a table in the kernel
         ADSLL="mpu ${STAB_MPU} linklayer ${LINKLAYER} overhead ${OVERHEAD} mtu ${STAB_MTU}"
-        [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "ADSLL: ${ADSLL}"
+        sqm_debug "ADSLL: ${ADSLL}"
     fi
     echo ${ADSLL}
 }
@@ -213,7 +213,7 @@ get_stab_string() {
     if [ "${LLAM}" = "tc_stab" -a "$LINKLAYER" != "none" ];
     then
         STABSTRING="stab mtu ${STAB_MTU} tsize ${STAB_TSIZE} mpu ${STAB_MPU} overhead ${OVERHEAD} linklayer ${LINKLAYER}"
-        [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "STAB: ${STABSTRING}"
+        sqm_debug "STAB: ${STABSTRING}"
     fi
     echo ${STABSTRING}
 }
@@ -229,7 +229,7 @@ get_cake_lla_string() {
         fi
 
         STABSTRING="${STABSTRING} overhead ${OVERHEAD}"
-        [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "cake link layer adjustments: ${STABSTRING}"
+        sqm_debug "cake link layer adjustments: ${STABSTRING}"
     fi
     echo ${STABSTRING}
 }
@@ -239,7 +239,7 @@ sqm_stop() {
     $TC qdisc del dev $IFACE ingress #2>> ${OUTPUT_TARGET}
     $TC qdisc del dev $IFACE root #2>> ${OUTPUT_TARGET}
     [ -n "$CUR_IFB" ] && $TC qdisc del dev $CUR_IFB root #2>> ${OUTPUT_TARGET}
-    [ -n "$CUR_IFB" -a "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "${0}: ${CUR_IFB} shaper deleted"
+    [ -n "$CUR_IFB" ] && sqm_debug "${0}: ${CUR_IFB} shaper deleted"
 
     [ -n "$CUR_IFB" ] && ipt -t mangle -D POSTROUTING -o $CUR_IFB -m mark --mark 0x00 -g QOS_MARK_${IFACE}
     ipt -t mangle -D POSTROUTING -o $IFACE -m mark --mark 0x00${IPT_MASK_STRING} -g QOS_MARK_${IFACE}
@@ -255,7 +255,7 @@ sqm_stop() {
 
     [ -n "$CUR_IFB" ] && $IP link set dev ${CUR_IFB} down
     [ -n "$CUR_IFB" ] && $IP link delete ${CUR_IFB} type ifb
-    [ -n "$CUR_IFB" ] && sqm_logger "${0}: ${CUR_IFB} interface deleted"
+    [ -n "$CUR_IFB" ] && sqm_debug "${0}: ${CUR_IFB} interface deleted"
 }
 # Note this has side effects on the prio variable
 # and depends on the interface global too
@@ -326,7 +326,7 @@ get_htb_quantum() {
         CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
     fi
 
-    [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "CUR_HTB_QUANTUM: ${CUR_QUANTUM}, BANDWIDTH: ${BANDWIDTH}"
+    sqm_debug "CUR_HTB_QUANTUM: ${CUR_QUANTUM}, BANDWIDTH: ${BANDWIDTH}"
 
     echo $CUR_QUANTUM
 }
@@ -336,7 +336,7 @@ get_htb_quantum() {
 # but I fear we actually need the wire size of the whole thing not so much the MTU
 get_mtu() {
     CUR_MTU=$(cat /sys/class/net/$1/mtu)
-    [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "IFACE: ${1} MTU: ${CUR_MTU}"
+    sqm_debug "IFACE: ${1} MTU: ${CUR_MTU}"
     echo ${CUR_MTU}
 }
 
@@ -380,13 +380,11 @@ get_flows_count() {
 get_target() {
     local CUR_TARGET=${1}
     local CUR_LINK_KBPS=${2}
-    [ ! -z "$CUR_TARGET" ] && sqm_logger "cur_target: ${CUR_TARGET} cur_bandwidth: ${CUR_LINK_KBPS}"
+    [ ! -z "$CUR_TARGET" ] && sqm_debug "cur_target: ${CUR_TARGET} cur_bandwidth: ${CUR_LINK_KBPS}"
     CUR_TARGET_STRING=
     # either e.g. 100ms or auto
     CUR_TARGET_VALUE=$( echo ${CUR_TARGET} | grep -o -e \^'[[:digit:]]\+' )
     CUR_TARGET_UNIT=$( echo ${CUR_TARGET} | grep -o -e '[[:alpha:]]\+'\$ )
-    #[ ! -z "$CUR_TARGET" ] && sqm_logger "CUR_TARGET_VALUE: $CUR_TARGET_VALUE"
-    #[ ! -z "$CUR_TARGET" ] && sqm_logger "CUR_TARGET_UNIT: $CUR_TARGET_UNIT"
 
     AUTO_TARGET=
     UNIT_VALID=
@@ -412,9 +410,9 @@ get_target() {
                     TMP_INTERVAL_STRING=$( adapt_interval_to_slow_link $TMP_TARGET_US )
                     CUR_TARGET_STRING="target ${TMP_TARGET_US}us ${TMP_INTERVAL_STRING}"
                     AUTO_TARGET="1"
-                    [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "get_target defaulting to auto."
+                    sqm_debug "get_target defaulting to auto."
                 else
-                    sqm_logger "required link bandwidth in kbps not passed to get_target()."
+                    sqm_warn "required link bandwidth in kbps not passed to get_target()."
                 fi
             fi
             # but still allow explicit use of the keyword auto for backward compatibility
@@ -427,7 +425,7 @@ get_target() {
                         CUR_TARGET_STRING="target ${TMP_TARGET_US}us ${TMP_INTERVAL_STRING}"
                         AUTO_TARGET="1"
                     else
-                        sqm_logger "required link bandwidth in kbps not passed to get_target()."
+                        sqm_warn "required link bandwidth in kbps not passed to get_target()."
                     fi
                     ;;
             esac
@@ -438,9 +436,9 @@ get_target() {
                     then
                         CUR_TARGET_STRING=""    # return nothing so the default target is not over-ridden...
                         AUTO_TARGET="1"
-                        [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "get_target using qdisc default, no explicit target string passed."
+                        sqm_debug "get_target using qdisc default, no explicit target string passed."
                     else
-                        sqm_logger "required link bandwidth in kbps not passed to get_target()."
+                        sqm_warn "required link bandwidth in kbps not passed to get_target()."
                     fi
                     ;;
             esac
@@ -448,12 +446,11 @@ get_target() {
             then
                 if [ -z "${CUR_TARGET_VALUE}" -o -z "${UNIT_VALID}" ];
                 then
-                    [ -z "$AUTO_TARGET" ] && sqm_logger "${CUR_TARGET} is not a well formed tc target specifier; e.g.: 5ms (or s, us), or one of the strings auto or default."
+                    [ -z "$AUTO_TARGET" ] && sqm_warn "${CUR_TARGET} is not a well formed tc target specifier; e.g.: 5ms (or s, us), or one of the strings auto or default."
                 fi
             fi
             ;;
     esac
-    #    sqm_logger "target: ${CUR_TARGET_STRING}"
     echo $CUR_TARGET_STRING
 }
 
@@ -509,10 +506,10 @@ get_limit() {
                                           ;;
         bfifo) [ -z "$CURLIMIT" ] && [ ! -z "$LIMIT" ] && CURLIMIT=$(( ${LIMIT} * $( cat /sys/class/net/${IFACE}/mtu ) ))    # bfifo defaults to txquelength * MTU,
                ;;
-        *) sqm_logger "${QDISC} does not support a limit"
+        *) sqm_warn "qdisc ${QDISC} does not support a limit"
            ;;
     esac
-    [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "get_limit: $1 CURLIMIT: ${CURLIMIT}"
+    sqm_debug "get_limit: $1 CURLIMIT: ${CURLIMIT}"
 
     if [ ! -z "$CURLIMIT" ]
     then
@@ -522,7 +519,6 @@ get_limit() {
 
 get_ecn() {
     CURECN=$1
-    #sqm_logger CURECN: $CURECN
     case ${CURECN} in
         ECN)
             case $QDISC in
@@ -545,10 +541,10 @@ get_ecn() {
             esac
             ;;
         *)
-            sqm_logger "ecn value $1 not handled"
+            sqm_warn "ecn value $1 not handled"
             ;;
     esac
-    [ "$SQM_VERBOSITY" -gt "$VERBOSITY_NORMAL" ] && sqm_logger "get_ECN: $1 CURECN: ${CURECN} IECN: ${IECN} EECN: ${EECN}"
+    sqm_debug "get_ECN: $1 CURECN: ${CURECN} IECN: ${IECN} EECN: ${EECN}"
     echo ${CURECN}
 
 }
