@@ -4,18 +4,28 @@
 #
 #       Copyright (C) 2012-4 Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller
 
-#improve the logread output, but allow silencing it, if verbosity is set to 0
 sqm_logger() {
-    if [ "$SQM_VERBOSITY" -gt "$VERBOSITY_SILENT" ] ; then
+    case $1 in
+        ''|*[!0-9]*) LEVEL=$VERBOSITY_INFO ;; # empty or non-numbers
+        *) LEVEL=$1; shift ;;
+    esac
+
+    if [ "$SQM_VERBOSITY" -ge "$LEVEL" ] ; then
 	if [ "$SQM_SYSLOG" -eq "1" ]; then
     	    logger -t SQM -s "$*"
 	else
     	    echo "$@" >&2
 	fi
-	#sm: slightly dangerous as this will keep adding to the log file
-	[ -n "${SQM_DEBUG}" -a "${SQM_DEBUG}" == 1 ] && echo "$@" >> ${SQM_DEBUG_LOG}
     fi
+    #sm: slightly dangerous as this will keep adding to the log file
+    [ -n "${SQM_DEBUG}" -a "${SQM_DEBUG}" == 1 ] && echo "$(date)" "$@" >> ${SQM_DEBUG_LOG}
 }
+
+sqm_error() { sqm_logger $VERBOSITY_ERROR ERROR: "$@"; }
+sqm_warn() { sqm_logger $VERBOSITY_WARNING WARNING: "$@"; }
+sqm_log() { sqm_logger $VERBOSITY_INFO "$@"; }
+sqm_debug() { sqm_logger $VERBOSITY_DEBUG "$@"; }
+sqm_trace() { sqm_logger $VERBOSITY_TRACE "$@"; }
 
 #sm: ipt needs a toggle to show the outputs for debugging (as do all users of > /dev/null 2>&1 and friends)
 ipt() {
