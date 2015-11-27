@@ -20,7 +20,7 @@ local sys = require "luci.sys"
 --local ifaces = net:get_interfaces()
 local ifaces = sys.net:devices()
 local path = "/usr/lib/sqm"
-local run_path = "/var/run/sqm/available_qdiscs"
+local run_path = "/tmp/run/sqm/available_qdiscs"
 
 m = Map("sqm", translate("Smart Queue Management"),
 	translate("With <abbr title=\"Smart Queue Management\">SQM</abbr> you " ..
@@ -28,7 +28,6 @@ m = Map("sqm", translate("Smart Queue Management"),
                   " active queue length management (AQM) " ..
                   " and prioritisation on one " ..
                   "network interface."))
-
 
 s = m:section(TypedSection, "queue", translate("Queues"))
 s:tab("tab_basic", translate("Basic Settings"))
@@ -100,7 +99,6 @@ c = s:taboption("tab_qdisc", ListValue, "qdisc", translate("Queuing disciplines 
 c:value("fq_codel", "fq_codel ("..translate("default")..")")
 
 if fs.stat(run_path) then
-	luci.sys.call("/usr/lib/sqm/update-available-qdiscs")
 	for file in fs.dir(run_path) do
 		c:value( file )
 	end
