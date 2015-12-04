@@ -42,5 +42,6 @@ fi
 sqm_trace; sqm_trace "$(date): Starting." # Add some space and a date stamp to verbose log output and log files to separate runs
 sqm_log "Starting SQM script: ${SCRIPT} on ${IFACE}, in: ${DOWNLINK} Kbps, out: ${UPLINK} Kbps"
 sqm_start && write_state_file ${STATE_FILE} ${ALL_SQM_VARS}
+sqm_log "${SCRIPT} was started on ${IFACE} successfully"
 
 exit 0
