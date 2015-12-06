@@ -1,0 +1,117 @@
+#!/bin/sh
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+
+. ${SQM_LIB_DIR}/defaults.sh
+
+PR=$(( ${UPLINK} * 40 / 100 ))
+NO=$(( ${UPLINK} * 30 / 100 ))
+BK=$(( ${UPLINK} * 15 / 100 ))
+
+egress() {
+    $TC qdisc del dev ${IFACE} root 2> /dev/null
+    $TC qdisc add dev ${IFACE} root handle 1: `get_stab_string` hfsc default 12
+
+    $TC class add dev ${IFACE} parent 1: classid 1:1 hfsc sc rate ${UPLINK}kbit \
+    ul rate ${UPLINK}kbit
+
+    $TC class add dev ${IFACE} parent 1:1 classid 1:11 hfsc sc rate ${PR}kbit
+    $TC class add dev ${IFACE} parent 1:1 classid 1:12 hfsc sc rate ${NO}kbit
+    $TC class add dev ${IFACE} parent 1:1 classid 1:13 hfsc sc rate ${BK}kbit
+
+    $TC qdisc add dev ${IFACE} parent 1:11 handle 110: ${QDISC} \
+    `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` \
+    `get_quantum  300` `get_flows ${PR}` ${EQDISC_OPTS}
+    $TC qdisc add dev ${IFACE} parent 1:12 handle 120: ${QDISC} \
+    `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` \
+    `get_quantum  300` `get_flows ${NO}` ${EQDISC_OPTS}
+    $TC qdisc add dev ${IFACE} parent 1:13 handle 130: ${QDISC} \
+    `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` \
+    `get_quantum  300` `get_flows ${BK}` ${EQDISC_OPTS}
+
+    #FLOW qdisc ensures that on Xfq_codel flows are taking pre-nat informations.
+    $TC filter add dev ${IFACE} parent 110: handle 110 protocol all \
+    flow hash keys nfct-src,nfct-dst,nfct-proto,nfct-proto-src,nfct-proto-dst \
+    divisor `get_flows_count ${PR}`
+    $TC filter add dev ${IFACE} parent 120: handle 120 protocol all \
+    flow hash keys nfct-src,nfct-dst,nfct-proto,nfct-proto-src,nfct-proto-dst \
+    divisor `get_flows_count ${NO}`
+    $TC filter add dev ${IFACE} parent 130: handle 130 protocol all \
+    flow hash keys nfct-src,nfct-dst,nfct-proto,nfct-proto-src,nfct-proto-dst \
+    divisor `get_flows_count ${BK}`
+
+    $TC filter add dev ${IFACE} parent 1:0 protocol all prio 1 u32 \
+    match mark 0x01 ${IPT_MASK} flowid 1:11
+    $TC filter add dev ${IFACE} parent 1:0 protocol all prio 2 u32 \
+    match mark 0x02 ${IPT_MASK} flowid 1:12
+    $TC filter add dev ${IFACE} parent 1:0 protocol all prio 2 u32 \
+    match mark 0x03 ${IPT_MASK} flowid 1:13
+}
+
+ingress() {
+    $TC qdisc del dev ${IFACE} handle ffff: ingress 2> /dev/null
+    $TC qdisc add dev ${IFACE} handle ffff: ingress
+
+    $TC qdisc del dev ${DEV} root 2> /dev/null
+    $TC qdisc add dev ${DEV} root handle 1: `get_stab_string` hfsc default 1
+
+    #Use a single queue for ingress.
+    $TC class add dev ${DEV} parent 1: classid 1:1 hfsc sc rate ${DOWNLINK}kbit \
+    ul rate ${DOWNLINK}kbit
+
+    $TC qdisc add dev ${DEV} parent 1:1 handle 11: ${QDISC} `get_limit ${ILIMIT}` \
+    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum  1540` \
+    `get_flows ${DOWNLINK}` ${IQDISC_OPTS}
+
+    $TC filter add dev ${DEV} parent 11: handle 11 protocol all \
+    flow hash keys nfct-src,nfct-dst,nfct-proto,nfct-proto-src,nfct-proto-dst \
+    divisor `get_flows_count ${DOWNLINK}`
+
+    $IP link set dev ${DEV} up
+
+    $TC filter add dev ${IFACE} parent ffff: protocol all prio 1 u32 \
+    match u32 0 0 action mirred egress redirect dev ${DEV}
+}
+
+sqm_start() {
+    [ -n "${IFACE}" ] || return 1
+    do_modules
+    verify_qdisc "hfsc" || return 1
+    verify_qdisc ${QDISC} || return 1
+    sqm_logger "Starting ${SCRIPT}"
+
+    [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
+
+    if [ "${UPLINK}" -ne 0 ];
+    then
+        egress
+        sqm_logger "egress shaping activated"
+    else
+        sqm_logger "egress shaping deactivated"
+        $TC qdisc del dev ${IFACE} root 2> /dev/null
+    fi
+    if [ "${DOWNLINK}" -ne 0 ];
+    then
+        verify_qdisc ingress "ingress" || return 1
+        ingress
+        sqm_logger "ingress shaping activated"
+    else
+        sqm_logger "ingress shaping deactivated"
+        $TC qdisc del dev ${DEV} root 2> /dev/null
+        $TC qdisc del dev ${IFACE} ingress 2> /dev/null
+    fi
+
+    return 0
+}
+
+sqm_stop() {
+    $TC qdisc del dev ${IFACE} ingress 2> /dev/null
+    $TC qdisc del dev ${IFACE} root 2> /dev/null
+    [ -n "$CUR_IFB" ] && $TC qdisc del dev ${CUR_IFB} root 2> /dev/null
+    [ -n "$CUR_IFB" ] && sqm_logger "${0}: ${CUR_IFB} shaper deleted"
+    [ -n "$CUR_IFB" ] && $IP link set dev ${CUR_IFB} down
+    [ -n "$CUR_IFB" ] && $IP link delete ${CUR_IFB} type ifb
+    [ -n "$CUR_IFB" ] && sqm_logger "${0}: ${CUR_IFB} interface deleted"
+}
