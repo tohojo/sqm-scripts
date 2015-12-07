@@ -7,8 +7,8 @@
 . ${SQM_LIB_DIR}/defaults.sh
 
 PR=$(( ${UPLINK} * 40 / 100 ))
-NO=$(( ${UPLINK} * 30 / 100 ))
-BK=$(( ${UPLINK} * 15 / 100 ))
+NO=$(( ${UPLINK} * 40 / 100 ))
+BK=$(( ${UPLINK} * 10 / 100 ))
 
 egress() {
     $TC qdisc del dev ${IFACE} root 2> /dev/null
@@ -23,13 +23,13 @@ egress() {
 
     $TC qdisc add dev ${IFACE} parent 1:11 handle 110: ${QDISC} \
     `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` \
-    `get_quantum  300` `get_flows ${PR}` ${EQDISC_OPTS}
+    `get_flows ${PR}` ${EQDISC_OPTS}
     $TC qdisc add dev ${IFACE} parent 1:12 handle 120: ${QDISC} \
     `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` \
-    `get_quantum  300` `get_flows ${NO}` ${EQDISC_OPTS}
+    `get_flows ${NO}` ${EQDISC_OPTS}
     $TC qdisc add dev ${IFACE} parent 1:13 handle 130: ${QDISC} \
     `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` \
-    `get_quantum  300` `get_flows ${BK}` ${EQDISC_OPTS}
+    `get_flows ${BK}` ${EQDISC_OPTS}
 
     #FLOW qdisc ensures that on Xfq_codel flows are taking pre-nat informations.
     $TC filter add dev ${IFACE} parent 110: handle 110 protocol all \
@@ -62,8 +62,8 @@ ingress() {
     ul rate ${DOWNLINK}kbit
 
     $TC qdisc add dev ${DEV} parent 1:1 handle 11: ${QDISC} `get_limit ${ILIMIT}` \
-    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum  1540` \
-    `get_flows ${DOWNLINK}` ${IQDISC_OPTS}
+    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_flows ${DOWNLINK}` \
+    ${IQDISC_OPTS}
 
     $TC filter add dev ${DEV} parent 11: handle 11 protocol all \
     flow hash keys nfct-src,nfct-dst,nfct-proto,nfct-proto-src,nfct-proto-dst \
