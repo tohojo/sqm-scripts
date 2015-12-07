@@ -8,7 +8,7 @@
 
 PR=$(( ${UPLINK} * 40 / 100 ))
 NO=$(( ${UPLINK} * 40 / 100 ))
-BK=$(( ${UPLINK} * 10 / 100 ))
+BK=$(( ${UPLINK} * 20 / 100 ))
 
 egress() {
     $TC qdisc del dev ${IFACE} root 2> /dev/null
