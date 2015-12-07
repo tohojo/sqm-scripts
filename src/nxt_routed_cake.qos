@@ -21,12 +21,10 @@ ipt_setup() {
     ipt -t mangle -A POSTROUTING -o ${IFACE} -g QOS_MARK_${IFACE}
 
     ipt -t mangle -A QOS_MARK_${IFACE} -m mark --mark 0x01${IPT_MASK_STRING} \
-    -j DSCP --set-dscp-class EF
-    ipt -t mangle -A QOS_MARK_${IFACE} -m mark --mark 0x02${IPT_MASK_STRING} \
     -j DSCP --set-dscp-class AF41
-    ipt -t mangle -A QOS_MARK_${IFACE} -m mark --mark 0x03${IPT_MASK_STRING} \
+    ipt -t mangle -A QOS_MARK_${IFACE} -m mark --mark 0x02${IPT_MASK_STRING} \
     -j DSCP --set-dscp-class AF11
-    ipt -t mangle -A QOS_MARK_${IFACE} -m mark --mark 0x04${IPT_MASK_STRING} \
+    ipt -t mangle -A QOS_MARK_${IFACE} -m mark --mark 0x03${IPT_MASK_STRING} \
     -j DSCP --set-dscp-class CS1
 }
 
