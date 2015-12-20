@@ -38,16 +38,16 @@ egress() {
 
     #FLOW qdisc ensures that on Xfq_codel flows are taking pre-nat informations.
     $TC filter add dev ${IFACE} parent 110: handle 110 protocol all \
-    flow hash keys nfct-src,nfct-dst,mark,proto,nfct-proto-src,nfct-proto-dst \
+    flow hash keys nfct-src,nfct-dst,proto,nfct-proto-src,nfct-proto-dst \
     divisor `get_flows_count ${PR}`
     $TC filter add dev ${IFACE} parent 120: handle 120 protocol all \
-    flow hash keys nfct-src,nfct-dst,mark,proto,nfct-proto-src,nfct-proto-dst \
+    flow hash keys nfct-src,nfct-dst,proto,nfct-proto-src,nfct-proto-dst \
     divisor `get_flows_count ${IN}`
     $TC filter add dev ${IFACE} parent 130: handle 130 protocol all \
-    flow hash keys nfct-src,nfct-dst,mark,proto,nfct-proto-src,nfct-proto-dst \
+    flow hash keys nfct-src,nfct-dst,proto,nfct-proto-src,nfct-proto-dst \
     divisor `get_flows_count ${NO}`
     $TC filter add dev ${IFACE} parent 140: handle 140 protocol all \
-    flow hash keys nfct-src,nfct-dst,mark,proto,nfct-proto-src,nfct-proto-dst \
+    flow hash keys nfct-src,nfct-dst,proto,nfct-proto-src,nfct-proto-dst \
     divisor `get_flows_count ${BK}`
 
     $TC filter add dev ${IFACE} parent 1:0 protocol all prio 1 u32 \
@@ -76,7 +76,7 @@ ingress() {
     ${IQDISC_OPTS}
 
     $TC filter add dev ${DEV} parent 11: handle 11 protocol all \
-    flow hash keys nfct-src,nfct-dst,mark,proto,nfct-proto-src,nfct-proto-dst \
+    flow hash keys nfct-src,nfct-dst,proto,nfct-proto-src,nfct-proto-dst \
     divisor `get_flows_count ${DOWNLINK}`
 
     $IP link set dev ${DEV} up
