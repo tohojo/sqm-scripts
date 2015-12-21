@@ -72,6 +72,7 @@ sqm_start() {
     if [ "${DOWNLINK}" -ne 0 ];
     then
         verify_qdisc ingress "ingress" || return 1
+        verify_qdisc ${QDISC} "cake" || return 1
         ingress
         sqm_logger "ingress shaping activated"
     else
