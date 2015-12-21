@@ -54,16 +54,15 @@ ingress() {
 
 sqm_start() {
     [ -n "${IFACE}" ] || return 1
-    do_modules
-    verify_qdisc ${QDISC} "cake" || return 1
     sqm_logger "Starting ${SCRIPT}"
-
+    do_modules
     ipt_setup
 
     [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
 
     if [ "${UPLINK}" -ne 0 ];
     then
+        verify_qdisc ${QDISC} "cake" || return 1
         egress
         sqm_logger "egress shaping activated"
     else
