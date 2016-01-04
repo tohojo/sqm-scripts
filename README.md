@@ -32,10 +32,12 @@ builds.
 
 `cd ./$your_distribution_directory_here`
 
-5.) Note for openwrt this will overwrite your specific /etc/config/sqm, so make sure to conserve your configuration file before. For openwrt this can be achieved by locally deleting the defaulf confg file in $your_distribution_directory_here first:
+5.) Note for openwrt this will overwrite your specific /etc/config/sqm, so make sure to conserve your configuration file before. For openwrt this can be achieved by locally deleting the default config file in $your_distribution_directory_here first:
 
 `rm -r etc/config`
 
 6.) Now, update to the current state:
 
 `scp -r ./* $USER@YOUR.SQM.HOSTNAME:/`
+
+Note: `$something` is used as a stand-in for the real information, e.g.: `$your_distribution_directory_here` could be be `current_sqm_base`; `$USER` on openwrt most likely should be `root`; and `$YOUR.SQM.HOSTNAME` probably is `192.168.1.1` or on cerowrt `gw.hom.lan`.
