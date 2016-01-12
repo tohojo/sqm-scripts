@@ -41,3 +41,22 @@ builds.
 `scp -r ./* $USER@YOUR.SQM.HOSTNAME:/`
 
 Note: `$something` is used as a stand-in for the real information, e.g.: `$your_distribution_directory_here` could be be `current_sqm_base`; `$USER` on openwrt most likely should be `root`; and `$YOUR.SQM.HOSTNAME` probably is `192.168.1.1` or on cerowrt `gw.hom.lan`.
+
+## Run-time debugging
+
+SQM_VERBOSITY controls the verbosity of sqm's output to the shell and syslog (0: no logging; 8: full debug output).
+SQM_DEBUG controlls whether sqm will log all binary invocations, their output and its shel output into a log file in `/var/run/sqm`.
+The log files are named `/var/run/sqm/${interface_name}.debug.log` e.g. `/var/run/sqm/pppoe-ge00.debug.log`.
+
+### Examples
+
+1) Log only the binary invocations and their output:
+`/etc/init.d/sqm stop ; SQM_DEBUG=1 SQM_VERBOSITY=0 /etc/init.d/sqm start`
+
+2) Log verbose debug output and all the binary invocations and their output:
+`/etc/init.d/sqm stop ; SQM_DEBUG=1 SQM_VERBOSITY=8 /etc/init.d/sqm start`
+
+3) Log both start and stop:
+`SQM_DEBUG=1 SQM_VERBOSITY=8 /etc/init.d/sqm stop ; SQM_DEBUG=1 SQM_VERBOSITY=8 /etc/init.d/sqm start`
+
+Note: This always appens to the log file(s), so manual intervention is required to save/delete these log files before they get too large.
