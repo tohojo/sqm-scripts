@@ -41,7 +41,7 @@ Run the steps below on your own computer (not on the router) to retrieve the new
 7. Now, use scp to copy the new scripts to the router. Change `$YOUR.SQM.HOSTNAME` to the address/DNS name for your computer - probably `192.168.1.1` or on cerowrt `gw.hom.lan`. If your account on the router is not "root", change "root" to your account:
 
 
-    `scp -r ./* root@$YOUR.SQM.HOSTNAME/`
+    `scp -r ./* root@$YOUR.SQM.HOSTNAME:/`
 
 Note this method relies on the presence of the required qdiscs on the router/destination host. On openwrt, you should first install the "normal" sqm-scripts package to take care of all the dependencies, then use this procedure to update to the newest sqm-scripts.
 
