@@ -14,8 +14,6 @@ builds.
 
 Run the steps below on your own computer (not on the router) to retrieve the newest script version from this repository, create the scripts, then copy those new scripts to your router. 
 
-_About notation:_ `$something` is used as a stand-in for the real information, e.g.: `$USER` on openwrt most likely should be `root`; and `$YOUR.SQM.HOSTNAME` is the address/DNS name for your computer - probably `192.168.1.1` or on cerowrt `gw.hom.lan`.
-
 1. Make a local clone of the git repository (if you have not already):
 
     `git clone https://github.com/tohojo/sqm-scripts`
@@ -36,13 +34,14 @@ _About notation:_ `$something` is used as a stand-in for the real information, e
 
     `cd ./current_sqm_base`
 
-6. Note for OpenWrt: The final step will overwrite your router's current sqm configuration file (at `/etc/config/sqm`). If you want to preserve the current configuration, delete the newly created config file from the local `etc/config`:
+6. Optional for OpenWrt: The final step will overwrite your router's current sqm configuration file (at `/etc/config/sqm`). If you want to preserve the current configuration, delete the newly created config file from the local `etc/config`:
 
     `rm -r etc/config`
 
-7. Now, use scp to copy the new scripts to the router:
+7. Now, use scp to copy the new scripts to the router. Change `$YOUR.SQM.HOSTNAME` to the address/DNS name for your computer - probably `192.168.1.1` or on cerowrt `gw.hom.lan`. If your account on the router is not "root", change "root" to your account:
 
-    `scp -r ./* $USER@YOUR.SQM.HOSTNAME:/`
+
+    `scp -r ./* root@$YOUR.SQM.HOSTNAME/`
 
 Note this method relies on the presence of the required qdiscs on the router/destination host. On openwrt, you should first install the "normal" sqm-scripts package to take care of all the dependencies, then use this procedure to update to the newest sqm-scripts.
 
