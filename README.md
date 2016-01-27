@@ -12,6 +12,8 @@ builds.
 
 ## "Installing" the current development version from git
 
+Run the steps below on your own computer (not on the router). The final step will copy the built scripts to your router. About notation: `$something` is used as a stand-in for the real information, e.g.: `$your_distribution_directory_here` could be be `current_sqm_base`; `$USER` on openwrt most likely should be `root`; and `$YOUR.SQM.HOSTNAME` probably is `192.168.1.1` or on cerowrt `gw.hom.lan`.
+
 0.) Make a local clone of the git repository (if you have not already):
 
 `git clone https://github.com/tohojo/sqm-scripts`
@@ -39,8 +41,6 @@ builds.
 6.) Now, update to the current state:
 
 `scp -r ./* $USER@YOUR.SQM.HOSTNAME:/`
-
-Note that `$something` is used as a stand-in for the real information, e.g.: `$your_distribution_directory_here` could be be `current_sqm_base`; `$USER` on openwrt most likely should be `root`; and `$YOUR.SQM.HOSTNAME` probably is `192.168.1.1` or on cerowrt `gw.hom.lan`.
 
 Also note this method relies on the presence of the required qdiscs on the destination host, so on openwrt it seems reasonable to first install the "normal" sqm-scripts packet which should take care of all the dependencies and then manually "update" to the git version.
 
