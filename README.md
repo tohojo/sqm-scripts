@@ -68,6 +68,6 @@ The log files are named `/var/run/sqm/${interface_name}.debug.log` e.g. `/var/ru
 - **WARNING:** The commands above leave logging enabled.
 The resulting log file(s) will continue to grow without limit unless you 
 turn logging off or delete/trim these log files on a regular basis.
-When you have finished debugging SQM, use the SQM-QoS web GUI, or issue this command:
+When you have finished debugging SQM, issue this command:
 
     `SQM_DEBUG=0 SQM_VERBOSITY=0 /etc/init.d/sqm start`
