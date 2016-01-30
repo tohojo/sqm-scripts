@@ -49,7 +49,7 @@ Note this method relies on the presence of the required qdiscs on the router/des
 
 SQM_VERBOSITY controls the verbosity of sqm's output to the shell and syslog (0: no logging; 8: full debug output).
 SQM_DEBUG controls whether sqm will log all binary invocations, their output and its shell output into a log file in `/var/run/sqm`.
-The log files are named `/var/run/sqm/${interface_name}.debug.log` e.g. `/var/run/sqm/pppoe-ge00.debug.log`.
+The log files are named `/var/run/sqm/${interface_name}.debug.log` e.g. `/var/run/sqm/pppoe-ge00.debug.log`. 
 
 #### Examples
 
@@ -69,4 +69,4 @@ The log files are named `/var/run/sqm/${interface_name}.debug.log` e.g. `/var/ru
 
     `SQM_DEBUG=0 SQM_VERBOSITY=5 /etc/init.d/sqm stop ; SQM_DEBUG=0 SQM_VERBOSITY=5 /etc/init.d/sqm start`
 
-Note: This always appends to the log file(s), so be sure to turn off debugging (see the last example) or remember to save/delete these log files before they get too large.
+Note: This always appends to the log file(s), so be sure to turn off debugging and reset the verbosity back to the default value (see the last example) or remember to save/delete these log files before they get too large.
