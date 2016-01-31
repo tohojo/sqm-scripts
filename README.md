@@ -12,7 +12,7 @@ builds.
 
 ## "Installing" the current development version from git
 
-Run the steps below on your own computer (not on the router) to retrieve the newest script version from this repository, create the scripts, then copy those new scripts to your router. 
+Run the steps below on your own computer (not on the router) to retrieve the newest script version from this repository, create the scripts, then copy those new scripts to your router.
 
 1. Make a local clone of the git repository (if you have not already):
 
@@ -49,7 +49,7 @@ Note this method relies on the presence of the required qdiscs on the router/des
 
 SQM_VERBOSITY controls the verbosity of sqm's output to the shell and syslog (0: no logging; 8: full debug output).
 SQM_DEBUG controls whether sqm will log all binary invocations, their output and its shell output into a log file in `/var/run/sqm`.
-The log files are named `/var/run/sqm/${interface_name}.debug.log` e.g. `/var/run/sqm/pppoe-ge00.debug.log`. 
+The log files are named `/var/run/sqm/${interface_name}.debug.log` e.g. `/var/run/sqm/pppoe-ge00.debug.log`.
 
 #### Examples
 
