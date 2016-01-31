@@ -65,8 +65,8 @@ The log files are named `/var/run/sqm/${interface_name}.debug.log` e.g. `/var/ru
 
     `SQM_DEBUG=1 SQM_VERBOSITY=8 /etc/init.d/sqm stop ; SQM_DEBUG=1 SQM_VERBOSITY=8 /etc/init.d/sqm start`
 
-- Disable logging and reset to default verbosity:
-
-    `SQM_DEBUG=0 SQM_VERBOSITY=5 /etc/init.d/sqm stop ; SQM_DEBUG=0 SQM_VERBOSITY=5 /etc/init.d/sqm start`
-
-Note: This always appends to the log file(s), so be sure to turn off debugging and reset the verbosity back to the default value (see the last example) or remember to save/delete these log files before they get too large.
+Note: This always appends to the log file(s). If you just run a one-off
+command with debugging enabled from the command line this is fine, but
+if you enable debugging in the web interface, the files can grow too
+large and cause problems. So if you do enable debugging in the web
+interface, remember to turn it back off again.
