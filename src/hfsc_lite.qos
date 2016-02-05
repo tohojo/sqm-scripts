@@ -1,0 +1,231 @@
+#!/bin/sh
+################################################################################
+# hfsc_lite.qos
+#
+# Problem: you have 60/5 or better broad band, but CeroWRT / Bufferbloat / SQM
+# stock scripts use HTB. HTB is eating your routers CPU for breakfast, so you
+# get 40/5 with QOS or +1000ms bloat without. CAKE is not yet done baking.
+#
+# Thought: There has got to be something else. Maybe not ideal bloat control,
+# but we'd like better than 50% of 100/10, if we paid for it.
+#
+# Solution: HFSC has its quirks, but without trying for a white knuckle grip,
+# it appears to be less expensive, and could be useful to consumer grade routers.
+# FQ_CODEL does well to spread out usage, and still preferred in SQM. PIE is 
+# 3%-ish cheaper on the leaf, but it is also sloppier.
+# 
+# The intent here is a typical concept of 3 tiers of band width limiting, and 
+# mostly allow the QDISC to do its flow sparsity priority (not micro manage).
+# We aren't going to set up any complex rules for the tiers either. Again, the
+# idea is simple, fast, and easy on the CPU. TOS mash-up on ingress or
+# potential misuse ... ignored.
+#
+# --TCP Standard Ports: Most users are on HTTP/HTTPS or 80/443 and we don't want 
+#   the kids complaining now do we.
+# --UDP Standard Ports: DNS, DHCP, NTP, and other frequent but small services. 
+#   Some VPN. They probably won't even use the service curve we give them.
+# --Other: VPN, ICMP, VOIP, Torrent, tunnels, and whatever will need to fight 
+#   it out. FQ_CODEL makes sparsity a priority so VOIP an ICMP will win.
+#
+################################################################################
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+#   Copyright (C) 2015 Eric Luehrsen
+#
+################################################################################
+
+. ${SQM_LIB_DIR}/defaults.sh
+
+################################################################################
+
+egress() {  
+  # Link share (virtual time) tuning is only rough as borrowing will occur.
+  # However in saturation, each class is guaranteed (real time) minimum of 15%.
+  # This allows HFSC to do its work but avoids some of its vitrual time quirks.
+  UPLINK_C=$(( ${UPLINK} * 50 / 49 ))
+  UPLINK_R=$(( ${UPLINK} * 1 / 7 ))
+  UPLINK_1=$(( ${UPLINK} * 3 / 7 ))
+  UPLINK_2=$(( ${UPLINK} * 2 / 7 ))
+  UPLINK_3=$(( ${UPLINK} * 2 / 7 ))
+  
+  # Tree Removal Special includes Stump Grinding
+  $TC qdisc del dev $IFACE root 2>/dev/null
+  
+  # Root Class
+  # The SC curve (LS+RT) includes feedback in virtual time, but the UL 
+  # ceiling is pure real time. If UL=SC, then you cant actually get SC.
+  $TC qdisc add dev $IFACE root handle 1: `get_stab_string` hfsc default 13
+  $TC class add dev $IFACE parent 1: classid 1:1 hfsc \
+    sc m1 ${UPLINK_C}kbit d 1s m2 ${UPLINK}kbit ul rate ${UPLINK_C}kbit
+  
+  # Tree Class - note RT 15% prevents starvation as LS rebalances
+  $TC class add dev $IFACE parent 1:1 classid 1:11 hfsc \
+    ls rate ${UPLINK_1}kbit rt rate ${UPLINK_R}kbit
+  $TC class add dev $IFACE parent 1:1 classid 1:12 hfsc \
+    ls rate ${UPLINK_2}kbit rt rate ${UPLINK_R}kbit
+  $TC class add dev $IFACE parent 1:1 classid 1:13 hfsc \
+    ls rate ${UPLINK_3}kbit rt rate ${UPLINK_R}kbit
+  
+  # Leaf QDISC
+  $TC qdisc add dev $IFACE parent 1:11 handle 110: ${QDISC} \
+    `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` \
+    `get_flows ${UPLINK_1}` ${EQDISC_OPTS}
+  $TC qdisc add dev $IFACE parent 1:12 handle 120: ${QDISC} \
+    `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` \
+    `get_flows ${UPLINK_2}` ${EQDISC_OPTS}
+  $TC qdisc add dev $IFACE parent 1:13 handle 130: ${QDISC} \
+    `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` \
+    `get_flows ${UPLINK_3}` ${EQDISC_OPTS}
+  
+  # We could filter FLOW here to get CONTACK address/ports, and if present,
+  # this works around the NAT. Though, that would be more CPU work, and NAT will
+  # use unique ports for each conneciton. So, leaf QDISC _should_ hash that.
+    
+  # TCP Standardized Ports either SRC or DST (1-1023)
+  $TC filter add dev $IFACE parent 1:0 protocol ip   prio 1 u32 \
+    match ip  protocol 6 0xff match ip  dport 1 0xfc00 flowid 1:11
+  $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 2 u32 \
+    match ip6 protocol 6 0xff match ip  dport 1 0xfc00 flowid 1:11
+  $TC filter add dev $IFACE parent 1:0 protocol ip   prio 3 u32 \
+    match ip  protocol 6 0xff match ip  sport 1 0xfc00 flowid 1:11
+  $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 4 u32 \
+    match ip6 protocol 6 0xff match ip  sport 1 0xfc00 flowid 1:11
+    
+  # UDP Standardized Ports either SRC or DST (1-1023)
+  $TC filter add dev $IFACE parent 1:0 protocol ip   prio 5 u32 \
+    match ip  protocol 17 0xff match ip  dport 1 0xfc00 flowid 1:12
+  $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 6 u32 \
+    match ip6 protocol 17 0xff match ip6 dport 1 0xfc00 flowid 1:12
+  $TC filter add dev $IFACE parent 1:0 protocol ip   prio 7 u32 \
+    match ip  protocol 17 0xff match ip  sport 1 0xfc00 flowid 1:12
+  $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 8 u32 \
+    match ip6 protocol 17 0xff match ip6 sport 1 0xfc00 flowid 1:12
+  
+  # All Else including ICMP
+  $TC filter add dev $IFACE parent 1:0 protocol ip   prio 11 u32 \
+    match ip  protocol 0 0x00 flowid 1:13
+  $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 12 u32 \
+    match ip6 protocol 0 0x00 flowid 1:13
+}
+
+################################################################################
+
+ingress() {
+  # Link share (virtual time) tuning is only rough as borrowing will occur.
+  # However in saturation, each class is guaranteed (real time) minimum of 15%.
+  # This allows HFSC to do its work but avoids some of its vitrual time quirks. 
+  DOWNLINK_C=$(( ${DOWNLINK} * 50 / 49 ))
+  DOWNLINK_R=$(( ${DOWNLINK} * 1 / 7 ))
+  DOWNLINK_1=$(( ${DOWNLINK} * 3 / 7 ))
+  DOWNLINK_2=$(( ${DOWNLINK} * 2 / 7 ))
+  DOWNLINK_3=$(( ${DOWNLINK} * 2 / 7 ))
+
+  # Virtual Ingress Port
+  $TC qdisc del dev $IFACE handle ffff: ingress 2>/dev/null
+  $TC qdisc add dev $IFACE handle ffff: ingress
+  
+  # Tree Removal Special includes Stump Grinding
+  $TC qdisc del dev $DEV root 2>/dev/null
+  
+  # Root Class
+  # The SC curve (LS+RT) includes feedback in virtual time, but the UL 
+  # ceiling is pure real time. If UL=SC, then you cant actually get SC.
+  $TC qdisc add dev $DEV root handle 1: `get_stab_string` hfsc default 13
+  $TC class add dev $DEV parent 1: classid 1:1 hfsc \
+    sc m1 ${DOWNLINK_C}kbit d 1s m2 ${DOWNLINK}kbit ul rate ${DOWNLINK_C}kbit
+  
+  # Tree Class - note RT 15% prevents starvation as LS rebalances
+  $TC class add dev $DEV parent 1:1 classid 1:11 hfsc \
+    ls rate ${DOWNLINK_1}kbit rt rate ${DOWNLINK_R}kbit
+  $TC class add dev $DEV parent 1:1 classid 1:12 hfsc \
+    ls rate ${DOWNLINK_2}kbit rt rate ${DOWNLINK_R}kbit
+  $TC class add dev $DEV parent 1:1 classid 1:13 hfsc \
+    ls rate ${DOWNLINK_3}kbit rt rate ${DOWNLINK_R}kbit
+  
+  # Leaf QDISC
+  $TC qdisc add dev $DEV parent 1:11 handle 110: $QDISC \
+    `get_limit ${ILIMIT}` `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` \
+    `get_flows ${DOWNLINK_1}` ${IQDISC_OPTS}
+  $TC qdisc add dev $DEV parent 1:12 handle 120: $QDISC \
+    `get_limit ${ILIMIT}` `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` \
+    `get_flows ${DOWNLINK_2}` ${IQDISC_OPTS}
+  $TC qdisc add dev $DEV parent 1:13 handle 130: $QDISC \
+    `get_limit ${ILIMIT}` `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` \
+    `get_flows ${DOWNLINK_3}` ${IQDISC_OPTS}
+  
+  # We could filter FLOW here to get CONTACK address/ports, and if present,
+  # this works around the NAT. Though, that would be more CPU work, and NAT will
+  # use unique ports for each conneciton. So, leaf QDISC _should_ hash that.
+    
+  # TCP Standardized Ports either SRC or DST (1-1023)
+  $TC filter add dev $DEV parent 1:0 protocol ip   prio 1 u32 \
+    match ip  protocol 6 0xff match ip  dport 1 0xfc00 flowid 1:11
+  $TC filter add dev $DEV parent 1:0 protocol ipv6 prio 2 u32 \
+    match ip6 protocol 6 0xff match ip  dport 1 0xfc00 flowid 1:11
+  $TC filter add dev $DEV parent 1:0 protocol ip   prio 3 u32 \
+    match ip  protocol 6 0xff match ip  sport 1 0xfc00 flowid 1:11
+  $TC filter add dev $DEV parent 1:0 protocol ipv6 prio 4 u32 \
+    match ip6 protocol 6 0xff match ip  sport 1 0xfc00 flowid 1:11
+    
+  # UDP Standardized Ports either SRC or DST (1-1023)  
+  $TC filter add dev $DEV parent 1:0 protocol ip   prio 5 u32 \
+    match ip  protocol 17 0xff match ip  dport 1 0xfc00 flowid 1:12
+  $TC filter add dev $DEV parent 1:0 protocol ipv6 prio 6 u32 \
+    match ip6 protocol 17 0xff match ip6 dport 1 0xfc00 flowid 1:12
+  $TC filter add dev $DEV parent 1:0 protocol ip   prio 7 u32 \
+    match ip  protocol 17 0xff match ip  sport 1 0xfc00 flowid 1:12
+  $TC filter add dev $DEV parent 1:0 protocol ipv6 prio 8 u32 \
+    match ip6 protocol 17 0xff match ip6 sport 1 0xfc00 flowid 1:12
+  
+  # All Else including ICMP    
+  $TC filter add dev $DEV parent 1:0 protocol ip   prio 11 u32 \
+    match ip  protocol 0 0x00 flowid 1:13
+  $TC filter add dev $DEV parent 1:0 protocol ipv6 prio 12 u32 \
+    match ip6 protocol 0 0x00 flowid 1:13
+
+  # Redirect $IFACE to Virtual Ingress
+  ip link set dev $DEV up
+  
+  $TC filter add dev $IFACE parent ffff: protocol all prio 15 u32 \
+    match u32 0 0 flowid 1:1 action mirred egress redirect dev $DEV
+}
+
+################################################################################
+
+sqm_start() {
+  sqm_logger "Starting ${SCRIPT}"
+  
+  [ -n "$IFACE" ] || return 1
+    
+  do_modules
+  verify_qdisc "hfsc" || return 1
+  verify_qdisc $QDISC || return 1
+  
+  [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
+  
+  if [ "$UPLINK" -ne 0 ];
+  then
+    egress
+    sqm_logger "egress shaping activated"
+  else
+    $TC qdisc del dev $IFACE root 2> /dev/null
+    sqm_logger "egress shaping deactivated"
+  fi
+   
+  if [ "$DOWNLINK" -ne 0 ];
+  then
+    verify_qdisc ingress "ingress" || return 1
+    ingress
+    sqm_logger "ingress shaping activated"
+  else
+    $TC qdisc del dev $DEV root 2> /dev/null
+    $TC qdisc del dev $IFACE ingress 2> /dev/null
+    sqm_logger "ingress shaping deactivated"
+  fi
+
+  return 0
+}
+
+################################################################################
