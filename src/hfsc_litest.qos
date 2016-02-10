@@ -1,0 +1,126 @@
+#!/bin/sh
+################################################################################
+# hfsc_litest.qos
+#
+# Problem: you have 60/5 or better broad band, but CeroWRT / Bufferbloat / SQM
+# stock scripts use HTB. HTB is eating your routers CPU for breakfast, so you
+# get 40/5 with QOS or +1000ms bloat without. CAKE is not yet done baking.
+#
+# Thought: There has got to be something else. Maybe not ideal bloat control,
+# but we'd like better than 50% of 100/10, if we paid for it.
+#
+# Solution: HFSC has its quirks, but without trying for a white knuckle grip,
+# it appears to be less expensive, and could be useful to consumer grade routers.
+# FQ_CODEL does well to spread out usage, and still preferred in SQM. 
+#
+# The intent here is absolute minimum amount of junk attached to TC. FQ_CODEL
+# makes good sparse flow priorities. Likely great service for a few users.
+#
+################################################################################
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+#   Copyright (C) 2015 Eric Luehrsen
+#
+################################################################################
+
+. ${SQM_LIB_DIR}/defaults.sh
+
+################################################################################
+
+egress() {   
+  UPLINK_C=$(( ${UPLINK} * 50 / 49 ))
+  
+  # Tree Removal Special includes Stump Grinding
+  $TC qdisc del dev $IFACE root 2>/dev/null
+  
+  # Root Class
+  # The SC curve (LS+RT) includes feedback in virtual time, but the UL 
+  # ceiling is pure real time. If UL=SC, then you cant actually get SC.
+  $TC qdisc add dev $IFACE root handle 1: `get_stab_string` hfsc default 1
+  $TC class add dev $IFACE parent 1: classid 1:1 hfsc \
+    sc m1 ${UPLINK_C}kbit d 1s m2 ${UPLINK}kbit ul rate ${UPLINK_C}kbit
+  
+  # Leaf QDISC
+  $TC qdisc add dev $IFACE parent 1:1 handle 110: ${QDISC} \
+    `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` \
+    `get_flows ${UPLINK}` ${EQDISC_OPTS}
+    
+  # We could filter FLOW here to get CONTACK address/ports, and if present,
+  # this works around the NAT. Though, that would be more CPU work, and NAT will
+  # use unique ports for each conneciton. So, leaf QDISC _should_ hash that.
+}
+
+################################################################################
+
+ingress() {
+  DOWNLINK_C=$(( ${DOWNLINK} * 50 / 49 ))
+  
+  # Virtual Ingress Port
+  $TC qdisc del dev $IFACE handle ffff: ingress 2>/dev/null
+  $TC qdisc add dev $IFACE handle ffff: ingress
+  
+  # Tree Removal Special includes Stump Grinding
+  $TC qdisc del dev $DEV root 2>/dev/null
+  
+  # Root Class
+  # The SC curve (LS+RT) includes feedback in virtual time, but the UL 
+  # ceiling is pure real time. If UL=SC, then you cant actually get SC.
+  $TC qdisc add dev $DEV root handle 1: `get_stab_string` hfsc default 1
+  $TC class add dev $DEV parent 1: classid 1:1 hfsc \
+    sc m1 ${DOWNLINK_C}kbit d 1s m2 ${DOWNLINK}kbit ul rate ${DOWNLINK_C}kbit
+  
+  # Leaf QDISC
+  $TC qdisc add dev $DEV parent 1:1 handle 110: $QDISC \
+    `get_limit ${ILIMIT}` `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` \
+    `get_flows ${DOWNLINK}` ${IQDISC_OPTS}
+  
+  # We could filter FLOW here to get CONTACK address/ports, and if present,
+  # this works around the NAT. Though, that would be more CPU work, and NAT will
+  # use unique ports for each conneciton. So, leaf QDISC _should_ hash that.
+  
+  # Redirect $IFACE to Virtual Ingress
+  ip link set dev $DEV up
+  
+  $TC filter add dev $IFACE parent ffff: protocol all prio 15 u32 \
+    match u32 0 0 flowid 1:1 action mirred egress redirect dev $DEV
+}
+
+################################################################################
+
+sqm_start() {
+  sqm_logger "Starting ${SCRIPT}"
+  
+  [ -n "$IFACE" ] || return 1
+    
+  do_modules
+  verify_qdisc "hfsc" || return 1
+  verify_qdisc $QDISC || return 1
+  
+  [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
+  
+  if [ "$UPLINK" -ne 0 ];
+  then
+    egress
+    sqm_logger "egress shaping activated"
+  else
+    $TC qdisc del dev $IFACE root 2> /dev/null
+    sqm_logger "egress shaping deactivated"
+  fi
+   
+  if [ "$DOWNLINK" -ne 0 ];
+  then
+    verify_qdisc ingress "ingress" || return 1
+    ingress
+    sqm_logger "ingress shaping activated"
+  else
+    $TC qdisc del dev $DEV root 2> /dev/null
+    $TC qdisc del dev $IFACE ingress 2> /dev/null
+    sqm_logger "ingress shaping deactivated"
+  fi
+
+  return 0
+}
+
+################################################################################
