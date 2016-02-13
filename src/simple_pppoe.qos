@@ -111,19 +111,19 @@ egress() {
 
     # FIXME should probably change the filter here to do pre-nat
 
-    $TC filter add dev $IFACE parent 1:0 protocol ip prio 1 handle 1 fw classid 1:11
-    $TC filter add dev $IFACE parent 1:0 protocol ip prio 2 handle 2 fw classid 1:12
-    $TC filter add dev $IFACE parent 1:0 protocol ip prio 3 handle 3 fw classid 1:13
+    $TC filter add dev $IFACE parent 1:0 protocol ip prio 1 handle 1/${IPT_MASK} fw classid 1:11
+    $TC filter add dev $IFACE parent 1:0 protocol ip prio 2 handle 2/${IPT_MASK} fw classid 1:12
+    $TC filter add dev $IFACE parent 1:0 protocol ip prio 3 handle 3/${IPT_MASK} fw classid 1:13
 
     # ipv6 support. Note that the handle indicates the fw mark bucket that is looked for
 
-    $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 4 handle 1 fw classid 1:11
-    $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 5 handle 2 fw classid 1:12
-    $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 6 handle 3 fw classid 1:13
+    $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 4 handle 1/${IPT_MASK} fw classid 1:11
+    $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 5 handle 2/${IPT_MASK} fw classid 1:12
+    $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 6 handle 3/${IPT_MASK} fw classid 1:13
 
     # Arp traffic
 
-    $TC filter add dev $IFACE parent 1:0 protocol arp prio 7 handle 1 fw classid 1:11
+    $TC filter add dev $IFACE parent 1:0 protocol arp prio 7 handle 1/${IPT_MASK} fw classid 1:11
 
     # ICMP traffic - Don't impress your friends. Deoptimize to manage ping floods
     # better instead
