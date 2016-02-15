@@ -1,0 +1,2 @@
+Uses a combination of HFSC and FLOW classifier to prioritize marked traffic.
+This script is specially designed for clients behind NAT.

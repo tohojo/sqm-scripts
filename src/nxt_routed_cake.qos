@@ -1,0 +1,100 @@
+#!/bin/sh
+
+# This script implements a CAKE shaper based on diffserv4 for egress
+# and besteffort for ingress.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+
+. ${SQM_LIB_DIR}/defaults.sh
+
+QDISC=cake
+EGRESS_CAKE_OPTS="wash diffserv4"
+INGRESS_CAKE_OPTS="squash"
+
+ipt_setup() {
+    ipt -t mangle -F QOS_MARK_${IFACE}
+    ipt -t mangle -X QOS_MARK_${IFACE}
+    ipt -t mangle -N QOS_MARK_${IFACE}
+
+    ipt -t mangle -A POSTROUTING -o ${IFACE} -g QOS_MARK_${IFACE}
+
+    ipt -t mangle -A QOS_MARK_${IFACE} -m mark --mark 0x01${IPT_MASK_STRING} \
+    -j DSCP --set-dscp-class EF
+    ipt -t mangle -A QOS_MARK_${IFACE} -m mark --mark 0x02${IPT_MASK_STRING} \
+    -j DSCP --set-dscp-class AF41
+    ipt -t mangle -A QOS_MARK_${IFACE} -m mark --mark 0x03${IPT_MASK_STRING} \
+    -j DSCP --set-dscp-class AF11
+    ipt -t mangle -A QOS_MARK_${IFACE} -m mark --mark 0x04${IPT_MASK_STRING} \
+    -j DSCP --set-dscp-class CS1
+}
+
+egress() {
+    $TC qdisc del dev ${IFACE} root 2> /dev/null
+    $TC qdisc add dev ${IFACE} root $( get_stab_string ) ${QDISC} \
+    bandwidth ${UPLINK}kbit \
+    $( get_cake_lla_string ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
+}
+
+ingress() {
+    $TC qdisc del dev ${IFACE} handle ffff: ingress 2> /dev/null
+    $TC qdisc add dev ${IFACE} handle ffff: ingress
+
+    $TC qdisc del dev ${DEV} root 2> /dev/null
+    $TC qdisc add dev ${DEV} root $( get_stab_string ) ${QDISC} \
+    bandwidth ${DOWNLINK}kbit \
+    $( get_cake_lla_string ) ${INGRESS_CAKE_OPTS} ${IQDISC_OPTS}
+
+    $IP link set dev ${DEV} up
+
+    $TC filter add dev ${IFACE} parent ffff: protocol all prio 1 u32 \
+    match u32 0 0 action mirred egress redirect dev ${DEV}
+}
+
+sqm_start() {
+    [ -n "${IFACE}" ] || return 1
+    sqm_logger "Starting ${SCRIPT}"
+    do_modules
+    ipt_setup
+
+    [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
+
+    if [ "${UPLINK}" -ne 0 ];
+    then
+        verify_qdisc ${QDISC} "cake" || return 1
+        egress
+        sqm_logger "egress shaping activated"
+    else
+        sqm_logger "egress shaping deactivated"
+        $TC qdisc del dev ${IFACE} root 2> /dev/null
+    fi
+    if [ "${DOWNLINK}" -ne 0 ];
+    then
+        verify_qdisc ingress "ingress" || return 1
+        verify_qdisc ${QDISC} "cake" || return 1
+        ingress
+        sqm_logger "ingress shaping activated"
+    else
+        sqm_logger "ingress shaping deactivated"
+        $TC qdisc del dev ${DEV} root 2> /dev/null
+        $TC qdisc del dev ${IFACE} ingress 2> /dev/null
+    fi
+
+    return 0
+}
+
+sqm_stop() {
+    $TC qdisc del dev ${IFACE} ingress 2> /dev/null
+    $TC qdisc del dev ${IFACE} root 2> /dev/null
+    [ -n "$CUR_IFB" ] && $TC qdisc del dev ${CUR_IFB} root 2> /dev/null
+    [ -n "$CUR_IFB" ] && sqm_logger "${0}: ${CUR_IFB} shaper deleted"
+
+    ipt -t mangle -D POSTROUTING -o ${IFACE} -g QOS_MARK_${IFACE}
+    ipt -t mangle -F QOS_MARK_${IFACE}
+    ipt -t mangle -X QOS_MARK_${IFACE}
+
+    [ -n "$CUR_IFB" ] && $IP link set dev ${CUR_IFB} down
+    [ -n "$CUR_IFB" ] && $IP link delete ${CUR_IFB} type ifb
+    [ -n "$CUR_IFB" ] && sqm_logger "${0}: ${CUR_IFB} interface deleted"
+}
