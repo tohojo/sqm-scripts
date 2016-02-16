@@ -29,8 +29,7 @@
 # Try modprobe first, fall back to insmod
 [ -z "$INSMOD" ] && INSMOD=$(which modprobe) || INSMOD=$(which insmod)
 [ -z "$TARGET" ] && TARGET="5ms"
-[ -z "$IPT_MASK" ] && IPT_MASK="0xff"
-[ -z "$IPT_MASK_STRING" ] && IPT_MASK_STRING="/${IPT_MASK}"	# for set-mark
+[ -z "$IPT_MASK" ] && IPT_MASK="0xff" # to disable: set mask to 0xffffffff
 #sm: we need the functions above before trying to set the ingress IFB device
 #sm: *_CAKE_OPTS should contain the diffserv keyword for cake
 [ -z "$INGRESS_CAKE_OPTS" ] && INGRESS_CAKE_OPTS="diffserv4"

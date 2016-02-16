@@ -244,11 +244,11 @@ sqm_stop() {
     [ -n "$CUR_IFB" ] && sqm_debug "${0}: ${CUR_IFB} shaper deleted"
 
     [ -n "$CUR_IFB" ] && ipt -t mangle -D POSTROUTING -o $CUR_IFB -m mark --mark 0x00 -g QOS_MARK_${IFACE}
-    ipt -t mangle -D POSTROUTING -o $IFACE -m mark --mark 0x00${IPT_MASK_STRING} -g QOS_MARK_${IFACE}
-    ipt -t mangle -D PREROUTING -i vtun+ -p tcp -j MARK --set-mark 0x2${IPT_MASK_STRING}
+    ipt -t mangle -D POSTROUTING -o $IFACE -m mark --mark 0x00/${IPT_MASK} -g QOS_MARK_${IFACE}
+    ipt -t mangle -D PREROUTING -i vtun+ -p tcp -j MARK --set-mark 0x2/${IPT_MASK}
     #sm: not sure whether we need to make this conditional or whether they are silent if the deletion does not work out
     ipt -t mangle -D PREROUTING -i $IFACE -m dscp ! --dscp 0 -j DSCP --set-dscp-class be
-    ipt -t mangle -D PREROUTING -i $IFACE -m mark --mark 0x00${IPT_MASK_STRING} -g QOS_MARK_${IFACE}
+    ipt -t mangle -D PREROUTING -i $IFACE -m mark --mark 0x00/${IPT_MASK} -g QOS_MARK_${IFACE}
 
     ipt -t mangle -D OUTPUT -p udp -m multiport --ports 123,53 -j DSCP --set-dscp-class AF42
     ipt -t mangle -F QOS_MARK_${IFACE}

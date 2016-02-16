@@ -22,18 +22,18 @@ ipt_setup() {
 
     ipt -t mangle -A QOS_MARK_${IFACE} -j CONNMARK \
     --restore-mark --nfmask ${IPT_MASK} --ctmask ${IPT_MASK}
-    ipt -t mangle -A QOS_MARK_${IFACE} -m mark --mark 0x00${IPT_MASK_STRING} \
+    ipt -t mangle -A QOS_MARK_${IFACE} -m mark --mark 0x00/${IPT_MASK} \
     -j QOS_RULES_${IFACE}
 
     #Classify known interactive services in the NORMAL queue.
     ipt -t mangle -A QOS_RULES_${IFACE} -p tcp -m multiport \
-    --dports 20,21,22,25,80,110,443,465,993,995 -j MARK --set-mark 0x02${IPT_MASK_STRING}
+    --dports 20,21,22,25,80,110,443,465,993,995 -j MARK --set-mark 0x02/${IPT_MASK}
     #Assign DNS and NTP to PRIORITY.
     ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m multiport \
-    --dports 53,123 -j MARK --set-mark 0x01${IPT_MASK_STRING}
+    --dports 53,123 -j MARK --set-mark 0x01/${IPT_MASK}
     #Everything else is marked for BULK.
-    ipt -t mangle -A QOS_RULES_${IFACE} -m mark --mark 0x00${IPT_MASK_STRING} \
-    -j MARK --set-mark 0x03${IPT_MASK_STRING}
+    ipt -t mangle -A QOS_RULES_${IFACE} -m mark --mark 0x00/${IPT_MASK} \
+    -j MARK --set-mark 0x03/${IPT_MASK}
     ipt -t mangle -A QOS_RULES_${IFACE} -j CONNMARK \
     --save-mark --nfmask ${IPT_MASK} --ctmask ${IPT_MASK}
 }
