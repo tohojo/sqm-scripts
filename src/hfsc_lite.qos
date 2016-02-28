@@ -2,30 +2,31 @@
 ################################################################################
 # hfsc_lite.qos
 #
-# Problem: you have 60/5 or better broad band, but CeroWRT / Bufferbloat / SQM
-# stock scripts use HTB. HTB is eating your routers CPU for breakfast, so you
-# get 40/5 with QOS or +1000ms bloat without. CAKE is not yet done baking.
+# Problem: You enable QOS to prevent 2000 ms delays on your cable service, but
+# your costly 100/10 Mbps service now only makes 50/10 through QOS. Well neither
+# situation is pleasing.
 #
-# Thought: There has got to be something else. Maybe not ideal bloat control,
-# but we'd like better than 50% of 100/10, if we paid for it.
+# Root Cause: Shapers eat CPU for breakfast. Its a lot of extra handling. When
+# the interrupt period expands for shaping tasks, then you will have one of two
+# failure modes. Strict shapers (HTB) will skip packets and have a bandwidth
+# cap, but preserve ideal delay. Loose shapers (HFSC) will borrow extra
+# buffering across the interrupt gap providing full bandwidth, but with some
+# delay proportional to the CPU lag.
 #
-# Solution: HFSC has its quirks, but without trying for a white knuckle grip,
-# it appears to be less expensive, and could be useful to consumer grade routers.
-# FQ_CODEL does well to spread out usage, and still preferred in SQM. PIE is 
-# 3%-ish cheaper on the leaf, but it is also sloppier.
+# Solution: You need to pick your poison. Strict delay control at the cost of
+# bandwidth hard cap. Nearly full bandwidth with proportionally growing delay.
 # 
-# The intent here is a typical concept of 3 tiers of band width limiting, and 
-# mostly allow the QDISC to do its flow sparsity priority (not micro manage).
-# We aren't going to set up any complex rules for the tiers either. Again, the
-# idea is simple, fast, and easy on the CPU. TOS mash-up on ingress or
-# potential misuse ... ignored.
+# Implementation: This HFSC configuration uses Protocol / Port to filter bands. 
+# This will align well with the service expectations of a common residential 
+# user. It should be noted that HTB with DSCP trends with delay enthusiasts. 
 #
-# --TCP Standard Ports: Most users are on HTTP/HTTPS or 80/443 and we don't want 
-#   the kids complaining now do we.
-# --UDP Standard Ports: DNS, DHCP, NTP, and other frequent but small services. 
-#   Some VPN. They probably won't even use the service curve we give them.
+# --Internet TCP Standard Ports: Most users are on HTTP/HTTPS or 80/443 and 
+#   we don't want the kids complaining now do we.
+# --Internet UDP Standard Ports: DNS, DHCP, NTP, and other frequent but small 
+#   services. Some VPN use this space for data transfer.
 # --Other: VPN, ICMP, VOIP, Torrent, tunnels, and whatever will need to fight 
 #   it out. FQ_CODEL makes sparsity a priority so VOIP an ICMP will win.
+#   If you provide a server (<1023) from home to the internet it will be here.
 #
 ################################################################################
 #
@@ -46,9 +47,9 @@ egress() {
   # This allows HFSC to do its work but avoids some of its vitrual time quirks.
   UPLINK_C=$(( ${UPLINK} * 50 / 49 ))
   UPLINK_R=$(( ${UPLINK} * 1 / 7 ))
-  UPLINK_1=$(( ${UPLINK} * 3 / 7 ))
+  UPLINK_1=$(( ${UPLINK} * 2 / 7 ))
   UPLINK_2=$(( ${UPLINK} * 2 / 7 ))
-  UPLINK_3=$(( ${UPLINK} * 2 / 7 ))
+  UPLINK_3=$(( ${UPLINK} * 3 / 7 ))
   
   # Tree Removal Special includes Stump Grinding
   $TC qdisc del dev $IFACE root 2>/dev/null
@@ -79,34 +80,25 @@ egress() {
     `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` \
     `get_flows ${UPLINK_3}` ${EQDISC_OPTS}
   
-  # We could filter FLOW here to get CONTACK address/ports, and if present,
-  # this works around the NAT. Though, that would be more CPU work, and NAT will
-  # use unique ports for each conneciton. So, leaf QDISC _should_ hash that.
+  # TC FILTER FLOW here if we wanted to cross the NAT, but it 
+  # should be unnecessary as NAT creates unique port per connection.
     
-  # TCP Standardized Ports either SRC or DST (1-1023)
+  # TCP Standardized Ports to Internet Destination (1-1023)
   $TC filter add dev $IFACE parent 1:0 protocol ip   prio 1 u32 \
     match ip  protocol 6 0xff match ip  dport 1 0xfc00 flowid 1:11
   $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 2 u32 \
     match ip6 protocol 6 0xff match ip  dport 1 0xfc00 flowid 1:11
-  $TC filter add dev $IFACE parent 1:0 protocol ip   prio 3 u32 \
-    match ip  protocol 6 0xff match ip  sport 1 0xfc00 flowid 1:11
-  $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 4 u32 \
-    match ip6 protocol 6 0xff match ip  sport 1 0xfc00 flowid 1:11
     
-  # UDP Standardized Ports either SRC or DST (1-1023)
-  $TC filter add dev $IFACE parent 1:0 protocol ip   prio 5 u32 \
+  # UDP Standardized Ports to Internet Destination (1-1023)
+  $TC filter add dev $IFACE parent 1:0 protocol ip   prio 3 u32 \
     match ip  protocol 17 0xff match ip  dport 1 0xfc00 flowid 1:12
-  $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 6 u32 \
+  $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 4 u32 \
     match ip6 protocol 17 0xff match ip6 dport 1 0xfc00 flowid 1:12
-  $TC filter add dev $IFACE parent 1:0 protocol ip   prio 7 u32 \
-    match ip  protocol 17 0xff match ip  sport 1 0xfc00 flowid 1:12
-  $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 8 u32 \
-    match ip6 protocol 17 0xff match ip6 sport 1 0xfc00 flowid 1:12
   
-  # All Else including ICMP
-  $TC filter add dev $IFACE parent 1:0 protocol ip   prio 11 u32 \
+   # Default (HFSC-->13) includes ICMP and Home Server Source (1-1023)
+  $TC filter add dev $IFACE parent 1:0 protocol ip   prio 5 u32 \
     match ip  protocol 0 0x00 flowid 1:13
-  $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 12 u32 \
+  $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 6 u32 \
     match ip6 protocol 0 0x00 flowid 1:13
 }
 
@@ -118,9 +110,9 @@ ingress() {
   # This allows HFSC to do its work but avoids some of its vitrual time quirks. 
   DOWNLINK_C=$(( ${DOWNLINK} * 50 / 49 ))
   DOWNLINK_R=$(( ${DOWNLINK} * 1 / 7 ))
-  DOWNLINK_1=$(( ${DOWNLINK} * 3 / 7 ))
+  DOWNLINK_1=$(( ${DOWNLINK} * 2 / 7 ))
   DOWNLINK_2=$(( ${DOWNLINK} * 2 / 7 ))
-  DOWNLINK_3=$(( ${DOWNLINK} * 2 / 7 ))
+  DOWNLINK_3=$(( ${DOWNLINK} * 3 / 7 ))
 
   # Virtual Ingress Port
   $TC qdisc del dev $IFACE handle ffff: ingress 2>/dev/null
@@ -155,34 +147,25 @@ ingress() {
     `get_limit ${ILIMIT}` `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` \
     `get_flows ${DOWNLINK_3}` ${IQDISC_OPTS}
   
-  # We could filter FLOW here to get CONTACK address/ports, and if present,
-  # this works around the NAT. Though, that would be more CPU work, and NAT will
-  # use unique ports for each conneciton. So, leaf QDISC _should_ hash that.
+  # TC FILTER FLOW here if we wanted to cross the NAT, but it 
+  # should be unnecessary as NAT creates unique port per connection.
     
-  # TCP Standardized Ports either SRC or DST (1-1023)
+  # TCP Standardized Ports from Internet Source (1-1023)
   $TC filter add dev $DEV parent 1:0 protocol ip   prio 1 u32 \
     match ip  protocol 6 0xff match ip  dport 1 0xfc00 flowid 1:11
   $TC filter add dev $DEV parent 1:0 protocol ipv6 prio 2 u32 \
     match ip6 protocol 6 0xff match ip  dport 1 0xfc00 flowid 1:11
-  $TC filter add dev $DEV parent 1:0 protocol ip   prio 3 u32 \
-    match ip  protocol 6 0xff match ip  sport 1 0xfc00 flowid 1:11
-  $TC filter add dev $DEV parent 1:0 protocol ipv6 prio 4 u32 \
-    match ip6 protocol 6 0xff match ip  sport 1 0xfc00 flowid 1:11
     
-  # UDP Standardized Ports either SRC or DST (1-1023)  
-  $TC filter add dev $DEV parent 1:0 protocol ip   prio 5 u32 \
+  # UDP Standardized Ports from Internet Source (1-1023)  
+  $TC filter add dev $DEV parent 1:0 protocol ip   prio 3 u32 \
     match ip  protocol 17 0xff match ip  dport 1 0xfc00 flowid 1:12
-  $TC filter add dev $DEV parent 1:0 protocol ipv6 prio 6 u32 \
+  $TC filter add dev $DEV parent 1:0 protocol ipv6 prio 4 u32 \
     match ip6 protocol 17 0xff match ip6 dport 1 0xfc00 flowid 1:12
-  $TC filter add dev $DEV parent 1:0 protocol ip   prio 7 u32 \
-    match ip  protocol 17 0xff match ip  sport 1 0xfc00 flowid 1:12
-  $TC filter add dev $DEV parent 1:0 protocol ipv6 prio 8 u32 \
-    match ip6 protocol 17 0xff match ip6 sport 1 0xfc00 flowid 1:12
   
-  # All Else including ICMP    
-  $TC filter add dev $DEV parent 1:0 protocol ip   prio 11 u32 \
+  # Default (HFSC-->13) includes ICMP and Home Server Destination (1-1023)    
+  $TC filter add dev $DEV parent 1:0 protocol ip   prio 5 u32 \
     match ip  protocol 0 0x00 flowid 1:13
-  $TC filter add dev $DEV parent 1:0 protocol ipv6 prio 12 u32 \
+  $TC filter add dev $DEV parent 1:0 protocol ipv6 prio 6 u32 \
     match ip6 protocol 0 0x00 flowid 1:13
 
   # Redirect $IFACE to Virtual Ingress
@@ -195,7 +178,7 @@ ingress() {
 ################################################################################
 
 sqm_start() {
-  sqm_logger "Starting ${SCRIPT}"
+  sqm_debug "Starting ${SCRIPT}"
   
   [ -n "$IFACE" ] || return 1
     
@@ -208,24 +191,25 @@ sqm_start() {
   if [ "$UPLINK" -ne 0 ];
   then
     egress
-    sqm_logger "egress shaping activated"
+    sqm_debug "egress shaping activated"
   else
     $TC qdisc del dev $IFACE root 2> /dev/null
-    sqm_logger "egress shaping deactivated"
+    sqm_debug "egress shaping deactivated"
   fi
    
   if [ "$DOWNLINK" -ne 0 ];
   then
     verify_qdisc ingress "ingress" || return 1
     ingress
-    sqm_logger "ingress shaping activated"
+    sqm_debug "ingress shaping activated"
   else
     $TC qdisc del dev $DEV root 2> /dev/null
     $TC qdisc del dev $IFACE ingress 2> /dev/null
-    sqm_logger "ingress shaping deactivated"
+    sqm_debug "ingress shaping deactivated"
   fi
 
   return 0
 }
 
 ################################################################################
+
