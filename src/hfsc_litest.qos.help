@@ -1,1 +1,5 @@
-This single band HFSC configuration is intended for consumer router as WAN gateway to cable or other broadband conneciton. HTB eats consumer router's CPU for breakfast past 50 Mbit. Try a bare minimum QOS with HFSC and your QDISC to get full bandwidth and decent bloat reduction. FQ_CODEL effectively make sparse data priority, so this could be great QOS for a few users in the residence. (IPV6+IPV4)
+This single band HFSC configuration is the bare minimum.
+This can achieve full bandwidth but with degraded delay proportional to CPU load.
+The lack of filter before the QDISC may help reduce CPU load.
+(IPV6+IPV4)
+
