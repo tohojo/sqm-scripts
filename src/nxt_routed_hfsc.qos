@@ -107,7 +107,7 @@ ingress() {
     flow hash keys nfct-src,nfct-dst,nfct-proto,nfct-proto-src,nfct-proto-dst \
     divisor `get_flows_count ${DOWNLINK}`
 
-    
+
     $IP link set dev ${DEV} up
 
     $TC filter add dev ${IFACE} parent ffff: protocol all prio 1 u32 \
