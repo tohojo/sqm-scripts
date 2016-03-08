@@ -1,1 +1,3 @@
-This 3-Band HFSC configuration is intended for consumer router as WAN gateway to cable or other broadband conneciton. HTB eats consumer router's CPU for breakfast past 50 Mbit. This uses HFSC, your QDISC, and extremely simplistic protocol filtering. The configuration is not the "academic ideal," but should allow close to 100/10, and do well to keep all services balanced. (IPV6+IPV4)
+This three band HFSC configuration is intended for a common residential router.
+It uses extremely simplistic protocol/port filtering for bands and prioritises
+bandwidth over low delay in case of insufficient CPU power.
