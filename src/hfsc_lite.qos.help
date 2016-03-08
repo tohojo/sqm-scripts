@@ -1,5 +1,3 @@
-This three band HFSC configuration is intended for a common residential router. 
-It uses extremely simplistic protocol/port filtering for bands. 
-This can achieve full bandwidth but with degraded delay proportional to CPU load.
-(IPV6+IPV4)
-
+This three band HFSC configuration is intended for a common residential router.
+It uses extremely simplistic protocol/port filtering for bands and prioritises
+bandwidth over low delay in case of insufficient CPU power.
