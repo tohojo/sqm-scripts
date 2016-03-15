@@ -1,8 +1,25 @@
+################################################################################
+# (sqm) functions.sh
+#
+# These are all helper functions for various parts of SQM scripts. If you want
+# to play around with your own shaper-qdisc-filter configuration look here for
+# ready made tools, or examples start of on your own.
+#
+# Please note the SQM logger function is broken down into levels of logging.
+# Use only levels appropriate to touch points in your script and realize the
+# potential to overflow SYSLOG.
+#
+################################################################################
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as
 # published by the Free Software Foundation.
 #
-#       Copyright (C) 2012-2016 Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller
+#   Copyright (C) 2012-6
+#       Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller
+#       Eric Luehrsen
+#
+################################################################################
 
 sqm_logger() {
     case $1 in
@@ -17,6 +34,7 @@ sqm_logger() {
             echo "$@" >&2
         fi
     fi
+
     # slightly dangerous as this will keep adding to the log file
     if [ -n "${SQM_DEBUG}" -a "${SQM_DEBUG}" == 1 ]; then
         if [ "$SQM_VERBOSITY" -ge "$LEVEL" -o "$LEVEL" -eq "$VERBOSITY_TRACE" ]; then
@@ -26,28 +44,33 @@ sqm_logger() {
 }
 
 sqm_error() { sqm_logger $VERBOSITY_ERROR ERROR: "$@"; }
-sqm_warn() { sqm_logger $VERBOSITY_WARNING WARNING: "$@"; }
-sqm_log() { sqm_logger $VERBOSITY_INFO "$@"; }
+sqm_warn()  { sqm_logger $VERBOSITY_WARNING WARNING: "$@"; }
+sqm_log()   { sqm_logger $VERBOSITY_INFO "$@"; }
 sqm_debug() { sqm_logger $VERBOSITY_DEBUG "$@"; }
 sqm_trace() { sqm_logger $VERBOSITY_TRACE "$@"; }
 
 # ipt needs a toggle to show the outputs for debugging (as do all users of >
 # /dev/null 2>&1 and friends)
+
 ipt() {
     d=$(echo $* | sed s/-A/-D/g)
+    
     [ "$d" != "$*" ] && {
         sqm_trace "iptables ${d}"
         iptables $d >> ${OUTPUT_TARGET} 2>&1
         sqm_trace "ip6tables ${d}"
         ip6tables $d >> ${OUTPUT_TARGET} 2>&1
     }
+    
     d=$(echo $* | sed s/-I/-D/g)
+    
     [ "$d" != "$*" ] && {
         sqm_trace "iptables ${d}"
         iptables $d >> ${OUTPUT_TARGET} 2>&1
         sqm_trace "ip6tables ${d}"
         ip6tables $d >> ${OUTPUT_TARGET} 2>&1
     }
+    
     sqm_trace "iptables $*"
     iptables $* >> ${OUTPUT_TARGET} 2>&1
     sqm_trace "ip6tables ${d}"
@@ -68,7 +91,6 @@ ip_wrapper() {
     ${IP_BINARY} $* >> ${OUTPUT_TARGET} 2>&1
 }
 
-
 do_modules() {
     for m in $ALL_MODULES; do
         [ -d /sys/modules/${m} ] && ${INSMOD} $m 2>>${OUTPUT_TARGET}
@@ -85,7 +107,6 @@ write_state_file() {
         echo "$var=\"$val\""
     done > $filename
 }
-
 
 # find the ifb device associated with a specific interface, return nothing of no
 # ifb is associated with IF
@@ -109,6 +130,7 @@ get_ifb_associated_with_if() {
             sqm_debug "Currently no ifb is associated with ${CUR_IF}, this is normal during starting of the sqm system."
         fi
     fi
+    
     echo ${CUR_IFB}
 }
 
@@ -118,12 +140,14 @@ ifb_name() {
     local IFB_PREFIX="ifb4"
     local NEW_IFB="${IFB_PREFIX}${CUR_IF}"
     local IFB_NAME_LENGTH=${#NEW_IFB}
+    
     # IFB names can only be 15 chararcters, so we chop of excessive characters
     # at the start of the interface name
     if [ ${IFB_NAME_LENGTH} -gt ${MAX_IF_NAME_LENGTH} ]; then
         local OVERLIMIT=$(( ${#NEW_IFB} - ${MAX_IF_NAME_LENGTH} ))
         NEW_IFB=${IFB_PREFIX}${CUR_IF:${OVERLIMIT}:$(( ${MAX_IF_NAME_LENGTH} - ${#IFB_PREFIX} ))}
     fi
+    
     echo ${NEW_IFB}
 }
 
@@ -158,8 +182,10 @@ get_ifb_for_if() {
     local CUR_IF=$1
     # if an ifb is already associated return that
     local CUR_IFB=$( get_ifb_associated_with_if ${CUR_IF} )
+    
     [ -z "$CUR_IFB" ] && CUR_IFB=$( create_new_ifb_for_if ${CUR_IF} )
     [ -z "$CUR_IFB" ] && sqm_warn "Could not find existing IFB for ${CUR_IF}, nor create a new IFB instead..."
+    
     echo ${CUR_IFB}
 }
 
@@ -182,9 +208,12 @@ verify_qdisc() {
         for q in $supported; do
             [ "$qdisc" = "$q" ] && found=1
         done
+        
         [ "$found" -eq "1" ] || return 1
     fi
+    
     create_ifb $ifb || return 1
+    
     case $qdisc in
         #ingress is special
         ingress) root_string="" ;;
@@ -192,36 +221,44 @@ verify_qdisc() {
 
     $TC qdisc replace dev $ifb $root_string $qdisc
     res=$?
+    
     [ "$res" = "0" ] || not="NOT "
+    
     sqm_debug "QDISC $qdisc is ${not}useable."
     delete_ifb $ifb
+    
     return $res
 }
 
 
 get_htb_adsll_string() {
     ADSLL=""
+
     if [ "$LLAM" = "htb_private" -a "$LINKLAYER" != "none" ]; then
         # HTB defaults to MTU 1600 and an implicit fixed TSIZE of 256, but HTB
         # as of around 3.10.0 does not actually use a table in the kernel
         ADSLL="mpu ${STAB_MPU} linklayer ${LINKLAYER} overhead ${OVERHEAD} mtu ${STAB_MTU}"
         sqm_debug "ADSLL: ${ADSLL}"
     fi
+    
     echo ${ADSLL}
 }
 
 get_stab_string() {
     STABSTRING=""
+
     if [ "${LLAM}" = "tc_stab" -a "$LINKLAYER" != "none" ]; then
         STABSTRING="stab mtu ${STAB_MTU} tsize ${STAB_TSIZE} mpu ${STAB_MPU} overhead ${OVERHEAD} linklayer ${LINKLAYER}"
         sqm_debug "STAB: ${STABSTRING}"
     fi
+    
     echo ${STABSTRING}
 }
 
 # cake knows how to handle ATM and per packet overhead, so expose and use this...
 get_cake_lla_string() {
     STABSTRING=""
+
     if [ "${LLAM}" = "cake" -a "${LINKLAYER}" != "none" ]; then
         if [ "${LINKLAYER}" = "atm" ]; then
             STABSTRING="atm"
@@ -230,6 +267,7 @@ get_cake_lla_string() {
         STABSTRING="${STABSTRING} overhead ${OVERHEAD}"
         sqm_debug "cake link layer adjustments: ${STABSTRING}"
     fi
+    
     echo ${STABSTRING}
 }
 
@@ -237,10 +275,11 @@ get_cake_lla_string() {
 sqm_stop() {
     $TC qdisc del dev $IFACE ingress #2>> ${OUTPUT_TARGET}
     $TC qdisc del dev $IFACE root #2>> ${OUTPUT_TARGET}
+    
     [ -n "$CUR_IFB" ] && $TC qdisc del dev $CUR_IFB root #2>> ${OUTPUT_TARGET}
     [ -n "$CUR_IFB" ] && sqm_debug "${0}: ${CUR_IFB} shaper deleted"
-
     [ -n "$CUR_IFB" ] && ipt -t mangle -D POSTROUTING -o $CUR_IFB -m mark --mark 0x00 -g QOS_MARK_${IFACE}
+    
     ipt -t mangle -D POSTROUTING -o $IFACE -m mark --mark 0x00/${IPT_MASK} -g QOS_MARK_${IFACE}
     ipt -t mangle -D PREROUTING -i vtun+ -p tcp -j MARK --set-mark 0x2/${IPT_MASK}
     # not sure whether we need to make this conditional or whether they are
@@ -252,14 +291,13 @@ sqm_stop() {
     ipt -t mangle -F QOS_MARK_${IFACE}
     ipt -t mangle -X QOS_MARK_${IFACE}
 
-
     [ -n "$CUR_IFB" ] && $IP link set dev ${CUR_IFB} down
     [ -n "$CUR_IFB" ] && $IP link delete ${CUR_IFB} type ifb
     [ -n "$CUR_IFB" ] && sqm_debug "${0}: ${CUR_IFB} interface deleted"
 }
+
 # Note this has side effects on the prio variable
 # and depends on the interface global too
-
 fc() {
     $TC filter add dev $interface protocol ip parent $1 prio $prio u32 match ip tos $2 0xfc classid $3
     prio=$(($prio + 1))
@@ -302,6 +340,43 @@ get_htb_quantum() {
     echo $CUR_QUANTUM
 }
 
+#el:  Create optional burst parameters to leap over CPU interupts
+#     when the CPU is severly loaded. We need to be conservative though.
+get_htb_burst() {
+    HTB_MTU=$( get_mtu $1 )
+    BANDWIDTH=$2
+
+    if [ -n "${HTB_MTU}" -a "${SHAPER_BURST}" -eq "1" ] ; then
+        # 10 MTU burst can itself create delay under CPU load.
+        # It will need to all wait for a hardware commit.
+        BANDWIDTH_L=$(( ${HTB_MTU} *  2 * 8 ))
+        BANDWIDTH_H=$(( ${HTB_MTU} * 10 * 8 ))
+        
+        
+        if [ ${BANDWIDTH} -gt ${BANDWIDTH_H} ] ; then
+            HTB_BURST=$(( ${HTB_MTU} * 10 ))
+            
+            sqm_debug "CUR_HTB_BURST: ${HTB_BURST}, BANDWIDTH: ${BANDWIDTH}"
+            
+            echo burst ${HTB_BURST} cburst ${HTB_BURST}
+            
+        elif [ ${BANDWIDTH} -gt ${BANDWIDTH_L} ] ; then
+            # Start with 1ms buffer 2x MTU, and lean out the mixture at higher rates
+            HTB_BURST=$(( ${BANDWIDTH} - ${BANDWIDTH_L} ))
+            HTB_BURST=$(( ${HTB_BURST} / 16 ))
+            HTB_BURST=$(( ${HTB_BURST} / ${HTB_MTU} ))
+            HTB_BURST=$(( ${HTB_BURST} * ${HTB_MTU} ))
+            HTB_BURST=$(( ${HTB_BURST} + ${HTB_MTU} * 2 ))
+            
+            sqm_debug "CUR_HTB_BURST: ${HTB_BURST}, BANDWIDTH: ${BANDWIDTH}"
+            
+            echo burst ${HTB_BURST} cburst ${HTB_BURST}
+           
+        else 
+            sqm_debug "Default Burst, HTB will use MTU plus shipping and handling"
+        fi
+    fi
+}
 
 # For a default PPPoE link this returns 1492 just as expected but I fear we
 # actually need the wire size of the whole thing not so much the MTU
@@ -313,7 +388,6 @@ get_mtu() {
 
 # Set the autoflow variable to 1 if you want to limit the number of flows
 # otherwise the default of 1024 will be used for all Xfq_codel qdiscs.
-
 get_flows() {
     case $QDISC in
         codel|ns2_codel|pie|*fifo|pfifo_fast) ;;
@@ -332,14 +406,15 @@ get_flows_count() {
         [ $1 -gt 39999 ] && FLOWS=256
         [ $1 -gt 69999 ] && FLOWS=512
         [ $1 -gt 99999 ] && FLOWS=1024
+        
         case $QDISC in
-          codel|ns2_codel|pie|*fifo|pfifo_fast) ;;
-          fq_codel|*fq_codel|sfq) echo $FLOWS ;;
+            codel|ns2_codel|pie|*fifo|pfifo_fast) ;;
+            fq_codel|*fq_codel|sfq) echo $FLOWS ;;
         esac
     else
         case $QDISC in
-          codel|ns2_codel|pie|*fifo|pfifo_fast) ;;
-          fq_codel|*fq_codel|sfq) echo 1024 ;;
+            codel|ns2_codel|pie|*fifo|pfifo_fast) ;;
+            fq_codel|*fq_codel|sfq) echo 1024 ;;
         esac
     fi
 }
@@ -350,7 +425,9 @@ get_flows_count() {
 get_target() {
     local CUR_TARGET=${1}
     local CUR_LINK_KBPS=${2}
+    
     [ ! -z "$CUR_TARGET" ] && sqm_debug "cur_target: ${CUR_TARGET} cur_bandwidth: ${CUR_LINK_KBPS}"
+    
     CUR_TARGET_STRING=
     # either e.g. 100ms or auto
     CUR_TARGET_VALUE=$( echo ${CUR_TARGET} | grep -o -e \^'[[:digit:]]\+' )
@@ -416,6 +493,7 @@ get_target() {
             fi
             ;;
     esac
+    
     echo $CUR_TARGET_STRING
 }
 
@@ -431,6 +509,7 @@ adapt_target_to_slow_link() {
 
     # do not change anything for fast links
     [ "$TARGET" -lt 5000 ] && TARGET=5000
+
     case ${QDISC} in
         *codel|pie)
             echo "${TARGET}"
@@ -443,6 +522,7 @@ adapt_target_to_slow_link() {
 # interval by the same amonut that target got increased
 adapt_interval_to_slow_link() {
     TARGET=$1
+
     case ${QDISC} in
         *codel)
             # Note this is not following codel theory to well as target should
@@ -451,6 +531,7 @@ adapt_interval_to_slow_link() {
             INTERVAL=$(( (100 - 5) * 1000 + ${TARGET} ))
             echo "interval ${INTERVAL}us"
             ;;
+            
         pie)
             ## not sure if pie needs this, probably not
             #TUPDATE=$(( (30 - 20) * 1000 + ${TARGET} ))
@@ -472,6 +553,7 @@ get_quantum() {
 # Note that $LIMIT contains the default limit
 get_limit() {
     CURLIMIT=$1
+    
     case $QDISC in
         *codel|*pie|pfifo_fast|sfq|pfifo) [ -z ${CURLIMIT} ] && CURLIMIT=${LIMIT}  # global default limit
                                           ;;
@@ -480,6 +562,7 @@ get_limit() {
         *) sqm_warn "qdisc ${QDISC} does not support a limit"
            ;;
     esac
+    
     sqm_debug "get_limit: $1 CURLIMIT: ${CURLIMIT}"
 
     if [ ! -z "$CURLIMIT" ]; then
@@ -489,6 +572,7 @@ get_limit() {
 
 get_ecn() {
     CURECN=$1
+    
     case ${CURECN} in
         ECN)
             case $QDISC in
@@ -500,6 +584,7 @@ get_ecn() {
                     ;;
             esac
             ;;
+            
         NOECN)
             case $QDISC in
                 *codel|*pie|*red)
@@ -510,13 +595,15 @@ get_ecn() {
                     ;;
             esac
             ;;
+            
         *)
             sqm_warn "ecn value $1 not handled"
             ;;
     esac
+    
     sqm_debug "get_ECN: $1 CURECN: ${CURECN} IECN: ${IECN} EECN: ${EECN}"
+    
     echo ${CURECN}
-
 }
 
 # This could be a complete diffserv implementation
