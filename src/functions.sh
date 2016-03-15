@@ -1,8 +1,25 @@
+################################################################################
+# (sqm) functions.sh
+#
+# These are all helper functions for various parts of SQM scripts. If you want
+# to play around with your own shaper-qdisc-filter configuration look here for
+# ready made tools, or examples start of on your own.
+#
+# Please note the SQM logger function is broken down into levels of logging.
+# Use only levels appropriate to touch points in your script and realize the
+# potential to overflow SYSLOG.
+#
+################################################################################
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as
 # published by the Free Software Foundation.
 #
-#       Copyright (C) 2012-2016 Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller
+#   Copyright (C) 2012-6
+#       Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller
+#       Eric Luehrsen
+#
+################################################################################
 
 sqm_logger() {
     case $1 in
@@ -302,6 +319,43 @@ get_htb_quantum() {
     echo $CUR_QUANTUM
 }
 
+# Create optional burst parameters to leap over CPU interupts when the CPU is
+# severly loaded. We need to be conservative though.
+get_htb_burst() {
+    HTB_MTU=$( get_mtu $1 )
+    BANDWIDTH=$2
+
+    if [ -n "${HTB_MTU}" -a "${SHAPER_BURST}" -eq "1" ] ; then
+        # 10 MTU burst can itself create delay under CPU load.
+        # It will need to all wait for a hardware commit.
+        BANDWIDTH_L=$(( ${HTB_MTU} *  2 * 8 ))
+        BANDWIDTH_H=$(( ${HTB_MTU} * 10 * 8 ))
+
+
+        if [ ${BANDWIDTH} -gt ${BANDWIDTH_H} ] ; then
+            HTB_BURST=$(( ${HTB_MTU} * 10 ))
+
+            sqm_debug "CUR_HTB_BURST: ${HTB_BURST}, BANDWIDTH: ${BANDWIDTH}"
+
+            echo burst ${HTB_BURST} cburst ${HTB_BURST}
+
+        elif [ ${BANDWIDTH} -gt ${BANDWIDTH_L} ] ; then
+            # Start with 1ms buffer 2x MTU, and lean out the mixture at higher rates
+            HTB_BURST=$(( ${BANDWIDTH} - ${BANDWIDTH_L} ))
+            HTB_BURST=$(( ${HTB_BURST} / 16 ))
+            HTB_BURST=$(( ${HTB_BURST} / ${HTB_MTU} ))
+            HTB_BURST=$(( ${HTB_BURST} * ${HTB_MTU} ))
+            HTB_BURST=$(( ${HTB_BURST} + ${HTB_MTU} * 2 ))
+
+            sqm_debug "CUR_HTB_BURST: ${HTB_BURST}, BANDWIDTH: ${BANDWIDTH}"
+
+            echo burst ${HTB_BURST} cburst ${HTB_BURST}
+
+        else
+            sqm_debug "Default Burst, HTB will use MTU plus shipping and handling"
+        fi
+    fi
+}
 
 # For a default PPPoE link this returns 1492 just as expected but I fear we
 # actually need the wire size of the whole thing not so much the MTU
