@@ -305,39 +305,36 @@ fc() {
     prio=$(($prio + 1))
 }
 
-# TODO: increase the quantum to lower computation cost.
-# a) this should be calculated slightly more inteligently
-# b) this should not arbitrarily end
-# c) most likely it should be set so that the transfer time of a quantum stays constant
+# WRT to bandwidth increase the quantum to lower computation cost.
 get_htb_quantum() {
-    CUR_QUANTUM=$( get_mtu $1 )
+    HTB_MTU=$( get_mtu $1 )
     BANDWIDTH=$2
 
-    if [ -z "${CUR_QUANTUM}" ]; then
-        CUR_QUANTUM=1500
+    if [ -z "${HTB_MTU}" ] ; then
+        HTB_MTU=1500        
     fi
-    if [ ${BANDWIDTH} -gt 20000 ]; then
-        CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
-    fi
-    if [ ${BANDWIDTH} -gt 30000 ]; then
-        CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
-    fi
-    if [ ${BANDWIDTH} -gt 40000 ]; then
-        CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
-    fi
-    if [ ${BANDWIDTH} -gt 50000 ]; then
-        CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
-    fi
-    if [ ${BANDWIDTH} -gt 60000 ]; then
-        CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
-    fi
-    if [ ${BANDWIDTH} -gt 80000 ]; then
-        CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
+    
+    # Because $BANDWIDTH is in kbps, bytes/1ms is simply factor-8
+    # Stop at some huge quantum, and don't start until 2 MTU
+    BANDWIDTH_L=$(( ${HTB_MTU} *  2 * 8 ))
+    BANDWIDTH_H=$(( ${HTB_MTU} * 64 * 8 ))
+
+    if [ ${BANDWIDTH} -gt ${BANDWIDTH_H} ] ; then
+        HTB_QUANTUM=$(( ${HTB_MTU} * 64 ))
+    
+    elif [ ${BANDWIDTH} -gt ${BANDWIDTH_L} ] ; then
+        # Take no chances with order o' exec rounding
+        HTB_QUANTUM=$(( ${BANDWIDTH}   / 8 ))
+        HTB_QUANTUM=$(( ${HTB_QUANTUM} / ${HTB_MTU} ))
+        HTB_QUANTUM=$(( ${HTB_QUANTUM} * ${HTB_MTU} ))
+        
+    else
+        HTB_QUANTUM=${HTB_MTU}
     fi
 
-    sqm_debug "CUR_HTB_QUANTUM: ${CUR_QUANTUM}, BANDWIDTH: ${BANDWIDTH}"
+    sqm_debug "CUR_HTB_QUANTUM: ${HTB_QUANTUM}, BANDWIDTH: ${BANDWIDTH}"
 
-    echo $CUR_QUANTUM
+    echo $HTB_QUANTUM
 }
 
 #el:  Create optional burst parameters to leap over CPU interupts
