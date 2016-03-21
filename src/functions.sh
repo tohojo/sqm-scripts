@@ -269,28 +269,6 @@ fc() {
     prio=$(($prio + 1))
 }
 
-fc_pppoe() {
-    PPPOE_SESSION_ETHERTYPE="0x8864"
-    PPPOE_DISCOVERY_ETHERTYPE="0x8863"
-    PPP_PROTO_IP4="0x0021"
-    PPP_PROTO_IP6="0x0057"
-    ARP_PROTO_IP4="0x0806"
-    $TC filter add dev $interface protocol ip parent $1 prio $prio u32 match ip tos $2 0xfc classid $3
-    $TC filter add dev $interface parent $1 protocol ${PPPOE_SESSION_ETHERTYPE} prio $(( 400 + ${prio}  )) u32 \
-        match u16 ${PPP_PROTO_IP4} 0xffff at 6 \
-        match u8 $2 0xfc at 9 \
-        flowid $3
-
-    prio=$(($prio + 1))
-    $TC filter add dev $interface protocol ipv6 parent $1 prio $prio u32 match ip6 priority $2 0xfc classid $3
-    $TC filter add dev $interface parent $1 protocol ${PPPOE_SESSION_ETHERTYPE} prio $(( 600 + ${prio} )) u32 \
-        match u16 ${PPP_PROTO_IP6} 0xffff at 6 \
-        match u16 0x0${2:2:2}0 0x0fc0 at 8 \
-        flowid $3
-
-    prio=$(($prio + 1))
-}
-
 #sm: TODO: increase the quantum to lower computation cost.
 # a) this should be calculated slightly more inteligently
 # b) this should not arbitrarily end
@@ -564,7 +542,6 @@ diffserv() {
         match ip protocol 0 0x00 flowid 1:12
 
     # Find the most common matches fast
-    #fc_pppoe() instead of fc() with effectice ingress classification for pppoe is very expensive and destroys LUL
 
     fc 1:0 0x00 1:12 # BE
     fc 1:0 0x20 1:13 # CS1
@@ -576,34 +553,6 @@ diffserv() {
 
     # Arp traffic
     $TC filter add dev $interface protocol arp parent 1:0 prio $prio handle 500 fw flowid 1:11
-
-    prio=$(($prio + 1))
-}
-
-diffserv_pppoe() {
-
-    interface=$1
-    prio=1
-
-    # Catchall
-
-    $TC filter add dev $interface parent 1:0 protocol all prio 999 u32 \
-        match ip protocol 0 0x00 flowid 1:12
-
-    # Find the most common matches fast
-    #fc_pppoe() instead of fc() with effectice ingress classification for pppoe is very expensive and destroys LUL
-
-    fc_pppoe 1:0 0x00 1:12 # BE
-    fc_pppoe 1:0 0x20 1:13 # CS1
-    fc_pppoe 1:0 0x10 1:11 # IMM
-    fc_pppoe 1:0 0xb8 1:11 # EF
-    fc_pppoe 1:0 0xc0 1:11 # CS3
-    fc_pppoe 1:0 0xe0 1:11 # CS6
-    fc_pppoe 1:0 0x90 1:11 # AF42 (mosh)
-
-    # Arp traffic
-    $TC filter add dev $interface protocol arp parent 1:0 prio $prio handle 500 fw flowid 1:11
-
 
     prio=$(($prio + 1))
 }
