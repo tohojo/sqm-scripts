@@ -2,7 +2,7 @@
 # it under the terms of the GNU General Public License version 2 as
 # published by the Free Software Foundation.
 #
-#       Copyright (C) 2012-4 Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller
+#       Copyright (C) 2012-2016 Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller
 
 sqm_logger() {
     case $1 in
@@ -11,13 +11,13 @@ sqm_logger() {
     esac
 
     if [ "$SQM_VERBOSITY" -ge "$LEVEL" ] ; then
-	if [ "$SQM_SYSLOG" -eq "1" ]; then
-    	    logger -t SQM -s "$*"
-	else
-    	    echo "$@" >&2
-	fi
+        if [ "$SQM_SYSLOG" -eq "1" ]; then
+            logger -t SQM -s "$*"
+        else
+            echo "$@" >&2
+        fi
     fi
-    #sm: slightly dangerous as this will keep adding to the log file
+    # slightly dangerous as this will keep adding to the log file
     if [ -n "${SQM_DEBUG}" -a "${SQM_DEBUG}" == 1 ]; then
         if [ "$SQM_VERBOSITY" -ge "$LEVEL" -o "$LEVEL" -eq "$VERBOSITY_TRACE" ]; then
             echo "$@" >> ${SQM_DEBUG_LOG}
@@ -31,20 +31,21 @@ sqm_log() { sqm_logger $VERBOSITY_INFO "$@"; }
 sqm_debug() { sqm_logger $VERBOSITY_DEBUG "$@"; }
 sqm_trace() { sqm_logger $VERBOSITY_TRACE "$@"; }
 
-#sm: ipt needs a toggle to show the outputs for debugging (as do all users of > /dev/null 2>&1 and friends)
+# ipt needs a toggle to show the outputs for debugging (as do all users of >
+# /dev/null 2>&1 and friends)
 ipt() {
     d=$(echo $* | sed s/-A/-D/g)
     [ "$d" != "$*" ] && {
-	sqm_trace "iptables ${d}"
+        sqm_trace "iptables ${d}"
         iptables $d >> ${OUTPUT_TARGET} 2>&1
-	sqm_trace "ip6tables ${d}"
+        sqm_trace "ip6tables ${d}"
         ip6tables $d >> ${OUTPUT_TARGET} 2>&1
     }
     d=$(echo $* | sed s/-I/-D/g)
     [ "$d" != "$*" ] && {
-	sqm_trace "iptables ${d}"
+        sqm_trace "iptables ${d}"
         iptables $d >> ${OUTPUT_TARGET} 2>&1
-	sqm_trace "ip6tables ${d}"
+        sqm_trace "ip6tables ${d}"
         ip6tables $d >> ${OUTPUT_TARGET} 2>&1
     }
     sqm_trace "iptables $*"
@@ -53,14 +54,14 @@ ipt() {
     ip6tables $* >> ${OUTPUT_TARGET} 2>&1
 }
 
-#sm: wrapper to call tc to allow debug logging
+# wrapper to call tc to allow debug logging
 tc_wrapper() {
     tc_args=$*
     sqm_trace "${TC_BINARY} $*"
     ${TC_BINARY} $* >> ${OUTPUT_TARGET} 2>&1
 }
 
-#sm: wrapper to call tc to allow debug logging
+# wrapper to call tc to allow debug logging
 ip_wrapper() {
     ip_args=$*
     sqm_trace "${IP_BINARY} $*"
@@ -86,28 +87,27 @@ write_state_file() {
 }
 
 
-# find the ifb device associated with a specific interface, return nothing of no ifb is associated with IF
+# find the ifb device associated with a specific interface, return nothing of no
+# ifb is associated with IF
 get_ifb_associated_with_if() {
     local CUR_IF=$1
-    # CUR_IFB=$( $TC -p filter show parent ffff: dev ${CUR_IF} | grep -o -e ifb'[[:digit:]]\+' )
-    #local CUR_IFB=$( $TC -p filter show parent ffff: dev ${CUR_IF} | grep -o -e ifb'[^)]\+' )    # my editor's syntax coloration is limitied so I need a single quote in this line (between eiditor and s)
-    local CUR_IFB=$( $TC -p filter show parent ffff: dev ${CUR_IF} | grep -o -E ifb'[^)\ ]+' )    # my editor's syntax coloration is limitied so I need a single quote in this line (between eiditor and s)
+    # Stray ' in the comment is a fix for broken editor syntax highlighting
+    local CUR_IFB=$( $TC -p filter show parent ffff: dev ${CUR_IF} | grep -o -E ifb'[^)\ ]+' )    # '
     sqm_debug "ifb associated with interface ${CUR_IF}: ${CUR_IFB}"
-    #sm: we could not detect an associated IFB for CUR_IF
-    if [ -z "${CUR_IFB}" ];
-    then
-	local TMP=$( $TC -p filter show parent ffff: dev ${CUR_IF} )
-	if [ ! -z "${TMP}" ];
-	then
-	    #sm: oops, there is output but we failed to properly parse it? Ask for a user report
-	    sqm_error "#---- CUT HERE ----#"
-	    sqm_error "get_ifb_associated_with_if failed to extrect the ifb name from:"
-	    sqm_error $( $TC_BINARY -p filter show parent ffff: dev ${CUR_IF} )
-	    sqm_error "Please report this as an issue at https://github.com/tohojo/sqm-scripts"
-	    sqm_error "Please copy and paste everything below the cut-here line into your issue report, thanks."
-	else
-	    sqm_debug "Currently no ifb is associated with ${CUR_IF}, this is normal during starting of the sqm system."
-	fi
+
+    # we could not detect an associated IFB for CUR_IF
+    if [ -z "${CUR_IFB}" ]; then
+        local TMP=$( $TC -p filter show parent ffff: dev ${CUR_IF} )
+        if [ ! -z "${TMP}" ]; then
+            # oops, there is output but we failed to properly parse it? Ask for a user report
+            sqm_error "#---- CUT HERE ----#"
+            sqm_error "get_ifb_associated_with_if failed to extrect the ifb name from:"
+            sqm_error $( $TC_BINARY -p filter show parent ffff: dev ${CUR_IF} )
+            sqm_error "Please report this as an issue at https://github.com/tohojo/sqm-scripts"
+            sqm_error "Please copy and paste everything below the cut-here line into your issue report, thanks."
+        else
+            sqm_debug "Currently no ifb is associated with ${CUR_IF}, this is normal during starting of the sqm system."
+        fi
     fi
     echo ${CUR_IFB}
 }
@@ -120,8 +120,7 @@ ifb_name() {
     local IFB_NAME_LENGTH=${#NEW_IFB}
     # IFB names can only be 15 chararcters, so we chop of excessive characters
     # at the start of the interface name
-    if [ ${IFB_NAME_LENGTH} -gt ${MAX_IF_NAME_LENGTH} ];
-    then
+    if [ ${IFB_NAME_LENGTH} -gt ${MAX_IF_NAME_LENGTH} ]; then
         local OVERLIMIT=$(( ${#NEW_IFB} - ${MAX_IF_NAME_LENGTH} ))
         NEW_IFB=${IFB_PREFIX}${CUR_IF:${OVERLIMIT}:$(( ${MAX_IF_NAME_LENGTH} - ${#IFB_PREFIX} ))}
     fi
@@ -137,7 +136,7 @@ create_new_ifb_for_if() {
 }
 
 
-#sm TODO: report failures
+# TODO: report failures
 create_ifb() {
     local CUR_IFB=${1}
     $IP link add name ${CUR_IFB} type ifb
@@ -153,7 +152,8 @@ delete_ifb() {
 }
 
 
-# the best match is either the IFB already associated with the current interface or a new named IFB
+# the best match is either the IFB already associated with the current interface
+# or a new named IFB
 get_ifb_for_if() {
     local CUR_IF=$1
     # if an ifb is already associated return that
@@ -167,14 +167,15 @@ get_ifb_for_if() {
 # Verify that a qdisc works, and optionally that it is part of a set of
 # supported qdiscs. If passed a $2, this function will first check if $1 is in
 # that (space-separated) list and return an error if it's not.
-#sm: note the ingress qdisc is different in that it requires
-# tc qdisc replace dev tmp_ifb ingress instead of "root ingress"
+#
+# note the ingress qdisc is different in that it requires tc qdisc replace dev
+# tmp_ifb ingress instead of "root ingress"
 verify_qdisc() {
     local qdisc=$1
     local supported="$2"
     local not=
     local ifb=TMP_IFB_4_SQM
-    local root_string="root"	# this works for most qdiscs
+    local root_string="root" # this works for most qdiscs
 
     if [ -n "$supported" ]; then
         local found=0
@@ -185,11 +186,11 @@ verify_qdisc() {
     fi
     create_ifb $ifb || return 1
     case $qdisc in
-	#ingress is special
-	ingress) root_string="" ;;
+        #ingress is special
+        ingress) root_string="" ;;
     esac
 
-    $TC qdisc replace dev $ifb $root_string $qdisc #>>${OUTPUT_TARGET} 2>&1
+    $TC qdisc replace dev $ifb $root_string $qdisc
     res=$?
     [ "$res" = "0" ] || not="NOT "
     sqm_debug "QDISC $qdisc is ${not}useable."
@@ -200,10 +201,9 @@ verify_qdisc() {
 
 get_htb_adsll_string() {
     ADSLL=""
-    if [ "$LLAM" = "htb_private" -a "$LINKLAYER" != "none" ];
-    then
-        # HTB defaults to MTU 1600 and an implicit fixed TSIZE of 256, but HTB as of around 3.10.0
-        # does not actually use a table in the kernel
+    if [ "$LLAM" = "htb_private" -a "$LINKLAYER" != "none" ]; then
+        # HTB defaults to MTU 1600 and an implicit fixed TSIZE of 256, but HTB
+        # as of around 3.10.0 does not actually use a table in the kernel
         ADSLL="mpu ${STAB_MPU} linklayer ${LINKLAYER} overhead ${OVERHEAD} mtu ${STAB_MTU}"
         sqm_debug "ADSLL: ${ADSLL}"
     fi
@@ -212,21 +212,18 @@ get_htb_adsll_string() {
 
 get_stab_string() {
     STABSTRING=""
-    if [ "${LLAM}" = "tc_stab" -a "$LINKLAYER" != "none" ];
-    then
+    if [ "${LLAM}" = "tc_stab" -a "$LINKLAYER" != "none" ]; then
         STABSTRING="stab mtu ${STAB_MTU} tsize ${STAB_TSIZE} mpu ${STAB_MPU} overhead ${OVERHEAD} linklayer ${LINKLAYER}"
         sqm_debug "STAB: ${STABSTRING}"
     fi
     echo ${STABSTRING}
 }
 
-#sm: cake knows how to handle ATM and per packet overhead, so expose and use this...
+# cake knows how to handle ATM and per packet overhead, so expose and use this...
 get_cake_lla_string() {
     STABSTRING=""
-    if [ "${LLAM}" = "cake" -a "${LINKLAYER}" != "none" ];
-    then
-        if [ "${LINKLAYER}" = "atm" ];
-        then
+    if [ "${LLAM}" = "cake" -a "${LINKLAYER}" != "none" ]; then
+        if [ "${LINKLAYER}" = "atm" ]; then
             STABSTRING="atm"
         fi
 
@@ -246,7 +243,8 @@ sqm_stop() {
     [ -n "$CUR_IFB" ] && ipt -t mangle -D POSTROUTING -o $CUR_IFB -m mark --mark 0x00 -g QOS_MARK_${IFACE}
     ipt -t mangle -D POSTROUTING -o $IFACE -m mark --mark 0x00/${IPT_MASK} -g QOS_MARK_${IFACE}
     ipt -t mangle -D PREROUTING -i vtun+ -p tcp -j MARK --set-mark 0x2/${IPT_MASK}
-    #sm: not sure whether we need to make this conditional or whether they are silent if the deletion does not work out
+    # not sure whether we need to make this conditional or whether they are
+    # silent if the deletion does not work out
     ipt -t mangle -D PREROUTING -i $IFACE -m dscp ! --dscp 0 -j DSCP --set-dscp-class be
     ipt -t mangle -D PREROUTING -i $IFACE -m mark --mark 0x00/${IPT_MASK} -g QOS_MARK_${IFACE}
 
@@ -269,7 +267,7 @@ fc() {
     prio=$(($prio + 1))
 }
 
-#sm: TODO: increase the quantum to lower computation cost.
+# TODO: increase the quantum to lower computation cost.
 # a) this should be calculated slightly more inteligently
 # b) this should not arbitrarily end
 # c) most likely it should be set so that the transfer time of a quantum stays constant
@@ -277,32 +275,25 @@ get_htb_quantum() {
     CUR_QUANTUM=$( get_mtu $1 )
     BANDWIDTH=$2
 
-    if [ -z "${CUR_QUANTUM}" ]
-    then
+    if [ -z "${CUR_QUANTUM}" ]; then
         CUR_QUANTUM=1500
     fi
-    if [ ${BANDWIDTH} -gt 20000 ]
-    then
+    if [ ${BANDWIDTH} -gt 20000 ]; then
         CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
     fi
-    if [ ${BANDWIDTH} -gt 30000 ]
-    then
+    if [ ${BANDWIDTH} -gt 30000 ]; then
         CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
     fi
-    if [ ${BANDWIDTH} -gt 40000 ]
-    then
+    if [ ${BANDWIDTH} -gt 40000 ]; then
         CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
     fi
-    if [ ${BANDWIDTH} -gt 50000 ]
-    then
+    if [ ${BANDWIDTH} -gt 50000 ]; then
         CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
     fi
-    if [ ${BANDWIDTH} -gt 60000 ]
-    then
+    if [ ${BANDWIDTH} -gt 60000 ]; then
         CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
     fi
-    if [ ${BANDWIDTH} -gt 80000 ]
-    then
+    if [ ${BANDWIDTH} -gt 80000 ]; then
         CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
     fi
 
@@ -312,8 +303,8 @@ get_htb_quantum() {
 }
 
 
-#sm: For a default PPPoE link this returns 1492 just as expected
-# but I fear we actually need the wire size of the whole thing not so much the MTU
+# For a default PPPoE link this returns 1492 just as expected but I fear we
+# actually need the wire size of the whole thing not so much the MTU
 get_mtu() {
     CUR_MTU=$(cat /sys/class/net/$1/mtu)
     sqm_debug "IFACE: ${1} MTU: ${CUR_MTU}"
@@ -331,8 +322,7 @@ get_flows() {
 }
 
 get_flows_count() {
-    if [ "${AUTOFLOW}" -eq "1" ]
-    then
+    if [ "${AUTOFLOW}" -eq "1" ]; then
         FLOWS=8
         [ $1 -gt 999 ] && FLOWS=16
         [ $1 -gt 2999 ] && FLOWS=32
@@ -384,8 +374,7 @@ get_target() {
             # empty field in GUI or undefined GUI variable now defaults to auto
             if [ -z "${CUR_TARGET_VALUE}" -a -z "${CUR_TARGET_UNIT}" ];
             then
-                if [ ! -z "${CUR_LINK_KBPS}" ];
-                then
+                if [ ! -z "${CUR_LINK_KBPS}" ]; then
                     TMP_TARGET_US=$( adapt_target_to_slow_link $CUR_LINK_KBPS )
                     TMP_INTERVAL_STRING=$( adapt_interval_to_slow_link $TMP_TARGET_US )
                     CUR_TARGET_STRING="target ${TMP_TARGET_US}us ${TMP_INTERVAL_STRING}"
@@ -398,8 +387,7 @@ get_target() {
             # but still allow explicit use of the keyword auto for backward compatibility
             case ${CUR_TARGET_UNIT} in
                 auto|Auto|AUTO)
-                    if [ ! -z "${CUR_LINK_KBPS}" ];
-                    then
+                    if [ ! -z "${CUR_LINK_KBPS}" ]; then
                         TMP_TARGET_US=$( adapt_target_to_slow_link $CUR_LINK_KBPS )
                         TMP_INTERVAL_STRING=$( adapt_interval_to_slow_link $TMP_TARGET_US )
                         CUR_TARGET_STRING="target ${TMP_TARGET_US}us ${TMP_INTERVAL_STRING}"
@@ -412,8 +400,7 @@ get_target() {
 
             case ${CUR_TARGET_UNIT} in
                 default|Default|DEFAULT)
-                    if [ ! -z "${CUR_LINK_KBPS}" ];
-                    then
+                    if [ ! -z "${CUR_LINK_KBPS}" ]; then
                         CUR_TARGET_STRING=""    # return nothing so the default target is not over-ridden...
                         AUTO_TARGET="1"
                         sqm_debug "get_target using qdisc default, no explicit target string passed."
@@ -422,10 +409,8 @@ get_target() {
                     fi
                     ;;
             esac
-            if [ ! -z "${CUR_TARGET}" ];
-            then
-                if [ -z "${CUR_TARGET_VALUE}" -o -z "${UNIT_VALID}" ];
-                then
+            if [ ! -z "${CUR_TARGET}" ]; then
+                if [ -z "${CUR_TARGET_VALUE}" -o -z "${UNIT_VALID}" ]; then
                     [ -z "$AUTO_TARGET" ] && sqm_warn "${CUR_TARGET} is not a well formed tc target specifier; e.g.: 5ms (or s, us), or one of the strings auto or default."
                 fi
             fi
@@ -435,35 +420,41 @@ get_target() {
 }
 
 # for low bandwidth links fq_codels default target of 5ms does not work too well
-# so increase target for slow links (note below roughly 2500kbps a single packet will \
-# take more than 5 ms to be tansfered over the wire)
+# so increase target for slow links (note below roughly 2500kbps a single packet
+# will take more than 5 ms to be tansfered over the wire)
 adapt_target_to_slow_link() {
-    CUR_LINK_KBPS=$1
-    CUR_EXTENDED_TARGET_US=
-    MAX_PAKET_DELAY_IN_US_AT_1KBPS=$(( 1000 * 1000 * 33 * 53 * 8 / 1000 ))	# for ATM the worst case expansion including overhead seems to be 33 clls of 53 bytes each
-    CUR_EXTENDED_TARGET_US=$(( ${MAX_PAKET_DELAY_IN_US_AT_1KBPS} / ${CUR_LINK_KBPS} ))    # note this truncates the decimals
+    LINK_BW=$1
+    # for ATM the worst case expansion including overhead seems to be 33 clls of
+    # 53 bytes each
+    MAX_DELAY=$(( 1000 * 1000 * 33 * 53 * 8 / 1000 )) # Max delay in us at 1kbps
+    TARGET=$(( ${MAX_DELAY} / ${LINK_BW} ))  # note this truncates the decimals
+
     # do not change anything for fast links
-    [ "$CUR_EXTENDED_TARGET_US" -lt 5000 ] && CUR_EXTENDED_TARGET_US=5000
+    [ "$TARGET" -lt 5000 ] && TARGET=5000
     case ${QDISC} in
         *codel|pie)
-            echo "${CUR_EXTENDED_TARGET_US}"
+            echo "${TARGET}"
             ;;
     esac
 }
 
-# codel looks at a whole interval to figure out wether observed latency stayed below target
-# if target >= interval that will not work well, so increase interval by the same amonut that target got increased
+# codel looks at a whole interval to figure out wether observed latency stayed
+# below target if target >= interval that will not work well, so increase
+# interval by the same amonut that target got increased
 adapt_interval_to_slow_link() {
-    CUR_TARGET_US=$1
+    TARGET=$1
     case ${QDISC} in
         *codel)
-            CUR_EXTENDED_INTERVAL_US=$(( (100 - 5) * 1000 + ${CUR_TARGET_US} ))	# Note this is not following codel theory to well as target should be 5-10% of interval and the simple addition does not conserve that relationship
-            echo "interval ${CUR_EXTENDED_INTERVAL_US}us"
+            # Note this is not following codel theory to well as target should
+            # be 5-10% of interval and the simple addition does not conserve
+            # that relationship
+            INTERVAL=$(( (100 - 5) * 1000 + ${TARGET} ))
+            echo "interval ${INTERVAL}us"
             ;;
         pie)
             ## not sure if pie needs this, probably not
-            #CUR_EXTENDED_TUPDATE_US=$(( (30 - 20) * 1000 + ${CUR_TARGET_US} ))
-            #echo "tupdate ${CUR_EXTENDED_TUPDATE_US}us"
+            #TUPDATE=$(( (30 - 20) * 1000 + ${TARGET} ))
+            #echo "tupdate ${TUPDATE}us"
             ;;
     esac
 }
@@ -482,7 +473,7 @@ get_quantum() {
 get_limit() {
     CURLIMIT=$1
     case $QDISC in
-        *codel|*pie|pfifo_fast|sfq|pfifo) [ -z ${CURLIMIT} ] && CURLIMIT=${LIMIT}    # use the global default limit
+        *codel|*pie|pfifo_fast|sfq|pfifo) [ -z ${CURLIMIT} ] && CURLIMIT=${LIMIT}  # global default limit
                                           ;;
         bfifo) [ -z "$CURLIMIT" ] && [ ! -z "$LIMIT" ] && CURLIMIT=$(( ${LIMIT} * $( cat /sys/class/net/${IFACE}/mtu ) ))    # bfifo defaults to txquelength * MTU,
                ;;
@@ -491,8 +482,7 @@ get_limit() {
     esac
     sqm_debug "get_limit: $1 CURLIMIT: ${CURLIMIT}"
 
-    if [ ! -z "$CURLIMIT" ]
-    then
+    if [ ! -z "$CURLIMIT" ]; then
         echo "limit ${CURLIMIT}"
     fi
 }
@@ -563,8 +553,7 @@ eth_setup() {
     ethtool -K $IFACE ufo off
     ethtool -K $IFACE gro off
 
-    if [ -e /sys/class/net/$IFACE/queues/tx-0/byte_queue_limits ]
-    then
+    if [ -e /sys/class/net/$IFACE/queues/tx-0/byte_queue_limits ]; then
        for i in /sys/class/net/$IFACE/queues/tx-*/byte_queue_limits
        do
           echo $(( 4 * $( get_mtu ${IFACE} ) )) > $i/limit_max
