@@ -1,3 +1,3 @@
 #!/bin/sh
 
-[ "$ACTION" = ifup ] && /etc/init.d/sqm enabled && /usr/lib/sqm/run.sh start ${DEVICE}
+[ "$ACTION" = ifup ] && /etc/init.d/sqm enabled && /usr/share/sqm/run.sh start ${DEVICE}

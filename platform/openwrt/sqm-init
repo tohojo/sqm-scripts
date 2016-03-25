@@ -14,10 +14,10 @@ restart()
 
 start()
 {
-    /usr/lib/sqm/run.sh start
+    /usr/share/sqm/run.sh start
 }
 
 stop()
 {
-    /usr/lib/sqm/run.sh stop
+    /usr/share/sqm/run.sh stop
 }
