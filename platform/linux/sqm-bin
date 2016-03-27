@@ -18,7 +18,9 @@ fi
 if [ "$ACTION" = "stop" -a -z "$RUN_IFACE" ]; then
     echo "Stopping SQM on all active interfaces." >&2
     for f in ${SQM_STATE_DIR}/*.state; do
-        [ -f "$f" ] && IFACE=$(basename $f .state) ${SQM_LIB_DIR}/stop-sqm
+        # Source the state file prior to stopping; we need the $IFACE and
+        # $SCRIPT variables saved in there.
+        [ -f "$f" ] && ( . $f; IFACE=$IFACE SCRIPT=$SCRIPT SQM_DEBUG=$SQM_DEBUG SQM_DEBUG_LOG=$SQM_DEBUG_LOG OUTPUT_TARGET=$OUTPUT_TARGET ${SQM_LIB_DIR}/stop-sqm )
     done
     exit 0
 fi
@@ -40,6 +42,14 @@ else
             . $f
             [ -f ${SQM_STATE_DIR}/$IFACE.state ] && ( . ${SQM_LIB_DIR}/stop-sqm )
             [ "$ACTION" = "stop" ] || ( . ${SQM_LIB_DIR}/start-sqm )
+        else
+            echo >&2
+            echo "Error: No valid interface configuration found." >&2
+            echo "A interface must be defined in /etc/sqm/<interface name>.iface.conf" >&2
+            echo "Please define a interface configuration in /etc/sqm." >&2
+            echo "For more information, see the template file in" >&2
+            echo "/etc/sqm/eth0.iface.conf.example" >&2
+            exit 1
         fi
     done
 fi

@@ -1,5 +1,8 @@
+# Uplink and Downlink values are in kbps
 UPLINK=1000
 DOWNLINK=85000
+
+# SQM recipe to use. For more information, see /usr/lib/sqm/*.help
 SCRIPT=simple.qos
 
 # Optional/advanced config
