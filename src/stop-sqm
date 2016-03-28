@@ -13,7 +13,18 @@
 . /etc/sqm/sqm.conf
 . ${SQM_LIB_DIR}/functions.sh
 . ${SQM_LIB_DIR}/defaults.sh
+
+if [ ! -f "${SQM_STATE_DIR}/${IFACE}.state" ] ; then
+    sqm_error "State file does not exists; SQM was not running on interface ${IFACE}"
+    exit 1
+fi
 STATE_FILE="${SQM_STATE_DIR}/${IFACE}.state"
+
+if [ -z "${SCRIPT}" ] ; then
+    sqm_error "SCRIPT value is not defined in /etc/sqm/${IFACE}.iface.conf"
+    sqm_error "Please check your configuration and try again."
+    exit 1
+fi
 
 sqm_trace; sqm_trace "$(date): Stopping." # Add some space and a date stamp to verbose log output and log files to separate runs
 sqm_log "Stopping SQM on ${IFACE}"

@@ -14,6 +14,12 @@
 . ${SQM_LIB_DIR}/defaults.sh
 STATE_FILE="${SQM_STATE_DIR}/${IFACE}.state"
 
+if [ -z "${SCRIPT}" ] ; then
+    sqm_error "SCRIPT value is not defined in /etc/sqm/${IFACE}.iface.conf"
+    sqm_error "Please check your configuration and try again."
+    exit 1
+fi
+
 [ -d "${SQM_STATE_DIR}" ] || mkdir -p "${SQM_STATE_DIR}"
 
 if [ -f "${STATE_FILE}" ]; then
