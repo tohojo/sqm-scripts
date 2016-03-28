@@ -106,18 +106,20 @@ egress() {
     BE_CEIL=`expr $CEIL - 16`  # A little slop at the top
 
     LQ="quantum `get_htb_quantum $IFACE $CEIL`"
+    BURST="`get_htb_burst $IFACE $CEIL`"
 
     $TC qdisc del dev $IFACE root 2> /dev/null
+
     case $QDISC in
         cake*) cake_egress; return;;
     esac
 
     $TC qdisc add dev $IFACE root handle 1: `get_stab_string` htb default 12
-    $TC class add dev $IFACE parent 1: classid 1:1 htb $LQ rate ${CEIL}kbit ceil ${CEIL}kbit `get_htb_adsll_string`
-    $TC class add dev $IFACE parent 1:1 classid 1:10 htb $LQ rate ${CEIL}kbit ceil ${CEIL}kbit prio 0 `get_htb_adsll_string`
+    $TC class add dev $IFACE parent 1: classid 1:1 htb $LQ rate ${CEIL}kbit ceil ${CEIL}kbit $BURST `get_htb_adsll_string`
+    $TC class add dev $IFACE parent 1:1 classid 1:10 htb $LQ rate ${CEIL}kbit ceil ${CEIL}kbit $BURST prio 0 `get_htb_adsll_string`
     $TC class add dev $IFACE parent 1:1 classid 1:11 htb $LQ rate 128kbit ceil ${PRIO_RATE}kbit prio 1 `get_htb_adsll_string`
-    $TC class add dev $IFACE parent 1:1 classid 1:12 htb $LQ rate ${BE_RATE}kbit ceil ${BE_CEIL}kbit prio 2 `get_htb_adsll_string`
-    $TC class add dev $IFACE parent 1:1 classid 1:13 htb $LQ rate ${BK_RATE}kbit ceil ${BE_CEIL}kbit prio 3 `get_htb_adsll_string`
+    $TC class add dev $IFACE parent 1:1 classid 1:12 htb $LQ rate ${BE_RATE}kbit ceil ${BE_CEIL}kbit $BURST prio 2 `get_htb_adsll_string`
+    $TC class add dev $IFACE parent 1:1 classid 1:13 htb $LQ rate ${BK_RATE}kbit ceil ${BE_CEIL}kbit $BURST prio 3 `get_htb_adsll_string`
 
     $TC qdisc add dev $IFACE parent 1:11 handle 110: $QDISC \
         `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 300` `get_flows ${PRIO_RATE}` ${EQDISC_OPTS}
@@ -182,6 +184,7 @@ ingress() {
     BE_CEIL=`expr $CEIL - 16`  # A little slop at the top
 
     LQ="quantum `get_htb_quantum $IFACE $CEIL`"
+    BURST="`get_htb_burst $IFACE $CEIL`"
 
     $TC qdisc del dev $IFACE handle ffff: ingress 2> /dev/null
     $TC qdisc add dev $IFACE handle ffff: ingress
@@ -195,18 +198,18 @@ ingress() {
     if [ "$SQUASH_INGRESS" = "1" ]; then
         sqm_debug "Do not perform DSCP based filtering on ingress. (1-tier classification)"
         $TC qdisc add dev $DEV root handle 1: `get_stab_string` htb default 10
-        $TC class add dev $DEV parent 1: classid 1:1 htb $LQ rate ${DOWNLINK}kbit ceil ${DOWNLINK}kbit `get_htb_adsll_string`
-        $TC class add dev $DEV parent 1:1 classid 1:10 htb $LQ rate ${DOWNLINK}kbit ceil ${DOWNLINK}kbit prio 0 `get_htb_adsll_string`
+        $TC class add dev $DEV parent 1: classid 1:1 htb $LQ rate ${DOWNLINK}kbit ceil ${DOWNLINK}kbit $BURST `get_htb_adsll_string`
+        $TC class add dev $DEV parent 1:1 classid 1:10 htb $LQ rate ${DOWNLINK}kbit ceil ${DOWNLINK}kbit $BURST prio 0 `get_htb_adsll_string`
         $TC qdisc add dev $DEV parent 1:10 handle 110: $QDISC \
             `get_limit ${ILIMIT}` `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_flows ${DOWNLINK}` ${IQDISC_OPTS}
     else
         sqm_debug "Perform DSCP based filtering on ingress. (3-tier classification)"
         $TC qdisc add dev $DEV root handle 1: `get_stab_string` htb default 12
-        $TC class add dev $DEV parent 1: classid 1:1 htb $LQ rate ${CEIL}kbit ceil ${CEIL}kbit `get_htb_adsll_string`
-        $TC class add dev $DEV parent 1:1 classid 1:10 htb $LQ rate ${CEIL}kbit ceil ${CEIL}kbit prio 0 `get_htb_adsll_string`
+        $TC class add dev $DEV parent 1: classid 1:1 htb $LQ rate ${CEIL}kbit ceil ${CEIL}kbit $BURST `get_htb_adsll_string`
+        $TC class add dev $DEV parent 1:1 classid 1:10 htb $LQ rate ${CEIL}kbit ceil ${CEIL}kbit $BURST prio 0 `get_htb_adsll_string`
         $TC class add dev $DEV parent 1:1 classid 1:11 htb $LQ rate 32kbit ceil ${PRIO_RATE}kbit prio 1 `get_htb_adsll_string`
-        $TC class add dev $DEV parent 1:1 classid 1:12 htb $LQ rate ${BE_RATE}kbit ceil ${BE_CEIL}kbit prio 2 `get_htb_adsll_string`
-        $TC class add dev $DEV parent 1:1 classid 1:13 htb $LQ rate ${BK_RATE}kbit ceil ${BE_CEIL}kbit prio 3 `get_htb_adsll_string`
+        $TC class add dev $DEV parent 1:1 classid 1:12 htb $LQ rate ${BE_RATE}kbit ceil ${BE_CEIL}kbit $BURST prio 2 `get_htb_adsll_string`
+        $TC class add dev $DEV parent 1:1 classid 1:13 htb $LQ rate ${BK_RATE}kbit ceil ${BE_CEIL}kbit $BURST prio 3 `get_htb_adsll_string`
 
         $TC qdisc add dev $DEV parent 1:11 handle 110: $QDISC \
             `get_limit ${ILIMIT}` `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 500` `get_flows ${PRIO_RATE}` ${IQDISC_OPTS}

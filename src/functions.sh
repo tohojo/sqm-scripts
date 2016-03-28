@@ -1,8 +1,25 @@
+################################################################################
+# (sqm) functions.sh
+#
+# These are all helper functions for various parts of SQM scripts. If you want
+# to play around with your own shaper-qdisc-filter configuration look here for
+# ready made tools, or examples start of on your own.
+#
+# Please note the SQM logger function is broken down into levels of logging.
+# Use only levels appropriate to touch points in your script and realize the
+# potential to overflow SYSLOG.
+#
+################################################################################
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as
 # published by the Free Software Foundation.
 #
-#       Copyright (C) 2012-2016 Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller
+#   Copyright (C) 2012-6
+#       Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller
+#       Eric Luehrsen
+#
+################################################################################
 
 sqm_logger() {
     case $1 in
@@ -267,41 +284,75 @@ fc() {
     prio=$(($prio + 1))
 }
 
-# TODO: increase the quantum to lower computation cost.
-# a) this should be calculated slightly more inteligently
-# b) this should not arbitrarily end
-# c) most likely it should be set so that the transfer time of a quantum stays constant
+# WRT to bandwidth increase the quantum to lower computation cost.
 get_htb_quantum() {
-    CUR_QUANTUM=$( get_mtu $1 )
+    HTB_MTU=$( get_mtu $1 )
     BANDWIDTH=$2
 
-    if [ -z "${CUR_QUANTUM}" ]; then
-        CUR_QUANTUM=1500
-    fi
-    if [ ${BANDWIDTH} -gt 20000 ]; then
-        CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
-    fi
-    if [ ${BANDWIDTH} -gt 30000 ]; then
-        CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
-    fi
-    if [ ${BANDWIDTH} -gt 40000 ]; then
-        CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
-    fi
-    if [ ${BANDWIDTH} -gt 50000 ]; then
-        CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
-    fi
-    if [ ${BANDWIDTH} -gt 60000 ]; then
-        CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
-    fi
-    if [ ${BANDWIDTH} -gt 80000 ]; then
-        CUR_QUANTUM=$((${CUR_QUANTUM} * 2))
+    if [ -z "${HTB_MTU}" ] ; then
+        HTB_MTU=1500
     fi
 
-    sqm_debug "CUR_HTB_QUANTUM: ${CUR_QUANTUM}, BANDWIDTH: ${BANDWIDTH}"
+    # Because $BANDWIDTH is in kbps, bytes/1ms is simply factor-8
+    # Stop at some huge quantum, and don't start until 2 MTU
+    BANDWIDTH_L=$(( ${HTB_MTU} *  2 * 8 ))
+    BANDWIDTH_H=$(( ${HTB_MTU} * 64 * 8 ))
 
-    echo $CUR_QUANTUM
+    if [ ${BANDWIDTH} -gt ${BANDWIDTH_H} ] ; then
+        HTB_QUANTUM=$(( ${HTB_MTU} * 64 ))
+
+    elif [ ${BANDWIDTH} -gt ${BANDWIDTH_L} ] ; then
+        # Take no chances with order o' exec rounding
+        HTB_QUANTUM=$(( ${BANDWIDTH}   / 8 ))
+        HTB_QUANTUM=$(( ${HTB_QUANTUM} / ${HTB_MTU} ))
+        HTB_QUANTUM=$(( ${HTB_QUANTUM} * ${HTB_MTU} ))
+
+    else
+        HTB_QUANTUM=${HTB_MTU}
+    fi
+
+    sqm_debug "CUR_HTB_QUANTUM: ${HTB_QUANTUM}, BANDWIDTH: ${BANDWIDTH}"
+
+    echo $HTB_QUANTUM
 }
 
+# Create optional burst parameters to leap over CPU interupts when the CPU is
+# severly loaded. We need to be conservative though.
+get_htb_burst() {
+    HTB_MTU=$( get_mtu $1 )
+    BANDWIDTH=$2
+
+    if [ -n "${HTB_MTU}" -a "${SHAPER_BURST}" -eq "1" ] ; then
+        # 10 MTU burst can itself create delay under CPU load.
+        # It will need to all wait for a hardware commit.
+        BANDWIDTH_L=$(( ${HTB_MTU} *  2 * 8 ))
+        BANDWIDTH_H=$(( ${HTB_MTU} * 10 * 8 ))
+
+
+        if [ ${BANDWIDTH} -gt ${BANDWIDTH_H} ] ; then
+            HTB_BURST=$(( ${HTB_MTU} * 10 ))
+
+            sqm_debug "CUR_HTB_BURST: ${HTB_BURST}, BANDWIDTH: ${BANDWIDTH}"
+
+            echo burst ${HTB_BURST} cburst ${HTB_BURST}
+
+        elif [ ${BANDWIDTH} -gt ${BANDWIDTH_L} ] ; then
+            # Start with 1ms buffer 2x MTU, and lean out the mixture at higher rates
+            HTB_BURST=$(( ${BANDWIDTH} - ${BANDWIDTH_L} ))
+            HTB_BURST=$(( ${HTB_BURST} / 16 ))
+            HTB_BURST=$(( ${HTB_BURST} / ${HTB_MTU} ))
+            HTB_BURST=$(( ${HTB_BURST} * ${HTB_MTU} ))
+            HTB_BURST=$(( ${HTB_BURST} + ${HTB_MTU} * 2 ))
+
+            sqm_debug "CUR_HTB_BURST: ${HTB_BURST}, BANDWIDTH: ${BANDWIDTH}"
+
+            echo burst ${HTB_BURST} cburst ${HTB_BURST}
+
+        else
+            sqm_debug "Default Burst, HTB will use MTU plus shipping and handling"
+        fi
+    fi
+}
 
 # For a default PPPoE link this returns 1492 just as expected but I fear we
 # actually need the wire size of the whole thing not so much the MTU
