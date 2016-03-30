@@ -35,6 +35,7 @@
 [ -z "$INGRESS_CAKE_OPTS" ] && INGRESS_CAKE_OPTS="diffserv4"
 [ -z "$EGRESS_CAKE_OPTS" ] && EGRESS_CAKE_OPTS="diffserv4"
 [ -z "$SHAPER_BURST" ] && SHAPER_BURST="0"
+[ -z "$HTB_QUANTUM_FUNCTION" ] && HTB_QUANTUM_FUNCTION="linear"
 
 # Logging verbosity
 VERBOSITY_SILENT=0

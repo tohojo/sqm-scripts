@@ -284,8 +284,19 @@ fc() {
     prio=$(($prio + 1))
 }
 
-# WRT to bandwidth increase the quantum to lower computation cost.
+# Scale quantum with bandwidth to lower computation cost.
 get_htb_quantum() {
+    case "$HTB_QUANTUM_FUNCTION" in
+        linear|step)
+            eval "htb_quantum_${HTB_QUANTUM_FUNCTION} $1 $2" ;;
+        *)
+            sqm_warn "unknown HTB quantum function: '$HTB_QUANTUM_FUNCTION'."
+            echo 1500 ;; # fallback
+    esac
+}
+
+# Linear scaling within bounds
+htb_quantum_linear() {
     HTB_MTU=$( get_mtu $1 )
     BANDWIDTH=$2
 
@@ -311,10 +322,43 @@ get_htb_quantum() {
         HTB_QUANTUM=${HTB_MTU}
     fi
 
-    sqm_debug "CUR_HTB_QUANTUM: ${HTB_QUANTUM}, BANDWIDTH: ${BANDWIDTH}"
+    sqm_debug "HTB_QUANTUM (linear): ${HTB_QUANTUM}, BANDWIDTH: ${BANDWIDTH}"
 
     echo $HTB_QUANTUM
 }
+
+# Fixed step scaling
+htb_quantum_step() {
+    HTB_QUANTUM=$( get_mtu $1 )
+    BANDWIDTH=$2
+
+    if [ -z "${HTB_QUANTUM}" ]; then
+        HTB_QUANTUM=1500
+    fi
+    if [ ${BANDWIDTH} -gt 20000 ]; then
+        HTB_QUANTUM=$((${HTB_QUANTUM} * 2))
+    fi
+    if [ ${BANDWIDTH} -gt 30000 ]; then
+        HTB_QUANTUM=$((${HTB_QUANTUM} * 2))
+    fi
+    if [ ${BANDWIDTH} -gt 40000 ]; then
+        HTB_QUANTUM=$((${HTB_QUANTUM} * 2))
+    fi
+    if [ ${BANDWIDTH} -gt 50000 ]; then
+        HTB_QUANTUM=$((${HTB_QUANTUM} * 2))
+    fi
+    if [ ${BANDWIDTH} -gt 60000 ]; then
+        HTB_QUANTUM=$((${HTB_QUANTUM} * 2))
+    fi
+    if [ ${BANDWIDTH} -gt 80000 ]; then
+        HTB_QUANTUM=$((${HTB_QUANTUM} * 2))
+    fi
+
+    sqm_debug "HTB_QUANTUM (step): ${HTB_QUANTUM}, BANDWIDTH: ${BANDWIDTH}"
+
+    echo $HTB_QUANTUM
+}
+
 
 # Create optional burst parameters to leap over CPU interupts when the CPU is
 # severly loaded. We need to be conservative though.
