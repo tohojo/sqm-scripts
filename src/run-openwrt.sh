@@ -55,7 +55,8 @@ run_sqm_scripts() {
     export TARGET=$(config_get "$section" target)
     export SQUASH_DSCP=$(config_get "$section" squash_dscp)
     export SQUASH_INGRESS=$(config_get "$section" squash_ingress)
-
+    export SHAPER_BURST=$(config_get "$section" shaper_burst)
+    export HTB_QUANTUM_FUNCTION=$(config_get "$section" htb_quantum_function)
     export QDISC=$(config_get "$section" qdisc)
     export SCRIPT=$(config_get "$section" script)
 
