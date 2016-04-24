@@ -3,10 +3,10 @@
 # simplest.qos (Cero3 Simple Shaper)
 #
 # Abstract:
-# This is a single band fq_codel and ipv6 enabled shaping script for Ethernet
-# gateways. This is nearly the simplest possible. With FQ_CODEL, the sparseness
-# priority will work pretty well for a casual network. Flow-hashes should not
-# overlap much with only a few users.
+# This is a single band ipv6 enabled shaping script for Ethernet gateways.
+# This is nearly the simplest possible. With FQ_CODEL, the sparseness priority
+# will work pretty well for a casual network. Flow-hashes should not overlap
+# much with only a few users.
 #
 # References:
 # This alternate shaper attempts to go for 1/u performance in a clever way
