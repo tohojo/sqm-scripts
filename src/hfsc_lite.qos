@@ -87,7 +87,7 @@ egress() {
   $TC filter add dev $IFACE parent 1:0 protocol ip   prio 1 u32 \
     match ip  protocol 6 0xff match ip  dport 1 0xfc00 flowid 1:11
   $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 2 u32 \
-    match ip6 protocol 6 0xff match ip  dport 1 0xfc00 flowid 1:11
+    match ip6 protocol 6 0xff match ip6 dport 1 0xfc00 flowid 1:11
 
   # UDP Standardized Ports to Internet Destination (1-1023)
   $TC filter add dev $IFACE parent 1:0 protocol ip   prio 3 u32 \
@@ -152,15 +152,15 @@ ingress() {
 
   # TCP Standardized Ports from Internet Source (1-1023)
   $TC filter add dev $DEV parent 1:0 protocol ip   prio 1 u32 \
-    match ip  protocol 6 0xff match ip  dport 1 0xfc00 flowid 1:11
+    match ip  protocol 6 0xff match ip  sport 1 0xfc00 flowid 1:11
   $TC filter add dev $DEV parent 1:0 protocol ipv6 prio 2 u32 \
-    match ip6 protocol 6 0xff match ip  dport 1 0xfc00 flowid 1:11
+    match ip6 protocol 6 0xff match ip6 sport 1 0xfc00 flowid 1:11
 
   # UDP Standardized Ports from Internet Source (1-1023)
   $TC filter add dev $DEV parent 1:0 protocol ip   prio 3 u32 \
-    match ip  protocol 17 0xff match ip  dport 1 0xfc00 flowid 1:12
+    match ip  protocol 17 0xff match ip  sport 1 0xfc00 flowid 1:12
   $TC filter add dev $DEV parent 1:0 protocol ipv6 prio 4 u32 \
-    match ip6 protocol 17 0xff match ip6 dport 1 0xfc00 flowid 1:12
+    match ip6 protocol 17 0xff match ip6 sport 1 0xfc00 flowid 1:12
 
   # Default (HFSC-->13) includes ICMP and Home Server Destination (1-1023)
   $TC filter add dev $DEV parent 1:0 protocol ip   prio 5 u32 \
