@@ -61,10 +61,11 @@ run_sqm_scripts() {
     export SCRIPT=$(config_get "$section" script)
 
 
-    #sm: if SQM_DEBUG or SQM_VERBOSITY were passed in via the command line make them available to the other scripts
+    #sm: if SQM_DEBUG or SQM_VERBOSITY_* were passed in via the command line make them available to the other scripts
     #	this allows to override sqm's log level as set in the GUI for quick debugging without GUI accesss.
     [ -n "$SQM_DEBUG" ] && export SQM_DEBUG || export SQM_DEBUG=$(config_get "$section" debug_logging)
-    [ -n "$SQM_VERBOSITY" ] && export SQM_VERBOSITY || export SQM_VERBOSITY=$(config_get "$section" verbosity)
+    [ -n "$SQM_VERBOSITY_MAX" ] && export SQM_VERBOSITY_MAX || export SQM_VERBOSITY_MAX=$(config_get "$section" verbosity)
+    [ -n "$SQM_VERBOSITY_MIN" ] && export SQM_VERBOSITY_MIN
 
     #sm: only stop-sqm if there is something running
     CUR_STATE_FILE="${SQM_STATE_DIR}/${IFACE}.state"
