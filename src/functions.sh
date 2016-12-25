@@ -229,7 +229,13 @@ get_htb_adsll_string() {
 
 get_stab_string() {
     STABSTRING=""
-    if [ "${LLAM}" = "tc_stab" -a "$LINKLAYER" != "none" ]; then
+    local TMP_LLAM=${LLAM}
+    if [ "${LLAM}" = "default" -a "$QDISC" != "cake" ]; then
+	sqm_debug "LLA: default link layer adjustment method for !cake is tc_stab"
+	TMP_LLAM="tc_stab"
+    fi
+    
+    if [ "${TMP_LLAM}" = "tc_stab" -a "$LINKLAYER" != "none" ]; then
         STABSTRING="stab mtu ${STAB_MTU} tsize ${STAB_TSIZE} mpu ${STAB_MPU} overhead ${OVERHEAD} linklayer ${LINKLAYER}"
         sqm_debug "STAB: ${STABSTRING}"
     fi
@@ -239,7 +245,13 @@ get_stab_string() {
 # cake knows how to handle ATM and per packet overhead, so expose and use this...
 get_cake_lla_string() {
     STABSTRING=""
-    if [ "${LLAM}" = "cake" -a "${LINKLAYER}" != "none" ]; then
+    local TMP_LLAM=${LLAM}
+    if [ "${LLAM}" = "default" -a "$QDISC" = "cake" ]; then
+	sqm_debug "LLA: default link layer adjustment method for cake is cake"
+	TMP_LLAM="cake"
+    fi
+        
+    if [ "${TMP_LLAM}" = "cake" -a "${LINKLAYER}" != "none" ]; then
         if [ "${LINKLAYER}" = "atm" ]; then
             STABSTRING="atm"
         fi
