@@ -234,7 +234,7 @@ get_stab_string() {
 	sqm_debug "LLA: default link layer adjustment method for !cake is tc_stab"
 	TMP_LLAM="tc_stab"
     fi
-    
+
     if [ "${TMP_LLAM}" = "tc_stab" -a "$LINKLAYER" != "none" ]; then
         STABSTRING="stab mtu ${STAB_MTU} tsize ${STAB_TSIZE} mpu ${STAB_MPU} overhead ${OVERHEAD} linklayer ${LINKLAYER}"
         sqm_debug "STAB: ${STABSTRING}"
@@ -250,7 +250,7 @@ get_cake_lla_string() {
 	sqm_debug "LLA: default link layer adjustment method for cake is cake"
 	TMP_LLAM="cake"
     fi
-        
+
     if [ "${TMP_LLAM}" = "cake" -a "${LINKLAYER}" != "none" ]; then
         if [ "${LINKLAYER}" = "atm" ]; then
             STABSTRING="atm"
@@ -372,6 +372,34 @@ htb_quantum_step() {
 }
 
 
+get_burst() {
+    MTU=$1
+    BANDWIDTH=$2
+    BURST=
+
+    # 10 MTU burst can itself create delay under CPU load.
+    # It will need to all wait for a hardware commit.
+    BANDWIDTH_L=$(( ${MTU} *  2 * 8 ))
+    BANDWIDTH_H=$(( ${MTU} * 10 * 8 ))
+
+
+    if [ ${BANDWIDTH} -gt ${BANDWIDTH_H} ] ; then
+        BURST=$(( ${HTB_MTU} * 10 ))
+
+    elif [ ${BANDWIDTH} -gt ${BANDWIDTH_L} ] ; then
+            # Start with 1ms buffer 2x MTU, and lean out the mixture at higher rates
+            BURST=$(( ${BANDWIDTH} - ${BANDWIDTH_L} ))
+            BURST=$(( ${BURST} / 16 ))
+            BURST=$(( ${BURST} / ${MTU} ))
+            BURST=$(( ${BURST} * ${MTU} ))
+            BURST=$(( ${BURST} + ${MTU} * 2 ))
+    fi
+
+    sqm_debug "BURST: ${BURST}, BANDWIDTH: ${BANDWIDTH}"
+
+    echo $BURST
+}
+
 # Create optional burst parameters to leap over CPU interupts when the CPU is
 # severly loaded. We need to be conservative though.
 get_htb_burst() {
@@ -379,31 +407,9 @@ get_htb_burst() {
     BANDWIDTH=$2
 
     if [ -n "${HTB_MTU}" -a "${SHAPER_BURST}" -eq "1" ] ; then
-        # 10 MTU burst can itself create delay under CPU load.
-        # It will need to all wait for a hardware commit.
-        BANDWIDTH_L=$(( ${HTB_MTU} *  2 * 8 ))
-        BANDWIDTH_H=$(( ${HTB_MTU} * 10 * 8 ))
-
-
-        if [ ${BANDWIDTH} -gt ${BANDWIDTH_H} ] ; then
-            HTB_BURST=$(( ${HTB_MTU} * 10 ))
-
-            sqm_debug "CUR_HTB_BURST: ${HTB_BURST}, BANDWIDTH: ${BANDWIDTH}"
-
-            echo burst ${HTB_BURST} cburst ${HTB_BURST}
-
-        elif [ ${BANDWIDTH} -gt ${BANDWIDTH_L} ] ; then
-            # Start with 1ms buffer 2x MTU, and lean out the mixture at higher rates
-            HTB_BURST=$(( ${BANDWIDTH} - ${BANDWIDTH_L} ))
-            HTB_BURST=$(( ${HTB_BURST} / 16 ))
-            HTB_BURST=$(( ${HTB_BURST} / ${HTB_MTU} ))
-            HTB_BURST=$(( ${HTB_BURST} * ${HTB_MTU} ))
-            HTB_BURST=$(( ${HTB_BURST} + ${HTB_MTU} * 2 ))
-
-            sqm_debug "CUR_HTB_BURST: ${HTB_BURST}, BANDWIDTH: ${BANDWIDTH}"
-
-            echo burst ${HTB_BURST} cburst ${HTB_BURST}
-
+        BURST=$( get_burst $HTB_MTU $BANDWIDTH )
+        if [ -n "$BURST" ]; then
+            echo burst $BURST cburst $BURST
         else
             sqm_debug "Default Burst, HTB will use MTU plus shipping and handling"
         fi
