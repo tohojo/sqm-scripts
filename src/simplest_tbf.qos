@@ -39,7 +39,7 @@ egress() {
     $TC qdisc del dev $IFACE root 2>/dev/null
 
     $TC qdisc add dev $IFACE root handle 1: $(get_stab_string) tbf \
-        rate ${UPLINK}kbit burst $BURST latency 10ms $(get_htb_adsll_string)
+        rate ${UPLINK}kbit burst $BURST latency 300ms $(get_htb_adsll_string)
     $TC qdisc add dev $IFACE parent 1: handle 110: $QDISC \
         $(get_limit ${ELIMIT}) $(get_target "${ETARGET}" ${UPLINK}) \
         $(get_ecn ${EECN}) $(get_flows ${UPLINK}) ${EQDISC_OPTS}
@@ -58,7 +58,7 @@ ingress() {
     $TC qdisc del dev $DEV root 2>/dev/null
 
     $TC qdisc add dev $DEV root handle 1: $(get_stab_string) tbf \
-        rate ${DOWNLINK}kbit burst $BURST latency 10ms $(get_htb_adsll_string)
+        rate ${DOWNLINK}kbit burst $BURST latency 300ms $(get_htb_adsll_string)
     $TC qdisc add dev $DEV parent 1: handle 110: $QDISC \
         $(get_limit ${ILIMIT}) $(get_target "${ITARGET}" ${DOWNLINK}) \
         $(get_ecn ${IECN}) $(get_flows ${DOWNLINK}) ${IQDISC_OPTS}
