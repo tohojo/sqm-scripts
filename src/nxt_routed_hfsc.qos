@@ -151,6 +151,9 @@ sqm_start() {
 sqm_stop() {
     $TC qdisc del dev ${IFACE} ingress 2> /dev/null
     $TC qdisc del dev ${IFACE} root 2> /dev/null
+
+    [ -z "$CUR_IFB" ] && CUR_IFB=$( get_ifb_for_if ${IFACE} )
+
     [ -n "$CUR_IFB" ] && $TC qdisc del dev ${CUR_IFB} root 2> /dev/null
     [ -n "$CUR_IFB" ] && sqm_debug "${0}: ${CUR_IFB} shaper deleted"
 
