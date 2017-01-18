@@ -1,3 +1,0 @@
-This single band HFSC configuration is the bare minimum.
-Prioritises bandwidth over low delay in case of insufficient CPU power.
-The lack of filter before the QDISC may help reduce CPU load.
