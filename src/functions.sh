@@ -192,6 +192,7 @@ verify_qdisc() {
     local supported="$2"
     local ifb=TMP_IFB_4_SQM
     local root_string="root" # this works for most qdiscs
+    local args=""
 
     if [ -n "$supported" ]; then
         local found=0
@@ -204,9 +205,11 @@ verify_qdisc() {
     case $qdisc in
         #ingress is special
         ingress) root_string="" ;;
+        #cannot instantiate tbf without args
+        tbf) args="limit 1 burst 1 rate 1kbps" ;;
     esac
 
-    $TC qdisc replace dev $ifb $root_string $qdisc
+    $TC qdisc replace dev $ifb $root_string $qdisc $args
     res=$?
     if [ "$res" = "0" ] ; then
         sqm_debug "QDISC $qdisc is useable."
