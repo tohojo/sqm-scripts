@@ -33,7 +33,7 @@
 egress() {
 
     MTU=$(get_mtu $IFACE)
-    BURST="$(get_burst ${MTU:-1514} ${DOWNLINK})"
+    BURST="$(get_burst ${MTU:-1514} ${UPLINK})"
     BURST=${BURST:-1514}
 
     $TC qdisc del dev $IFACE root 2>/dev/null
