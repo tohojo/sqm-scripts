@@ -379,8 +379,9 @@ get_burst() {
 
     # 10 MTU burst can itself create delay under CPU load.
     # It will need to all wait for a hardware commit.
+    # Note the lean mixture at high bandwidths for upper limit.
     BANDWIDTH_L=$(( ${MTU} *  2 * 8 ))
-    BANDWIDTH_H=$(( ${MTU} * 10 * 8 ))
+    BANDWIDTH_H=$(( ${MTU} * 18 * 8 ))
 
 
     if [ ${BANDWIDTH} -gt ${BANDWIDTH_H} ] ; then
