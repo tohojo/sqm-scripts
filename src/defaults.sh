@@ -34,7 +34,7 @@
 #sm: *_CAKE_OPTS should contain the diffserv keyword for cake
 [ -z "$INGRESS_CAKE_OPTS" ] && INGRESS_CAKE_OPTS="diffserv4"
 [ -z "$EGRESS_CAKE_OPTS" ] && EGRESS_CAKE_OPTS="diffserv4"
-[ -z "$SHAPER_BURST" ] && SHAPER_BURST="0"
+[ -z "$SHAPER_BURST" ] && SHAPER_BURST="1"
 [ -z "$HTB_QUANTUM_FUNCTION" ] && HTB_QUANTUM_FUNCTION="linear"
 
 # Logging verbosity
