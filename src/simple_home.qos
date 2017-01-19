@@ -1,0 +1,214 @@
+#!/bin/sh
+################################################################################
+# simple_home.qos
+#
+# This HTB script is based on simple.qos three-tier traffic, but uses protocol
+# and port to classify instead of DSCP. Residential ISP can squash DSCP and
+# consumer applications may not use it.
+#
+# Yet, it is useful to ensure DHCP, DNS, and other UDP (small, timely) get
+# some reserved traffic lanes. Then keep bittorrent away from daily HTTPS.
+#
+# --Internet TCP Standard Ports: Most users are on HTTP/HTTPS or 80/443 and
+#   we don't want the kids complaining now do we.
+# --Internet UDP Standard Ports: DNS, DHCP, NTP, and other frequent but small
+#   services. Some VPN use this space for data transfer.
+# --Other: VPN, ICMP, VOIP, Torrent, tunnels, and whatever will need to fight
+#   it out. FQ_CODEL makes sparsity a priority so VOIP an ICMP will win.
+#   If you provide a server (<1023) from home to the internet it will be here.
+#
+################################################################################
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+#   Copyright (C) 2015
+#     Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller, Eric Luehrsen
+#
+################################################################################
+
+. ${SQM_LIB_DIR}/defaults.sh
+
+################################################################################
+
+egress() {
+  # Link share (virtual time) tuning is only rough as borrowing will occur.
+  # However in saturation, each class is guaranteed (real time) minimum of 15%.
+  # This allows HFSC to do its work but avoids some of its vitrual time quirks.
+  UPLINK_C=$(( ${UPLINK} * 50 / 49 ))
+  UPLINK_R=$(( ${UPLINK} * 1 / 7 ))
+  UPLINK_1=$(( ${UPLINK} * 2 / 7 ))
+  UPLINK_2=$(( ${UPLINK} * 2 / 7 ))
+  UPLINK_3=$(( ${UPLINK} * 3 / 7 ))
+
+  LQ="quantum `get_htb_quantum $IFACE $UPLINK`"
+  BURST="`get_htb_burst $IFACE $UPLINK`"
+
+  # Tree Removal Special includes Stump Grinding
+  $TC qdisc del dev $IFACE root 2>/dev/null
+
+  # Root Class
+  $TC qdisc add dev $IFACE root handle 1: `get_stab_string` htb default 13
+  $TC class add dev $IFACE parent 1: classid 1:1 htb \
+    $LQ rate ${UPLINK}kbit ceil ${UPLINK_C}kbit \
+    $BURST `get_htb_adsll_string`
+
+  # Tree Class
+  $TC class add dev $IFACE parent 1:1 classid 1:11 htb \
+    $LQ rate ${UPLINK_1}kbit ceil ${UPLINK}kbit \
+    $BURST prio 1 `get_htb_adsll_string`
+  $TC class add dev $IFACE parent 1:1 classid 1:12 htb \
+    $LQ rate ${UPLINK_2}kbit ceil ${UPLINK}kbit \
+    $BURST prio 2 `get_htb_adsll_string`
+  $TC class add dev $IFACE parent 1:1 classid 1:13 htb \
+    $LQ rate ${UPLINK_3}kbit ceil ${UPLINK}kbit \
+    $BURST prio 3 `get_htb_adsll_string`
+
+  # Leaf QDISC
+  $TC qdisc add dev $IFACE parent 1:11 handle 110: ${QDISC} \
+    `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` \
+    `get_ecn ${EECN}` `get_flows ${UPLINK}` ${EQDISC_OPTS}
+  $TC qdisc add dev $IFACE parent 1:12 handle 120: ${QDISC} \
+    `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` \
+    `get_ecn ${EECN}` `get_flows ${UPLINK}` ${EQDISC_OPTS}
+  $TC qdisc add dev $IFACE parent 1:13 handle 130: ${QDISC} \
+    `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` \
+    `get_ecn ${EECN}` `get_flows ${UPLINK}` ${EQDISC_OPTS}
+
+  # TC FILTER FLOW here if we wanted to cross the NAT, but it
+  # should be unnecessary as NAT creates unique port per connection.
+
+  # TCP Standardized Ports to Internet Destination (1-1023)
+  $TC filter add dev $IFACE parent 1:0 protocol ip   prio 1 u32 \
+    match ip  protocol 6 0xff match ip  dport 1 0xfc00 flowid 1:11
+  $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 2 u32 \
+    match ip6 protocol 6 0xff match ip6 dport 1 0xfc00 flowid 1:11
+
+  # UDP Standardized Ports to Internet Destination (1-1023)
+  $TC filter add dev $IFACE parent 1:0 protocol ip   prio 3 u32 \
+    match ip  protocol 17 0xff match ip  dport 1 0xfc00 flowid 1:12
+  $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 4 u32 \
+    match ip6 protocol 17 0xff match ip6 dport 1 0xfc00 flowid 1:12
+
+   # Default (HTB-->13) includes ICMP and Home Server Source (1-1023)
+  $TC filter add dev $IFACE parent 1:0 protocol ip   prio 5 u32 \
+    match ip  protocol 0 0x00 flowid 1:13
+  $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 6 u32 \
+    match ip6 protocol 0 0x00 flowid 1:13
+}
+
+################################################################################
+
+ingress() {
+  # Link share (virtual time) tuning is only rough as borrowing will occur.
+  # However in saturation, each class is guaranteed (real time) minimum of 15%.
+  # This allows HFSC to do its work but avoids some of its vitrual time quirks.
+  DOWNLINK_C=$(( ${DOWNLINK} * 50 / 49 ))
+  DOWNLINK_R=$(( ${DOWNLINK} * 1 / 7 ))
+  DOWNLINK_1=$(( ${DOWNLINK} * 2 / 7 ))
+  DOWNLINK_2=$(( ${DOWNLINK} * 2 / 7 ))
+  DOWNLINK_3=$(( ${DOWNLINK} * 3 / 7 ))
+
+  LQ="quantum `get_htb_quantum $IFACE $DOWNLINK`"
+  BURST="`get_htb_burst $IFACE $DOWNLINK`"
+
+  # Virtual Ingress Port
+  $TC qdisc del dev $IFACE handle ffff: ingress 2>/dev/null
+  $TC qdisc add dev $IFACE handle ffff: ingress
+
+  # Tree Removal Special includes Stump Grinding
+  $TC qdisc del dev $DEV root 2>/dev/null
+
+  # Root Class
+  $TC qdisc add dev $DEV root handle 1: `get_stab_string` htb default 13
+  $TC class add dev $DEV parent 1: classid 1:1 htb \
+    $LQ rate ${DOWNLINK}kbit ceil ${DOWNLINK_C}kbit \
+    $BURST `get_htb_adsll_string`
+
+  # Tree Class
+  $TC class add dev $DEV parent 1:1 classid 1:11 htb \
+    $LQ rate ${DOWNLINK_1}kbit ceil ${DOWNLINK}kbit \
+    $BURST prio 1 `get_htb_adsll_string`
+  $TC class add dev $DEV parent 1:1 classid 1:12 htb \
+    $LQ rate ${DOWNLINK_2}kbit ceil ${DOWNLINK}kbit \
+    $BURST prio 2 `get_htb_adsll_string`
+  $TC class add dev $DEV parent 1:1 classid 1:13 htb \
+    $LQ rate ${DOWNLINK_3}kbit ceil ${DOWNLINK}kbit \
+    $BURST prio 3 `get_htb_adsll_string`
+
+  # Leaf QDISC
+  $TC qdisc add dev $DEV parent 1:11 handle 110: ${QDISC} \
+    `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` \
+    `get_ecn ${EECN}` `get_flows ${DOWNLINK}` ${EQDISC_OPTS}
+  $TC qdisc add dev $DEV parent 1:12 handle 120: ${QDISC} \
+    `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` \
+    `get_ecn ${EECN}` `get_flows ${DOWNLINK}` ${EQDISC_OPTS}
+  $TC qdisc add dev $DEV parent 1:13 handle 130: ${QDISC} \
+    `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` \
+    `get_ecn ${EECN}` `get_flows ${DOWNLINK}` ${EQDISC_OPTS}
+
+  # TC FILTER FLOW here if we wanted to cross the NAT, but it
+  # should be unnecessary as NAT creates unique port per connection.
+
+  # TCP Standardized Ports from Internet Source (1-1023)
+  $TC filter add dev $DEV parent 1:0 protocol ip   prio 1 u32 \
+    match ip  protocol 6 0xff match ip  sport 1 0xfc00 flowid 1:11
+  $TC filter add dev $DEV parent 1:0 protocol ipv6 prio 2 u32 \
+    match ip6 protocol 6 0xff match ip6 sport 1 0xfc00 flowid 1:11
+
+  # UDP Standardized Ports from Internet Source (1-1023)
+  $TC filter add dev $DEV parent 1:0 protocol ip   prio 3 u32 \
+    match ip  protocol 17 0xff match ip  sport 1 0xfc00 flowid 1:12
+  $TC filter add dev $DEV parent 1:0 protocol ipv6 prio 4 u32 \
+    match ip6 protocol 17 0xff match ip6 sport 1 0xfc00 flowid 1:12
+
+  # Default (HTB-->13) includes ICMP and Home Server Destination (1-1023)
+  $TC filter add dev $DEV parent 1:0 protocol ip   prio 5 u32 \
+    match ip  protocol 0 0x00 flowid 1:13
+  $TC filter add dev $DEV parent 1:0 protocol ipv6 prio 6 u32 \
+    match ip6 protocol 0 0x00 flowid 1:13
+
+  # Redirect $IFACE to Virtual Ingress
+  ip link set dev $DEV up
+
+  $TC filter add dev $IFACE parent ffff: protocol all prio 15 u32 \
+    match u32 0 0 flowid 1:1 action mirred egress redirect dev $DEV
+}
+
+################################################################################
+
+sqm_start() {
+  sqm_debug "Starting ${SCRIPT}"
+
+  [ -n "$IFACE" ] || return 1
+
+  do_modules
+  verify_qdisc "htb" || return 1
+  verify_qdisc $QDISC || return 1
+
+  [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
+
+  if [ "$UPLINK" -ne 0 ];
+  then
+    egress
+    sqm_debug "egress shaping activated"
+  else
+    $TC qdisc del dev $IFACE root 2> /dev/null
+    sqm_debug "egress shaping deactivated"
+  fi
+
+  if [ "$DOWNLINK" -ne 0 ];
+  then
+    verify_qdisc ingress "ingress" || return 1
+    ingress
+    sqm_debug "ingress shaping activated"
+  else
+    $TC qdisc del dev $DEV root 2> /dev/null
+    $TC qdisc del dev $IFACE ingress 2> /dev/null
+    sqm_debug "ingress shaping deactivated"
+  fi
+
+  return 0
+}
+
+################################################################################
