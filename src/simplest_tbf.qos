@@ -75,7 +75,7 @@ ingress() {
 sqm_start() {
     [ -n "$IFACE" ] || return 1
     do_modules
-    verify_qdisc "htb" || return 1
+    verify_qdisc "tbf" || return 1
 
     case $QDISC in
         cake*)
