@@ -190,7 +190,6 @@ get_ifb_for_if() {
 verify_qdisc() {
     local qdisc=$1
     local supported="$2"
-    local not=
     local ifb=TMP_IFB_4_SQM
     local root_string="root" # this works for most qdiscs
 
@@ -209,8 +208,11 @@ verify_qdisc() {
 
     $TC qdisc replace dev $ifb $root_string $qdisc
     res=$?
-    [ "$res" = "0" ] || not="NOT "
-    sqm_debug "QDISC $qdisc is ${not}useable."
+    if [ "$res" = "0" ] ; then
+        sqm_debug "QDISC $qdisc is useable."
+    else
+        sqm_error "QDISC $qdisc is NOT useable."
+    fi
     delete_ifb $ifb
     return $res
 }
