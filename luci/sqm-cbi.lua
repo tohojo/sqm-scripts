@@ -111,7 +111,7 @@ c.rmempty = false
 local qos_desc = ""
 sc = s:taboption("tab_qdisc", ListValue, "script", translate("Queue setup script"))
 for file in fs.dir(path) do
-	if string.find(file, ".qos$") then
+	if string.find(file, ".qos$") and not fs.stat(path .. "/" .. file .. ".hidden") then
 		sc:value(file)
 		qos_desc = qos_desc .. "<p><b>" .. file .. ":</b><br />"
 		fh = io.open(path .. "/" .. file .. ".help", "r")
