@@ -113,10 +113,13 @@ sc = s:taboption("tab_qdisc", ListValue, "script", translate("Queue setup script
 for file in fs.dir(path) do
 	if string.find(file, ".qos$") then
 		sc:value(file)
-	end
-	if string.find(file, ".qos.help$") then
-		fh = io.open(path .. "/" .. file, "r")
-		qos_desc = qos_desc .. "<p><b>" .. file:gsub(".help$", "") .. ":</b><br />" .. fh:read("*a") .. "</p>"
+		qos_desc = qos_desc .. "<p><b>" .. file .. ":</b><br />"
+		fh = io.open(path .. "/" .. file .. ".help", "r")
+		if fh then
+			qos_desc = qos_desc .. fh:read("*a") .. "</p>"
+		else
+			qos_desc = qos_desc .. "No help text</p>"
+		end
 	end
 end
 sc.default = "simple.qos"
