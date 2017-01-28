@@ -1,6 +1,6 @@
 #!/bin/sh
 # Cero3 Simple Shaper
-# A 1 bin cake shaper for
+# A 1 tin cake shaper for
 # ethernet gateways. This is nearly the simplest possible
 
 # This program is free software; you can redistribute it and/or modify
@@ -15,12 +15,36 @@ QDISC=cake
 
 
 # to keep this as simple as possible we ignore the *_CAKE_OPTS from defaults.sh
+# and clear the DSCP bits from ingress & egress
 INGRESS_CAKE_OPTS="besteffort"
 EGRESS_CAKE_OPTS="besteffort"
 
 
+ipt_setup() {
+
+    sqm_debug "cake does all the diffserv work - no need for iptables rules"
+
+    #kdb: cake can choose to use DSCP for classification (none = besteffort, others diffserv3,4 etc)
+    #kdb: and clear those DSCP bits (wash) on egress of the qdisc independently
+    #kdb: FIXME: Permit independent selection of DSCP clearing for ingress/egress qdiscs - needs gui tweak
+    #kdb: these are really horrible, non-intuitive variable names, something like DSCP_INGRESS_ZERO and DSCP_INGRESS_IGNORE ?
+    #kdb: with matching for EGRESS.
+    if [ "$SQUASH_DSCP" = "1" ]
+    then
+	sqm_debug "Clearing differentiated services code points (DSCP) from ingress."
+	INGRESS_CAKE_ZERO_OPTS="wash"
+	EGRESS_CAKE_ZERO_OPTS="wash"
+    else
+	sqm_debug "Keeping differentiated services code points (DSCP) from ingress."
+	INGRESS_CAKE_ZERO_OPTS="" # default is effectively "nowash"
+	EGRESS_CAKE_ZERO_OPTS=""  # default is effectively "nowash"
+    fi
+
+}
+
 egress() {
     sqm_debug "egress"
+    EGRESS_CAKE_OPTS="${EGRESS_CAKE_OPTS} ${EGRESS_CAKE_ZERO_OPTS}"
     $TC qdisc del dev $IFACE root 2>/dev/null
     $TC qdisc add dev $IFACE root $( get_stab_string ) cake bandwidth ${UPLINK}kbit $( get_cake_lla_string ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
 }
@@ -28,6 +52,7 @@ egress() {
 
 ingress() {
     sqm_debug "ingress"
+    INGRESS_CAKE_OPTS="${INGRESS_CAKE_OPTS} ${INGRESS_CAKE_ZERO_OPTS}"
     $TC qdisc del dev $IFACE handle ffff: ingress 2>/dev/null
     $TC qdisc add dev $IFACE handle ffff: ingress
     $TC qdisc del dev $DEV root 2>/dev/null
@@ -49,6 +74,7 @@ sqm_start() {
 
     [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
 
+    ipt_setup
 
     if [ "${UPLINK}" -ne 0 ];
     then
