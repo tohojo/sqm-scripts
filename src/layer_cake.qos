@@ -15,51 +15,14 @@
 . ${SQM_LIB_DIR}/defaults.sh
 QDISC=cake
 
-# INGRESS_CAKE_OPTS and EGRESS_CAKE_OPTS are defined in defaults.sh now
-
-
-
-
-ipt_setup() {
-
-    ipt -t mangle -N QOS_MARK_${IFACE}
-
-    sqm_debug "cake does all the diffserv work - no need for iptables rules"
-
-    # Turn it on. Preserve classification if already performed
-
-    #sm: Since we use an IFB for ingress shaping the TOS bits will not be re-mapped/squashed
-    #	before reaching cake, so we need to tell cake to ignore them, iptables will squash them later.
-    if [ "$ZERO_DSCP" = "1" ]
-    then
-	sqm_debug "Squashing differentiated services code points (DSCP) from ingress."
-	INGRESS_CAKE_OPTS=besteffort # someday squash
-	ipt -t mangle -I PREROUTING -i $IFACE -m dscp ! --dscp 0 -j DSCP --set-dscp-class be
-    else
-	sqm_debug "Keeping differentiated services code points (DSCP) from ingress."
-	#INGRESS_CAKE_OPTS="diffserv4"
-	ipt -t mangle -A PREROUTING -i $IFACE -m mark --mark 0x00/${IPT_MASK} -g QOS_MARK_${IFACE}
-    fi
-
-    ipt -t mangle -A POSTROUTING -o $IFACE -m mark --mark 0x00/${IPT_MASK} -g QOS_MARK_${IFACE}
-
-    # Not sure if this will work. Encapsulation is a problem period
-    ipt -t mangle -I PREROUTING -i vtun+ -p tcp -j MARK --set-mark 0x2/${IPT_MASK} # tcp tunnels need ordering
-
-    ## Emanating from router, do a little more optimization
-    ## but don't bother with it too much.
-    #sm: actually just keep this as reference in case it should be needed, our 1-tier shaper scripts
-    # work quite well without that "optimization"
-    #ipt -t mangle -A OUTPUT -p udp -m multiport --ports 123,53 -j DSCP --set-dscp-class AF42
-}
+# Default traffic classication is passed in INGRESS_CAKE_OPTS and EGRESS_CAKE_OPTS, defined in defaults.sh now
 
 
 egress() {
-
     $TC qdisc del dev $IFACE root 2> /dev/null
-    $TC qdisc add dev $IFACE root $( get_stab_string ) cake bandwidth ${UPLINK}kbit $( get_cake_lla_string ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
+    $TC qdisc add dev $IFACE root $( get_stab_string ) cake \
+        bandwidth ${UPLINK}kbit $( get_cake_lla_string ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
 
-    #diffserv $IFACE
 }
 
 
@@ -70,16 +33,11 @@ ingress() {
 
     $TC qdisc del dev $DEV root  2> /dev/null
 
-    if [ "$IGNORE_DSCP" = "1" ]
-    then
-	sqm_debug "Do not perform DSCP based filtering on ingress. (1-tier classification)"
-	# Revert to no dscp based filtering
-	INGRESS_CAKE_OPTS="besteffort"
-	$TC qdisc add dev $DEV root $( get_stab_string ) cake bandwidth ${DOWNLINK}kbit $( get_cake_lla_string ) ${INGRESS_CAKE_OPTS} ${IQDISC_OPTS}
-    else
-	sqm_debug "Perform DSCP based filtering on ingress. (multi-tier classification)"
-	$TC qdisc add dev $DEV root $( get_stab_string) cake bandwidth ${DOWNLINK}kbit $( get_cake_lla_string ) $INGRESS_CAKE_OPTS ${IQDISC_OPTS}
-    fi
+    [ "$IGNORE_DSCP" -eq "1" ] && INGRESS_CAKE_OPTS="$INGRESS_CAKE_OPTS besteffort"
+    [ "$ZERO_DSCP" -eq "1" ] && INGRESS_CAKE_OPTS="$INGRESS_CAKE_OPTS wash"
+
+    $TC qdisc add dev $DEV root $( get_stab_string ) cake \
+        bandwidth ${DOWNLINK}kbit $( get_cake_lla_string ) ${INGRESS_CAKE_OPTS} ${IQDISC_OPTS}
 
     $IP link set dev $DEV up
 
@@ -96,8 +54,6 @@ sqm_start() {
     sqm_debug "Starting ${SCRIPT}"
 
     [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
-
-    ipt_setup
 
     if [ "${UPLINK}" -ne 0 ];
     then

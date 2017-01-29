@@ -1,6 +1,6 @@
 #!/bin/sh
 # Cero3 Simple Shaper
-# A 1 bin cake shaper for
+# A 1 tin cake shaper for
 # ethernet gateways. This is nearly the simplest possible
 
 # This program is free software; you can redistribute it and/or modify
@@ -22,16 +22,22 @@ EGRESS_CAKE_OPTS="besteffort"
 egress() {
     sqm_debug "egress"
     $TC qdisc del dev $IFACE root 2>/dev/null
-    $TC qdisc add dev $IFACE root $( get_stab_string ) cake bandwidth ${UPLINK}kbit $( get_cake_lla_string ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
+    $TC qdisc add dev $IFACE root $( get_stab_string ) cake \
+        bandwidth ${UPLINK}kbit $( get_cake_lla_string ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
 }
 
 
 ingress() {
     sqm_debug "ingress"
+
     $TC qdisc del dev $IFACE handle ffff: ingress 2>/dev/null
     $TC qdisc add dev $IFACE handle ffff: ingress
     $TC qdisc del dev $DEV root 2>/dev/null
-    $TC qdisc add dev $DEV root $( get_stab_string ) cake bandwidth ${DOWNLINK}kbit $( get_cake_lla_string ) ${INGRESS_CAKE_OPTS} ${IQDISC_OPTS}
+
+    [ "$ZERO_DSCP" -eq "1" ] && INGRESS_CAKE_OPTS="$INGRESS_CAKE_OPTS wash"
+
+    $TC qdisc add dev $DEV root $( get_stab_string ) cake \
+        bandwidth ${DOWNLINK}kbit $( get_cake_lla_string ) ${INGRESS_CAKE_OPTS} ${IQDISC_OPTS}
 
     $IP link set dev $DEV up
 
@@ -48,7 +54,6 @@ sqm_start() {
     sqm_debug "Starting ${SCRIPT}"
 
     [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
-
 
     if [ "${UPLINK}" -ne 0 ];
     then
