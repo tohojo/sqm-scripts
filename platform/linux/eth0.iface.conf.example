@@ -33,6 +33,6 @@ SCRIPT=simple.qos
 # CoDel target
 #TARGET=5ms
 
-#SQUASH_DSCP=1
-#SQUASH_INGRESS=1
+#ZERO_DSCP=1
+#IGNORE_DSCP=1
 

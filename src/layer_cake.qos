@@ -30,7 +30,7 @@ ipt_setup() {
 
     #sm: Since we use an IFB for ingress shaping the TOS bits will not be re-mapped/squashed
     #	before reaching cake, so we need to tell cake to ignore them, iptables will squash them later.
-    if [ "$SQUASH_DSCP" = "1" ]
+    if [ "$ZERO_DSCP" = "1" ]
     then
 	sqm_debug "Squashing differentiated services code points (DSCP) from ingress."
 	INGRESS_CAKE_OPTS=besteffort # someday squash
@@ -70,7 +70,7 @@ ingress() {
 
     $TC qdisc del dev $DEV root  2> /dev/null
 
-    if [ "$SQUASH_INGRESS" = "1" ]
+    if [ "$IGNORE_DSCP" = "1" ]
     then
 	sqm_debug "Do not perform DSCP based filtering on ingress. (1-tier classification)"
 	# Revert to no dscp based filtering

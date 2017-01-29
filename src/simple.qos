@@ -60,11 +60,11 @@ ipt_setup() {
     #
     #sm: is it correct to do this in $IFACE? Should ingress not be on $DEV? since HTB acts on $DEV?
     #
-    # SQUASH also does not work on $DEV (that is the IFB will still see the
+    # ZERO also does not work on $DEV (that is the IFB will still see the
     # incoming ToS bits whether we squash or not)
     #
-    # SQUASH is still useful to protect internal machines...
-    if [ "$SQUASH_DSCP" = "1" ]; then
+    # ZERO is still useful to protect internal machines...
+    if [ "$ZERO_DSCP" = "1" ]; then
         sqm_debug "Squashing differentiated services code points (DSCP) from ingress."
         ipt -t mangle -I PREROUTING -i $IFACE -m dscp ! --dscp 0 -j DSCP --set-dscp-class be
     else
@@ -161,10 +161,10 @@ egress() {
 
 cake_ingress()
 {
-    besteffort=
-    [ "$SQUASH_INGRESS" = "1" -o "$SQUASH_DSCP" = "1" ] && besteffort=besteffort
+    CAKEARGS=
+    [ "$IGNORE_DSCP" = "1" ] && CAKEARGS="$CAKEARGS besteffort"
     $TC qdisc add dev $DEV root `get_stab_string` $QDISC bandwidth ${DOWNLINK}kbit \
-        $besteffort `get_cake_lla_string` ${IQDISC_OPTS}
+        $CAKEARGS `get_cake_lla_string` ${IQDISC_OPTS}
 
     $IP link set dev $DEV up
 
@@ -194,7 +194,7 @@ ingress() {
         cake*) cake_ingress; return ;;
     esac
 
-    if [ "$SQUASH_INGRESS" = "1" ]; then
+    if [ "$IGNORE_DSCP" = "1" ]; then
         sqm_debug "Do not perform DSCP based filtering on ingress. (1-tier classification)"
         $TC qdisc add dev $DEV root handle 1: `get_stab_string` htb default 10
         $TC class add dev $DEV parent 1: classid 1:1 htb $LQ rate ${DOWNLINK}kbit ceil ${DOWNLINK}kbit $BURST `get_htb_adsll_string`

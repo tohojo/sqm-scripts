@@ -53,13 +53,16 @@ run_sqm_scripts() {
     export IQDISC_OPTS=$(config_get "$section" iqdisc_opts)
     export EQDISC_OPTS=$(config_get "$section" eqdisc_opts)
     export TARGET=$(config_get "$section" target)
-    export SQUASH_DSCP=$(config_get "$section" squash_dscp)
-    export SQUASH_INGRESS=$(config_get "$section" squash_ingress)
     export SHAPER_BURST=$(config_get "$section" shaper_burst)
     export HTB_QUANTUM_FUNCTION=$(config_get "$section" htb_quantum_function)
     export QDISC=$(config_get "$section" qdisc)
     export SCRIPT=$(config_get "$section" script)
 
+    # The UCI names for these two variables are confusing and should have been
+    # changed ages ago. For now, keep the bad UCI names but use meaningful
+    # variable names in the scripts to not break user configs.
+    export ZERO_DSCP=$(config_get "$section" squash_dscp)
+    export IGNORE_DSCP=$(config_get "$section" squash_ingress)
 
     #sm: if SQM_DEBUG or SQM_VERBOSITY_* were passed in via the command line make them available to the other scripts
     #	this allows to override sqm's log level as set in the GUI for quick debugging without GUI accesss.
