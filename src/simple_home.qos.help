@@ -1,0 +1,1 @@
+This HTB script is based on simple.qos three-tier traffic, but uses protocol/port to classify instead of DSCP. Residential ISP can squash DSCP and consumer applications may not use it.
