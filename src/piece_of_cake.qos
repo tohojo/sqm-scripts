@@ -34,7 +34,7 @@ ingress() {
     $TC qdisc add dev $IFACE handle ffff: ingress
     $TC qdisc del dev $DEV root 2>/dev/null
 
-    [ "$ZERO_DSCP" -eq "1" ] && INGRESS_CAKE_OPTS="$INGRESS_CAKE_OPTS wash"
+    [ "$ZERO_DSCP_INGRESS" -eq "1" ] && INGRESS_CAKE_OPTS="$INGRESS_CAKE_OPTS wash"
 
     $TC qdisc add dev $DEV root $( get_stab_string ) cake \
         bandwidth ${DOWNLINK}kbit $( get_cake_lla_string ) ${INGRESS_CAKE_OPTS} ${IQDISC_OPTS}

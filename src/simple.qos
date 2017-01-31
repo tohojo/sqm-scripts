@@ -64,7 +64,7 @@ ipt_setup() {
     # incoming ToS bits whether we squash or not)
     #
     # ZERO is still useful to protect internal machines...
-    if [ "$ZERO_DSCP" = "1" ]; then
+    if [ "$ZERO_DSCP_INGRESS" = "1" ]; then
         sqm_debug "Squashing differentiated services code points (DSCP) from ingress."
         ipt -t mangle -I PREROUTING -i $IFACE -m dscp ! --dscp 0 -j DSCP --set-dscp-class be
     else
@@ -162,7 +162,7 @@ egress() {
 cake_ingress()
 {
     CAKEARGS=
-    [ "$IGNORE_DSCP" = "1" ] && CAKEARGS="$CAKEARGS besteffort"
+    [ "$IGNORE_DSCP_INGRESS" = "1" ] && CAKEARGS="$CAKEARGS besteffort"
     $TC qdisc add dev $DEV root `get_stab_string` $QDISC bandwidth ${DOWNLINK}kbit \
         $CAKEARGS `get_cake_lla_string` ${IQDISC_OPTS}
 
@@ -194,7 +194,7 @@ ingress() {
         cake*) cake_ingress; return ;;
     esac
 
-    if [ "$IGNORE_DSCP" = "1" ]; then
+    if [ "$IGNORE_DSCP_INGRESS" = "1" ]; then
         sqm_debug "Do not perform DSCP based filtering on ingress. (1-tier classification)"
         $TC qdisc add dev $DEV root handle 1: `get_stab_string` htb default 10
         $TC class add dev $DEV parent 1: classid 1:1 htb $LQ rate ${DOWNLINK}kbit ceil ${DOWNLINK}kbit $BURST `get_htb_adsll_string`
