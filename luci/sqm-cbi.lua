@@ -57,11 +57,21 @@ function e.write(self, section, value)
 end
 -- TODO: inform the user what we just did...
 
+
+-- Add to physical interface list a hint of the correpsonding network names,
+-- used to help users better select e.g. lan or wan interface.
+
 n = s:taboption("tab_basic", ListValue, "interface", translate("Interface name"))
 -- sm lifted from luci-app-wol, the original implementation failed to show pppoe-ge00 type interface names
 for _, iface in ipairs(ifaces) do
 	if not (iface == "lo" or iface:match("^ifb.*")) then
-		n:value(iface)
+		local nets = net:get_interface(iface)
+		nets = nets and nets:get_networks() or {}
+		for k, v in pairs(nets) do
+			nets[k] = nets[k].sid
+		end
+		nets = table.concat(nets, ",")
+		n:value(iface, ((#nets > 0) and "%s (%s)" % {iface, nets} or iface))
 	end
 end
 n.rmempty = false
