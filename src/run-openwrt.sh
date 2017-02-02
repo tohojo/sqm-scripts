@@ -30,11 +30,12 @@ config_load sqm
 
 run_sqm_scripts() {
     local section="$1"
+    local SECTION_ACTION=start
     export IFACE=$(config_get "$section" interface)
 
     [ -z "$RUN_IFACE" -o "$RUN_IFACE" = "$IFACE" ] || return
 
-    [ $(config_get "$section" enabled) -ne 1 ] && ACTION=stop
+    [ $(config_get "$section" enabled) -ne 1 ] && SECTION_ACTION=stop
 
     export UPLINK=$(config_get "$section" upload)
     export DOWNLINK=$(config_get "$section" download)
@@ -76,7 +77,7 @@ run_sqm_scripts() {
 	"${SQM_LIB_DIR}/stop-sqm"
     fi
 
-    [ "$ACTION" = "start" ] && "${SQM_LIB_DIR}/start-sqm"
+    [ "$SECTION_ACTION" = "start" ] && "${SQM_LIB_DIR}/start-sqm"
 }
 
 config_foreach run_sqm_scripts
