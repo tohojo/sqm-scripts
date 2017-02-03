@@ -62,8 +62,8 @@ run_sqm_scripts() {
     # The UCI names for these two variables are confusing and should have been
     # changed ages ago. For now, keep the bad UCI names but use meaningful
     # variable names in the scripts to not break user configs.
-    export ZERO_DSCP=$(config_get "$section" squash_dscp)
-    export IGNORE_DSCP=$(config_get "$section" squash_ingress)
+    export ZERO_DSCP_INGRESS=$(config_get "$section" squash_dscp)
+    export IGNORE_DSCP_INGRESS=$(config_get "$section" squash_ingress)
 
     #sm: if SQM_DEBUG or SQM_VERBOSITY_* were passed in via the command line make them available to the other scripts
     #	this allows to override sqm's log level as set in the GUI for quick debugging without GUI accesss.
