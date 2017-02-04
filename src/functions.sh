@@ -67,7 +67,7 @@ ipt() {
     }
     sqm_trace "iptables $*"
     iptables $* >> ${OUTPUT_TARGET} 2>&1
-    sqm_trace "ip6tables ${d}"
+    sqm_trace "ip6tables $*"
     ip6tables $* >> ${OUTPUT_TARGET} 2>&1
 }
 
