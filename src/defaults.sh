@@ -4,7 +4,7 @@
 [ -z "$DOWNLINK" ] && DOWNLINK=14698
 [ -z "$IFACE" ] && IFACE=eth0
 [ -z "$QDISC" ] && QDISC=fq_codel
-[ -z "$LLAM" ] && LLAM="tc_stab"
+[ -z "$LLAM" ] && LLAM="default"
 [ -z "$LINKLAYER" ] && LINKLAYER="none"
 [ -z "$OVERHEAD" ] && OVERHEAD=0
 [ -z "$STAB_MTU" ] && STAB_MTU=2047
