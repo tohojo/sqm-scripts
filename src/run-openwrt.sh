@@ -7,7 +7,7 @@
 #       Copyright (C) 2012-4 Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller
 
 
-. /lib/functions.sh
+. /usr/share/sqm/functions.sh
 
 . /etc/sqm/sqm.conf
 
