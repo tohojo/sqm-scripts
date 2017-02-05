@@ -30,12 +30,9 @@ config_load sqm
 
 run_sqm_scripts() {
     local section="$1"
-    local SECTION_ACTION=start
     export IFACE=$(config_get "$section" interface)
 
     [ -z "$RUN_IFACE" -o "$RUN_IFACE" = "$IFACE" ] || return
-
-    [ $(config_get "$section" enabled) -ne 1 ] && SECTION_ACTION=stop
 
     export UPLINK=$(config_get "$section" upload)
     export DOWNLINK=$(config_get "$section" download)
@@ -65,19 +62,19 @@ run_sqm_scripts() {
     export ZERO_DSCP_INGRESS=$(config_get "$section" squash_dscp)
     export IGNORE_DSCP_INGRESS=$(config_get "$section" squash_ingress)
 
-    #sm: if SQM_DEBUG or SQM_VERBOSITY_* were passed in via the command line make them available to the other scripts
-    #	this allows to override sqm's log level as set in the GUI for quick debugging without GUI accesss.
+    # If SQM_DEBUG or SQM_VERBOSITY_* were passed in via the command line make
+    # them available to the other scripts this allows to override sqm's log
+    # level as set in the GUI for quick debugging without GUI accesss.
     [ -n "$SQM_DEBUG" ] && export SQM_DEBUG || export SQM_DEBUG=$(config_get "$section" debug_logging)
     [ -n "$SQM_VERBOSITY_MAX" ] && export SQM_VERBOSITY_MAX || export SQM_VERBOSITY_MAX=$(config_get "$section" verbosity)
     [ -n "$SQM_VERBOSITY_MIN" ] && export SQM_VERBOSITY_MIN
 
-    #sm: only stop-sqm if there is something running
-    CUR_STATE_FILE="${SQM_STATE_DIR}/${IFACE}.state"
-    if [ -f "${CUR_STATE_FILE}" ]; then
-	"${SQM_LIB_DIR}/stop-sqm"
+    if [ -f "${SQM_STATE_DIR}/${IFACE}.state" ]; then
+        [ "$ACTION" = "stop" ] && "${SQM_LIB_DIR}/stop-sqm"
+    else
+        ENABLED=$(config_get "$section" enabled)
+        [ "$ACTION" = "start" ] && [ "$ENABLED" -eq 1 ] && "${SQM_LIB_DIR}/start-sqm"
     fi
-
-    [ "$SECTION_ACTION" = "start" ] && "${SQM_LIB_DIR}/start-sqm"
 }
 
 config_foreach run_sqm_scripts

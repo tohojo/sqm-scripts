@@ -2,16 +2,6 @@
 
 START=50
 
-reload()
-{
-    start
-}
-
-restart()
-{
-    reload
-}
-
 start()
 {
     /usr/lib/sqm/run.sh start
