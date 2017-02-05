@@ -2,24 +2,14 @@
 
 START=50
 
-reload()
-{
-    start
-}
-
-restart()
-{
-    reload
-}
-
 start()
 {
-    /usr/lib/sqm/run.sh start
+    /usr/lib/sqm/run.sh start "$@"
 }
 
 stop()
 {
-    /usr/lib/sqm/run.sh stop
+    /usr/lib/sqm/run.sh stop "$@"
 }
 
 boot()
