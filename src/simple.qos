@@ -45,7 +45,9 @@ ipt_qos_setup() {
     # You can go further with classification but...
     ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class CS1 -j MARK --set-mark 0x3/${IPT_MASK}
     ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class CS6 -j MARK --set-mark 0x1/${IPT_MASK}
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class CS7 -j MARK --set-mark 0x1/${IPT_MASK}
     ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class EF -j MARK --set-mark 0x1/${IPT_MASK}
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp 0x2C -j MARK --set-mark 0x1/${IPT_MASK}
     ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class AF42 -j MARK --set-mark 0x1/${IPT_MASK}
     ipt -t mangle -A QOS_MARK_${IFACE} -m tos  --tos Minimize-Delay -j MARK --set-mark 0x1/${IPT_MASK}
 }
