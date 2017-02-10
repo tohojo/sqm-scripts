@@ -87,12 +87,12 @@ ipt_misc_mark() {
     # ipt -t mangle -A PREROUTING -i s+ -p tcp -m tcp --tcp-flags SYN,RST,ACK SYN -j MARK --set-mark 0x01
     # Not sure if this will work. Encapsulation is a problem period
 
-    ipt -t mangle -I PREROUTING -i vtun+ -p tcp -j MARK --set-mark 0x2/${IPT_MASK} # tcp tunnels need ordering
+    ipt -t mangle -I PREROUTING -i vtun+ -p tcp -j DSCP --set-dscp-class BE # tcp tunnels need ordering
 
     # Emanating from router, do a little more optimization
     # but don't bother with it too much.
 
-    ipt -t mangle -A OUTPUT -p udp -m multiport --ports 123,53 -j DSCP --set-dscp-class AF42
+    ipt -t mangle -A OUTPUT -p udp -m multiport --ports 123,53 -j DSCP --set-dscp-class EF
 
     #Not clear if the second line is needed
     #ipt -t mangle -A OUTPUT -o $IFACE -g QOS_MARK_${IFACE}
