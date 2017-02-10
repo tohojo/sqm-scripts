@@ -58,9 +58,12 @@ ipt_squash_ingress() {
     # incoming ToS bits whether we squash or not)
     #
     # ZERO is still useful to protect internal machines...
+    #
+    # This must be called after ipt_qos_mark_*() to allow independent
+    # squashing and diffserv marking.
     if [ "$ZERO_DSCP_INGRESS" = "1" ]; then
         sqm_debug "Squashing differentiated services code points (DSCP) from ingress."
-        ipt -t mangle -I PREROUTING -i $IFACE -m dscp ! --dscp 0 -j DSCP --set-dscp-class be
+        ipt -t mangle -A PREROUTING -i $IFACE -m dscp ! --dscp 0 -j DSCP --set-dscp-class BE
     else
         sqm_debug "Keeping differentiated services code points (DSCP) from ingress."
     fi
@@ -71,12 +74,12 @@ ipt_qos_mark_ingress() {
 
     #sm: is it correct to do this in $IFACE? Should ingress not be on $DEV? since HTB acts on $DEV?
 
-    ipt -t mangle -A PREROUTING -i $IFACE -m mark --mark 0x00/${IPT_MASK} -g QOS_MARK_${IFACE}
+    ipt -t mangle -A PREROUTING -i $IFACE -m mark --mark 0x00/${IPT_MASK} -j QOS_MARK_${IFACE}
 }
 
 ipt_qos_mark_egress() {
 
-    ipt -t mangle -A POSTROUTING -o $IFACE -m mark --mark 0x00/${IPT_MASK} -g QOS_MARK_${IFACE}
+    ipt -t mangle -A POSTROUTING -o $IFACE -m mark --mark 0x00/${IPT_MASK} -j QOS_MARK_${IFACE}
 }
 
 
@@ -257,9 +260,9 @@ sqm_start() {
     [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
 
     ipt_qos_setup
-    ipt_squash_ingress
     ipt_qos_mark_ingress
     ipt_qos_mark_egress
+    ipt_squash_ingress
     ipt_misc_mark
 
     if [ "$UPLINK" -ne 0 ]; then
