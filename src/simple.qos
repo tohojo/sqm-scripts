@@ -94,7 +94,7 @@ ipt_setup() {
 
 cake_egress()
 {
-    $TC qdisc add dev $IFACE root `get_stab_string` $QDISC bandwidth ${CEIL}kbit `get_cake_lla_string` ${EQDISC_OPTS}
+    $TC qdisc add dev $IFACE root `get_stab_string` $QDISC bandwidth ${UPLINK}kbit `get_cake_lla_string` ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
 }
 
 egress() {
@@ -161,10 +161,10 @@ egress() {
 
 cake_ingress()
 {
-    CAKEARGS=
-    [ "$IGNORE_DSCP_INGRESS" = "1" ] && CAKEARGS="$CAKEARGS besteffort"
+    [ "$IGNORE_DSCP_INGRESS" -eq "1" ] && INGRESS_CAKE_OPTS="$INGRESS_CAKE_OPTS besteffort"
+    [ "$ZERO_DSCP_INGRESS" -eq "1" ] && INGRESS_CAKE_OPTS="$INGRESS_CAKE_OPTS wash"
     $TC qdisc add dev $DEV root `get_stab_string` $QDISC bandwidth ${DOWNLINK}kbit \
-        $CAKEARGS `get_cake_lla_string` ${IQDISC_OPTS}
+        `get_cake_lla_string` ${INGRESS_CAKE_OPTS} ${IQDISC_OPTS}
 
     $IP link set dev $DEV up
 
