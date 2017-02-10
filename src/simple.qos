@@ -48,11 +48,11 @@ ipt_qos_setup() {
     ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class EF -j MARK --set-mark 0x1/${IPT_MASK}
     ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class AF42 -j MARK --set-mark 0x1/${IPT_MASK}
     ipt -t mangle -A QOS_MARK_${IFACE} -m tos  --tos Minimize-Delay -j MARK --set-mark 0x1/${IPT_MASK}
+}
 
-    # Turn it on. Preserve classification if already performed
-    #
-    #sm: is it correct to do this in $IFACE? Should ingress not be on $DEV? since HTB acts on $DEV?
-    #
+
+ipt_squash_ingress() {
+ 
     # ZERO also does not work on $DEV (that is the IFB will still see the
     # incoming ToS bits whether we squash or not)
     #
@@ -62,8 +62,18 @@ ipt_qos_setup() {
         ipt -t mangle -I PREROUTING -i $IFACE -m dscp ! --dscp 0 -j DSCP --set-dscp-class be
     else
         sqm_debug "Keeping differentiated services code points (DSCP) from ingress."
-        ipt -t mangle -A PREROUTING -i $IFACE -m mark --mark 0x00/${IPT_MASK} -g QOS_MARK_${IFACE}
     fi
+}
+
+
+ipt_qos_mark_ingress() {
+
+    #sm: is it correct to do this in $IFACE? Should ingress not be on $DEV? since HTB acts on $DEV?
+
+    ipt -t mangle -A PREROUTING -i $IFACE -m mark --mark 0x00/${IPT_MASK} -g QOS_MARK_${IFACE}
+}
+
+ipt_qos_mark_egress() {
 
     ipt -t mangle -A POSTROUTING -o $IFACE -m mark --mark 0x00/${IPT_MASK} -g QOS_MARK_${IFACE}
 }
@@ -87,11 +97,11 @@ ipt_misc_mark() {
 }
 
 
-
 cake_egress()
 {
     $TC qdisc add dev $IFACE root `get_stab_string` $QDISC bandwidth ${UPLINK}kbit `get_cake_lla_string` ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
 }
+
 
 qdisc_egress() {
 
@@ -175,6 +185,7 @@ cake_ingress()
         match u32 0 0 flowid 1:1 action mirred egress redirect dev $DEV
 }
 
+
 qdisc_ingress() {
 
     CEIL=$DOWNLINK
@@ -245,6 +256,9 @@ sqm_start() {
     [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
 
     ipt_qos_setup
+    ipt_squash_ingress
+    ipt_qos_mark_ingress
+    ipt_qos_mark_egress
     ipt_misc_mark
 
     if [ "$UPLINK" -ne 0 ]; then
