@@ -654,10 +654,11 @@ diffserv() {
 
     fc 1:0 0x00 1:12 # BE
     fc 1:0 0x20 1:13 # CS1
-    fc 1:0 0x10 1:11 # IMM
+    fc 1:0 0x10 1:11 # IMM (TOS4)
+    fc 1:0 0xb0 1:11 # VA
     fc 1:0 0xb8 1:11 # EF
-    fc 1:0 0xc0 1:11 # CS3
-    fc 1:0 0xe0 1:11 # CS6
+    fc 1:0 0xc0 1:11 # CS6
+    fc 1:0 0xe0 1:11 # CS7
     fc 1:0 0x90 1:11 # AF42 (mosh)
 
     # Arp traffic
