@@ -37,24 +37,17 @@
 
 ################################################################################
 
-ipt_setup() {
+ipt_qos_setup() {
 
     ipt -t mangle -N QOS_MARK_${IFACE}
 
-    case $QDISC in
-        cake*)
-            sqm_debug "cake does all the diffserv work - no need for iptables rules"
-            ;;
-        *)
-            ipt -t mangle -A QOS_MARK_${IFACE} -j MARK --set-mark 0x2/${IPT_MASK}
-            # You can go further with classification but...
-            ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class CS1 -j MARK --set-mark 0x3/${IPT_MASK}
-            ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class CS6 -j MARK --set-mark 0x1/${IPT_MASK}
-            ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class EF -j MARK --set-mark 0x1/${IPT_MASK}
-            ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class AF42 -j MARK --set-mark 0x1/${IPT_MASK}
-            ipt -t mangle -A QOS_MARK_${IFACE} -m tos  --tos Minimize-Delay -j MARK --set-mark 0x1/${IPT_MASK}
-            ;;
-    esac
+    ipt -t mangle -A QOS_MARK_${IFACE} -j MARK --set-mark 0x2/${IPT_MASK}
+    # You can go further with classification but...
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class CS1 -j MARK --set-mark 0x3/${IPT_MASK}
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class CS6 -j MARK --set-mark 0x1/${IPT_MASK}
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class EF -j MARK --set-mark 0x1/${IPT_MASK}
+    ipt -t mangle -A QOS_MARK_${IFACE} -m dscp --dscp-class AF42 -j MARK --set-mark 0x1/${IPT_MASK}
+    ipt -t mangle -A QOS_MARK_${IFACE} -m tos  --tos Minimize-Delay -j MARK --set-mark 0x1/${IPT_MASK}
 
     # Turn it on. Preserve classification if already performed
     #
@@ -73,6 +66,10 @@ ipt_setup() {
     fi
 
     ipt -t mangle -A POSTROUTING -o $IFACE -m mark --mark 0x00/${IPT_MASK} -g QOS_MARK_${IFACE}
+}
+
+
+ipt_misc_mark() {
 
     # The Syn optimization was nice but fq_codel does it for us
     # ipt -t mangle -A PREROUTING -i s+ -p tcp -m tcp --tcp-flags SYN,RST,ACK SYN -j MARK --set-mark 0x01
@@ -87,7 +84,6 @@ ipt_setup() {
 
     #Not clear if the second line is needed
     #ipt -t mangle -A OUTPUT -o $IFACE -g QOS_MARK_${IFACE}
-
 }
 
 
@@ -97,7 +93,7 @@ cake_egress()
     $TC qdisc add dev $IFACE root `get_stab_string` $QDISC bandwidth ${UPLINK}kbit `get_cake_lla_string` ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
 }
 
-egress() {
+qdisc_egress() {
 
     CEIL=${UPLINK}
     PRIO_RATE=`expr $CEIL / 3` # Ceiling for prioirty
@@ -107,12 +103,6 @@ egress() {
 
     LQ="quantum `get_htb_quantum $IFACE $CEIL`"
     BURST="`get_htb_burst $IFACE $CEIL`"
-
-    $TC qdisc del dev $IFACE root 2> /dev/null
-
-    case $QDISC in
-        cake*) cake_egress; return;;
-    esac
 
     $TC qdisc add dev $IFACE root handle 1: `get_stab_string` htb default 12
     $TC class add dev $IFACE parent 1: classid 1:1 htb $LQ rate ${CEIL}kbit ceil ${CEIL}kbit $BURST `get_htb_adsll_string`
@@ -159,6 +149,17 @@ egress() {
 }
 
 
+egress() {
+
+    $TC qdisc del dev $IFACE root 2> /dev/null
+
+    case $QDISC in
+        cake*) cake_egress; return;;
+        *) qdisc_egress; return;;
+    esac
+}
+
+
 cake_ingress()
 {
     [ "$IGNORE_DSCP_INGRESS" -eq "1" ] && INGRESS_CAKE_OPTS="$INGRESS_CAKE_OPTS besteffort"
@@ -174,7 +175,7 @@ cake_ingress()
         match u32 0 0 flowid 1:1 action mirred egress redirect dev $DEV
 }
 
-ingress() {
+qdisc_ingress() {
 
     CEIL=$DOWNLINK
     PRIO_RATE=`expr $CEIL / 3` # Ceiling for prioirty
@@ -184,15 +185,6 @@ ingress() {
 
     LQ="quantum `get_htb_quantum $IFACE $CEIL`"
     BURST="`get_htb_burst $IFACE $CEIL`"
-
-    $TC qdisc del dev $IFACE handle ffff: ingress 2> /dev/null
-    $TC qdisc add dev $IFACE handle ffff: ingress
-
-    $TC qdisc del dev $DEV root  2> /dev/null
-
-    case $QDISC in
-        cake*) cake_ingress; return ;;
-    esac
 
     if [ "$IGNORE_DSCP_INGRESS" = "1" ]; then
         sqm_debug "Do not perform DSCP based filtering on ingress. (1-tier classification)"
@@ -228,6 +220,21 @@ ingress() {
 
 }
 
+
+ingress() {
+
+    $TC qdisc del dev $IFACE handle ffff: ingress 2> /dev/null
+    $TC qdisc add dev $IFACE handle ffff: ingress
+
+    $TC qdisc del dev $DEV root  2> /dev/null
+
+    case $QDISC in
+        cake*) cake_ingress; return ;;
+        *) qdisc_ingress; return ;;
+    esac
+}
+
+
 sqm_start() {
     [ -n "$IFACE" ] || return 1
     do_modules
@@ -237,7 +244,8 @@ sqm_start() {
 
     [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
 
-    ipt_setup
+    ipt_qos_setup
+    ipt_misc_mark
 
     if [ "$UPLINK" -ne 0 ]; then
         egress
