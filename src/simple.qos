@@ -173,8 +173,13 @@ egress() {
     $TC qdisc del dev $IFACE root 2> /dev/null
 
     case $QDISC in
-        cake*) cake_egress; return;;
-        *) qdisc_egress; return;;
+        cake*)
+            cake_egress
+            return;;
+        *)
+            ipt_qos_mark_egress
+            qdisc_egress
+            return;;
     esac
 }
 
@@ -249,8 +254,14 @@ ingress() {
     $TC qdisc del dev $DEV root  2> /dev/null
 
     case $QDISC in
-        cake*) cake_ingress; return ;;
-        *) qdisc_ingress; return ;;
+        cake*)
+            cake_ingress
+            return ;;
+        *)
+            ipt_qos_mark_ingress
+            ipt_squash_ingress
+            qdisc_ingress
+            return ;;
     esac
 }
 
@@ -265,9 +276,6 @@ sqm_start() {
     [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
 
     ipt_qos_setup
-    ipt_qos_mark_ingress
-    ipt_qos_mark_egress
-    ipt_squash_ingress
     ipt_misc_mark
 
     if [ "$UPLINK" -ne 0 ]; then
@@ -283,6 +291,7 @@ sqm_start() {
         ingress
         sqm_debug "ingress shaping activated"
     else
+        ipt_squash_ingress
         sqm_debug "ingress shaping deactivated"
         $TC qdisc del dev $DEV root 2> /dev/null
         $TC qdisc del dev $IFACE ingress 2> /dev/null
