@@ -111,6 +111,8 @@ ipt_misc_mark() {
 
 cake_egress()
 {
+    [ "$IGNORE_DSCP_EGRESS" -eq "1" ] && EGRESS_CAKE_OPTS="$EGRESS_CAKE_OPTS besteffort"
+    [ "$ZERO_DSCP_EGRESS" -eq "1" ] && EGRESS_CAKE_OPTS="$EGRESS_CAKE_OPTS wash"
     $TC qdisc add dev $IFACE root `get_stab_string` $QDISC bandwidth ${UPLINK}kbit `get_cake_lla_string` ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
 }
 
