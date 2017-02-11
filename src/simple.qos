@@ -133,48 +133,59 @@ qdisc_egress() {
     LQ="quantum `get_htb_quantum $IFACE $CEIL`"
     BURST="`get_htb_burst $IFACE $CEIL`"
 
-    $TC qdisc add dev $IFACE root handle 1: `get_stab_string` htb default 12
-    $TC class add dev $IFACE parent 1: classid 1:1 htb $LQ rate ${CEIL}kbit ceil ${CEIL}kbit $BURST `get_htb_adsll_string`
-    $TC class add dev $IFACE parent 1:1 classid 1:11 htb $LQ rate 128kbit ceil ${PRIO_RATE}kbit prio 1 `get_htb_adsll_string`
-    $TC class add dev $IFACE parent 1:1 classid 1:12 htb $LQ rate ${BE_RATE}kbit ceil ${BE_CEIL}kbit $BURST prio 2 `get_htb_adsll_string`
-    $TC class add dev $IFACE parent 1:1 classid 1:13 htb $LQ rate ${BK_RATE}kbit ceil ${BE_CEIL}kbit $BURST prio 3 `get_htb_adsll_string`
+    if [ "$IGNORE_DSCP_EGRESS" = "1" ]; then
+        sqm_debug "Do not perform DSCP based filtering on egress. (1-tier classification)"
+        $TC qdisc add dev $IFACE root handle 1: `get_stab_string` htb default 10
+        $TC class add dev $IFACE parent 1: classid 1:1 htb $LQ rate ${UPLINK}kbit ceil ${UPLINK}kbit $BURST `get_htb_adsll_string`
+        $TC class add dev $IFACE parent 1:1 classid 1:10 htb $LQ rate ${UPLINK}kbit ceil ${UPLINK}kbit $BURST prio 0 `get_htb_adsll_string`
+        $TC qdisc add dev $IFACE parent 1:10 handle 110: $QDISC \
+            `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_flows ${UPLINK}` ${EQDISC_OPTS}
 
-    $TC qdisc add dev $IFACE parent 1:11 handle 110: $QDISC \
-        `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 300` `get_flows ${PRIO_RATE}` ${EQDISC_OPTS}
-    $TC qdisc add dev $IFACE parent 1:12 handle 120: $QDISC \
-        `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 300` `get_flows ${BE_RATE}` ${EQDISC_OPTS}
-    $TC qdisc add dev $IFACE parent 1:13 handle 130: $QDISC \
-        `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 300` `get_flows ${BK_RATE}` ${EQDISC_OPTS}
+    else
+        sqm_debug "Perform DSCP based filtering on egress. (3-tier classification)"
+        $TC qdisc add dev $IFACE root handle 1: `get_stab_string` htb default 12
+        $TC class add dev $IFACE parent 1: classid 1:1 htb $LQ rate ${CEIL}kbit ceil ${CEIL}kbit $BURST `get_htb_adsll_string`
+        $TC class add dev $IFACE parent 1:1 classid 1:11 htb $LQ rate 128kbit ceil ${PRIO_RATE}kbit prio 1 `get_htb_adsll_string`
+        $TC class add dev $IFACE parent 1:1 classid 1:12 htb $LQ rate ${BE_RATE}kbit ceil ${BE_CEIL}kbit $BURST prio 2 `get_htb_adsll_string`
+        $TC class add dev $IFACE parent 1:1 classid 1:13 htb $LQ rate ${BK_RATE}kbit ceil ${BE_CEIL}kbit $BURST prio 3 `get_htb_adsll_string`
 
-    # Need a catchall rule
+        $TC qdisc add dev $IFACE parent 1:11 handle 110: $QDISC \
+            `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 300` `get_flows ${PRIO_RATE}` ${EQDISC_OPTS}
+        $TC qdisc add dev $IFACE parent 1:12 handle 120: $QDISC \
+            `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 300` `get_flows ${BE_RATE}` ${EQDISC_OPTS}
+        $TC qdisc add dev $IFACE parent 1:13 handle 130: $QDISC \
+            `get_limit ${ELIMIT}` `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 300` `get_flows ${BK_RATE}` ${EQDISC_OPTS}
 
-    $TC filter add dev $IFACE parent 1:0 protocol all prio 999 u32 \
-        match ip protocol 0 0x00 flowid 1:12
+        # Need a catchall rule
 
-    # FIXME should probably change the filter here to do pre-nat
+        $TC filter add dev $IFACE parent 1:0 protocol all prio 999 u32 \
+            match ip protocol 0 0x00 flowid 1:12
 
-    $TC filter add dev $IFACE parent 1:0 protocol ip prio 1 handle 1/${IPT_MASK} fw classid 1:11
-    $TC filter add dev $IFACE parent 1:0 protocol ip prio 2 handle 2/${IPT_MASK} fw classid 1:12
-    $TC filter add dev $IFACE parent 1:0 protocol ip prio 3 handle 3/${IPT_MASK} fw classid 1:13
+        # FIXME should probably change the filter here to do pre-nat
 
-    # ipv6 support. Note that the handle indicates the fw mark bucket that is looked for
+        $TC filter add dev $IFACE parent 1:0 protocol ip prio 1 handle 1/${IPT_MASK} fw classid 1:11
+        $TC filter add dev $IFACE parent 1:0 protocol ip prio 2 handle 2/${IPT_MASK} fw classid 1:12
+        $TC filter add dev $IFACE parent 1:0 protocol ip prio 3 handle 3/${IPT_MASK} fw classid 1:13
 
-    $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 4 handle 1/${IPT_MASK} fw classid 1:11
-    $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 5 handle 2/${IPT_MASK} fw classid 1:12
-    $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 6 handle 3/${IPT_MASK} fw classid 1:13
+        # ipv6 support. Note that the handle indicates the fw mark bucket that is looked for
 
-    # Arp traffic
+        $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 4 handle 1/${IPT_MASK} fw classid 1:11
+        $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 5 handle 2/${IPT_MASK} fw classid 1:12
+        $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 6 handle 3/${IPT_MASK} fw classid 1:13
 
-    $TC filter add dev $IFACE parent 1:0 protocol arp prio 7 handle 1/${IPT_MASK} fw classid 1:11
+        # Arp traffic
 
-    # ICMP traffic - Don't impress your friends. Deoptimize to manage ping floods
-    # better instead
+        $TC filter add dev $IFACE parent 1:0 protocol arp prio 7 handle 1/${IPT_MASK} fw classid 1:11
 
-    $TC filter add dev $IFACE parent 1:0 protocol ip prio 8 \
-        u32 match ip protocol 1 0xff flowid 1:13
+        # ICMP traffic - Don't impress your friends. Deoptimize to manage
+        # ping floods better instead
 
-    $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 9 \
-        u32 match ip protocol 1 0xff flowid 1:13
+        $TC filter add dev $IFACE parent 1:0 protocol ip prio 8 \
+            u32 match ip protocol 1 0xff flowid 1:13
+
+        $TC filter add dev $IFACE parent 1:0 protocol ipv6 prio 9 \
+            u32 match ip protocol 1 0xff flowid 1:13
+    fi
 }
 
 
