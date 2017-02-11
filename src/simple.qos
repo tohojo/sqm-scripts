@@ -74,7 +74,12 @@ ipt_qos_mark_ingress() {
 
     #sm: is it correct to do this in $IFACE? Should ingress not be on $DEV? since HTB acts on $DEV?
 
-    ipt -t mangle -A PREROUTING -i $IFACE -m mark --mark 0x00/${IPT_MASK} -j QOS_MARK_${IFACE}
+    if [ "$IGNORE_DSCP_INGRESS" = "1" ]; then
+        sqm_debug "Do not perform DSCP based marking on ingress. (1-tier classification)"
+    else
+        sqm_debug "Perform DSCP based marking on ingress. (3-tier classification)"
+        ipt -t mangle -A PREROUTING -i $IFACE -m mark --mark 0x00/${IPT_MASK} -j QOS_MARK_${IFACE}
+    fi
 }
 
 ipt_qos_mark_egress() {
