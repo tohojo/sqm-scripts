@@ -62,6 +62,10 @@ start_sqm_section() {
     export ZERO_DSCP_INGRESS=$(config_get "$section" squash_dscp)
     export IGNORE_DSCP_INGRESS=$(config_get "$section" squash_ingress)
 
+    # These two variables are new so the UCI names can be kept consistent.
+    export ZERO_DSCP_EGRESS=$(config_get "$section" zero_dscp_egress)
+    export IGNORE_DSCP_EGRESS=$(config_get "$section" ignore_dscp_egress)
+
     # If SQM_DEBUG or SQM_VERBOSITY_* were passed in via the command line make
     # them available to the other scripts this allows to override sqm's log
     # level as set in the GUI for quick debugging without GUI accesss.

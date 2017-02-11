@@ -33,6 +33,11 @@ SCRIPT=simple.qos
 # CoDel target
 #TARGET=5ms
 
+# Squashing DSCP options (defaults)
 #ZERO_DSCP_INGRESS=1
+#ZERO_DSCP_EGRESS=1
+
+# Ignore/process DSCP for prioritization (defaults)
 #IGNORE_DSCP_INGRESS=1
+#IGNORE_DSCP_EGRESS=1
 
