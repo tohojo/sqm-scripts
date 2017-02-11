@@ -87,7 +87,12 @@ ipt_squash_egress() {
 
 ipt_qos_mark_egress() {
 
-    ipt -t mangle -A POSTROUTING -o $IFACE -m mark --mark 0x00/${IPT_MASK} -j QOS_MARK_${IFACE}
+    if [ "$IGNORE_DSCP_EGRESS" = "1" ]; then
+        sqm_debug "Do not perform DSCP based marking on egress. (1-tier classification)"
+    else
+        sqm_debug "Perform DSCP based marking on egress. (3-tier classification)"
+        ipt -t mangle -A POSTROUTING -o $IFACE -m mark --mark 0x00/${IPT_MASK} -j QOS_MARK_${IFACE}
+    fi
 }
 
 
@@ -184,6 +189,7 @@ egress() {
         *)
             ipt_qos_setup
             ipt_qos_mark_egress
+            ipt_squash_egress
             qdisc_egress
             return;;
     esac
@@ -286,6 +292,7 @@ sqm_start() {
         egress
         sqm_debug "egress shaping activated"
     else
+        ipt_squash_egress
         sqm_debug "egress shaping deactivated"
         $TC qdisc del dev $IFACE root 2> /dev/null
     fi
