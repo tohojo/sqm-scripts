@@ -109,12 +109,12 @@ write_state_file() {
 get_ifb_associated_with_if() {
     local CUR_IF=$1
     # Stray ' in the comment is a fix for broken editor syntax highlighting
-    local CUR_IFB=$( $TC -p filter show parent ffff: dev ${CUR_IF} | grep -o -E ifb'[^)\ ]+' )    # '
+    local CUR_IFB=$( $TC_BINARY -p filter show parent ffff: dev ${CUR_IF} | grep -o -E ifb'[^)\ ]+' )    # '
     sqm_debug "ifb associated with interface ${CUR_IF}: ${CUR_IFB}"
 
     # we could not detect an associated IFB for CUR_IF
     if [ -z "${CUR_IFB}" ]; then
-        local TMP=$( $TC -p filter show parent ffff: dev ${CUR_IF} )
+        local TMP=$( $TC_BINARY -p filter show parent ffff: dev ${CUR_IF} )
         if [ ! -z "${TMP}" ]; then
             # oops, there is output but we failed to properly parse it? Ask for a user report
             sqm_error "#---- CUT HERE ----#"
