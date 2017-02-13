@@ -175,7 +175,7 @@ qdisc_egress() {
 
         # Arp traffic
 
-        $TC filter add dev $IFACE parent 1:0 protocol arp prio 7 handle 1/${IPT_MASK} fw classid 1:11
+        $TC filter add dev $IFACE parent 1:0 protocol arp prio 7 u32 match u32 0 0 classid 1:11
 
         # ICMP traffic - Don't impress your friends. Deoptimize to manage
         # ping floods better instead
