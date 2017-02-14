@@ -274,7 +274,7 @@ sqm_stop() {
     [ -n "$CUR_IFB" ] && $TC qdisc del dev $CUR_IFB root #2>> ${OUTPUT_TARGET}
     [ -n "$CUR_IFB" ] && sqm_debug "${0}: ${CUR_IFB} shaper deleted"
 
-    [ -n "$CUR_IFB" ] && ipt -t mangle -D POSTROUTING -o $CUR_IFB -m mark --mark 0x00 -g QOS_MARK_${IFACE}
+    ipt -t mangle -D POSTROUTING -o $IFACE -m dscp ! --dscp 0 -j DSCP --set-dscp-class be
     ipt -t mangle -D POSTROUTING -o $IFACE -m mark --mark 0x00/${IPT_MASK} -j QOS_MARK_${IFACE}
     ipt -t mangle -D PREROUTING -i vtun+ -p tcp -j DSCP --set-dscp-class BE
     # not sure whether we need to make this conditional or whether they are
