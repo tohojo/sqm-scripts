@@ -659,7 +659,6 @@ diffserv() {
     fc 1:0 0xb8 1:11 # EF
     fc 1:0 0xc0 1:11 # CS6
     fc 1:0 0xe0 1:11 # CS7
-    fc 1:0 0x90 1:11 # AF42 (mosh)
 
     # Arp traffic
     $TC filter add dev $interface protocol arp parent 1:0 prio $prio u32 match u32 0 0 flowid 1:11
