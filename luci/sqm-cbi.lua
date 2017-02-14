@@ -140,30 +140,30 @@ ad = s:taboption("tab_qdisc", Flag, "qdisc_advanced", translate("Show and Use Ad
 ad.default = false
 ad.rmempty = true
 
-zero_dscp_in = s:taboption("tab_qdisc", ListValue, "squash_dscp", translate("Squash DSCP on inbound packets (ingress):"))
-zero_dscp_in:value("1", "SQUASH")
-zero_dscp_in:value("0", "DO NOT SQUASH")
+zero_dscp_in = s:taboption("tab_qdisc", ListValue, "squash_dscp", translate("Pass-through DSCP on inbound packets (ingress):"))
+zero_dscp_in:value("1", "DO NOT PASS ("..translate("default")..")")
+zero_dscp_in:value("0", "PASS")
 zero_dscp_in.default = "1"
 zero_dscp_in.rmempty = true
 zero_dscp_in:depends("qdisc_advanced", "1")
 
-zero_dscp_eg = s:taboption("tab_qdisc", ListValue, "zero_dscp_egress", translate("Squash DSCP on outbound packets (egress):"))
-zero_dscp_eg:value("1", "SQUASH")
-zero_dscp_eg:value("0", "DO NOT SQUASH")
+zero_dscp_eg = s:taboption("tab_qdisc", ListValue, "zero_dscp_egress", translate("Pass-through DSCP on outbound packets (egress):"))
+zero_dscp_eg:value("1", "DO NOT PASS ("..translate("default")..")")
+zero_dscp_eg:value("0", "PASS")
 zero_dscp_eg.default = "1"
 zero_dscp_eg.rmempty = true
 zero_dscp_eg:depends("qdisc_advanced", "1")
 
-ign_dscp_in = s:taboption("tab_qdisc", ListValue, "squash_ingress", translate("Ignore DSCP on ingress:"))
-ign_dscp_in:value("1", "Ignore")
-ign_dscp_in:value("0", "Allow")
+ign_dscp_in = s:taboption("tab_qdisc", ListValue, "squash_ingress", translate("Prioritize by DSCP on inbound packets (ingress):"))
+ign_dscp_in:value("1", "DO NOT PRIORITIZE ("..translate("default")..")")
+ign_dscp_in:value("0", "PRIORITIZE")
 ign_dscp_in.default = "1"
 ign_dscp_in.rmempty = true
 ign_dscp_in:depends("qdisc_advanced", "1")
 
-ign_dscp_eg = s:taboption("tab_qdisc", ListValue, "ignore_dscp_egress", translate("Ignore DSCP on egress:"))
-ign_dscp_eg:value("1", "Ignore")
-ign_dscp_eg:value("0", "Allow")
+ign_dscp_eg = s:taboption("tab_qdisc", ListValue, "ignore_dscp_egress", translate("Prioritize by DSCP on outbound packets (egress):"))
+ign_dscp_eg:value("1", "DO NOT PRIORITIZE ("..translate("default")..")")
+ign_dscp_eg:value("0", "PRIORITIZE")
 ign_dscp_eg.default = "1"
 ign_dscp_eg.rmempty = true
 ign_dscp_eg:depends("qdisc_advanced", "1")
