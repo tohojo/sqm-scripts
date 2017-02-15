@@ -1,1 +1,3 @@
 Simplest possible configuration: HTB rate limiter with your qdisc attached.
+This script is also recommended on low bandwidth (less than 2 Mbps) and / or
+systems where other scripts tends to saturate the CPU.

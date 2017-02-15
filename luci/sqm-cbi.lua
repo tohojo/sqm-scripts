@@ -105,7 +105,7 @@ verb.rmempty = true
 -- QDISC
 
 local val_qdisc_name = ""
-c = s:taboption("tab_qdisc", ListValue, "qdisc", translate("Queuing disciplines useable on this system. After installing a new qdisc, you need to restart the router to see updates!"))
+c = s:taboption("tab_qdisc", ListValue, "qdisc", translate("Queuing disciplines useable on this system. If you have a low bandwidth link (less than 2 Mbps), consider using the HTB queue discipline and 'Simplest' Queue Setup Script. After installing a new qdisc, you need to restart the router to see updates!"))
 c:value("fq_codel", "fq_codel ("..translate("default")..")")
 
 if fs.stat(run_path) then
