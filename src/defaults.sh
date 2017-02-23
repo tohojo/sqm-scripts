@@ -24,6 +24,7 @@
 [ -z "$ZERO_DSCP_EGRESS" ] && ZERO_DSCP_EGRESS="1"
 [ -z "$IGNORE_DSCP_EGRESS" ] && IGNORE_DSCP_EGRESS="1"
 
+[ -z "$SCRIPT" ] && SCRIPT=""
 [ -z "$IQDISC_OPTS" ] && IQDISC_OPTS=""
 [ -z "$EQDISC_OPTS" ] && EQDISC_OPTS=""
 [ -z "$TC" ] && TC=tc_wrapper
