@@ -173,6 +173,20 @@ for k, v in match_caps_pairs(all_qdiscs,"shaper") do
 	avail_shapers[k] = all_qdiscs[k]
 end
 
+-- Extract details of "diffserv" capabilities, including UCI variable values
+-- and related descriptive text
+
+local qdisc_diffserv = {}
+local qdiscs_with_diffserv = {}
+for k, p in match_caps_pairs(all_qdiscs, "diffserv") do
+	qdisc_diffserv[k] = {}
+	table.insert(qdiscs_with_diffserv, k)
+	for _, s in match_caps_pairs(p, "diffserv") do
+		local _, v, d = string.match(s, "(%S+):(%S+):(%S+)")
+		table.insert(qdisc_diffserv[k], { val = v, desc = d:gsub("_", " ") })
+	end
+end
+
 
 -- QDISC
 
@@ -245,33 +259,84 @@ zero_dscp_eg.default = "1"
 zero_dscp_eg.rmempty = true
 zero_dscp_eg:depends("qdisc_advanced", "1")
 
+-- Only allow configuring prioritization with classful shapers or cake,
+-- i.e. qdiscs which have the 'diffserv' capability
+
+deps_prioritize = {}
+for _, v in pairs(qdiscs_with_diffserv) do
+	table.insert(deps_prioritize, {["qdisc_advanced"]="1", [shp.variants["tc"].option]=v})
+	table.insert(deps_prioritize, {["qdisc_advanced"]="1", [shp.variants["cake"].option]=v})
+end
+
+local function dfsrv_setup(q, var)
+	return function(o)
+		o:value("diffserv3", "3-Tier [diffserv3] ("..translate("default")..")")
+		for _, d in pairs(qdisc_diffserv[q]) do
+			o:value(d.val, d.desc)
+		end
+
+		o.default = "diffserv3"
+		o.rmempty = true
+		o.widget = "radio"
+		o.orientation = "horizontal"
+
+		o:depends({[var]="0", [shp.variants["tc"].option]=q})
+		o:depends({[var]="0", [shp.variants["cake"].option]=q})
+	end
+end
+
 ign_dscp_in = s:taboption("tab_qdisc", ListValue, "squash_ingress", translate("Prioritize by DSCP on inbound packets (ingress):"))
 ign_dscp_in:value("1", "DO NOT PRIORITIZE ("..translate("default")..")")
 ign_dscp_in:value("0", "PRIORITIZE")
 ign_dscp_in.default = "1"
 ign_dscp_in.rmempty = true
-ign_dscp_in:depends("qdisc_advanced", "1")
+for _, v in pairs(deps_prioritize) do
+	ign_dscp_in:depends(v)
+end
+
+dfsrv_in = s:varianttaboption("tab_qdisc", ListValue, "diffserv_ingress", qdiscs_with_diffserv, translate("Priority scheme on inbound packets (ingress):"))
+
+for _, v in pairs(qdiscs_with_diffserv) do
+	dfsrv_in.variants[v].yield(dfsrv_setup(v, "squash_ingress"))
+end
 
 ign_dscp_eg = s:taboption("tab_qdisc", ListValue, "ignore_dscp_egress", translate("Prioritize by DSCP on outbound packets (egress):"))
 ign_dscp_eg:value("1", "DO NOT PRIORITIZE ("..translate("default")..")")
 ign_dscp_eg:value("0", "PRIORITIZE")
 ign_dscp_eg.default = "1"
 ign_dscp_eg.rmempty = true
-ign_dscp_eg:depends("qdisc_advanced", "1")
+for _, v in pairs(deps_prioritize) do
+	ign_dscp_eg:depends(v)
+end
+
+dfsrv_eg = s:varianttaboption("tab_qdisc", ListValue, "diffserv_egress", qdiscs_with_diffserv, translate("Priority scheme on outbound packets (egress):"))
+
+for _, v in pairs(qdiscs_with_diffserv) do
+	dfsrv_eg.variants[v].yield(dfsrv_setup(v, "ignore_dscp_egress"))
+end
+
+deps_ecn = {}
+for k, _ in match_caps_pairs(avail_leafs, "ecn") do
+	table.insert(deps_ecn, {["qdisc_advanced"]="1", ["qdisc"]=k})
+end
 
 iecn = s:taboption("tab_qdisc", ListValue, "ingress_ecn", translate("Explicit congestion notification (ECN) status on inbound packets (ingress):"))
 iecn:value("ECN", "ECN ("..translate("default")..")")
 iecn:value("NOECN")
 iecn.default = "ECN"
 iecn.rmempty = true
-iecn:depends("qdisc_advanced", "1")
+for _, v in pairs(deps_ecn) do
+	iecn:depends(v)
+end
 
 eecn = s:taboption("tab_qdisc", ListValue, "egress_ecn", translate("Explicit congestion notification (ECN) status on outbound packets (egress)."))
 eecn:value("NOECN", "NOECN ("..translate("default")..")")
 eecn:value("ECN")
 eecn.default = "NOECN"
 eecn.rmempty = true
-eecn:depends("qdisc_advanced", "1")
+for _, v in pairs(deps_ecn) do
+	eecn:depends(v)
+end
 
 ad2 = s:taboption("tab_qdisc", Flag, "qdisc_really_really_advanced", translate("Show and Use Dangerous Configuration. Dangerous options will only be used as long as this box is checked."))
 ad2.default = false
