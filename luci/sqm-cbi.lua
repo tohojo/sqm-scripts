@@ -21,7 +21,7 @@ local sys = require "luci.sys"
 --local ifaces = net:get_interfaces()
 local ifaces = sys.net:devices()
 local path = "/usr/lib/sqm"
-local run_path = "/tmp/run/sqm/available_qdiscs"
+local qdisc_caps_path = "/tmp/run/sqm/available_qdiscs"
 
 m = Map("sqm", translate("Smart Queue Management"),
 	translate("With <abbr title=\"Smart Queue Management\">SQM</abbr> you " ..
@@ -125,41 +125,107 @@ verb.default = "5"
 verb.rmempty = true
 
 
+-- Read qdisc and shaper capabilities
+
+function read_caps(path)
+	local result = {}
+	if fs.stat(path) then
+		for fname in fs.dir(path) do
+			local caps = {}
+			for line in io.lines(path .. "/" .. fname) do
+				for word in string.gmatch(line,"%S+") do
+					table.insert(caps, word)
+				end
+			end
+			result[fname] = caps
+		end
+	end
+	return result
+end
+
+-- Use capability filter to iterate over qdisc list or capability list
+
+function match_caps_pairs(t,m)
+	local k, v = nil, nil
+	return function ()
+		k, v = next(t, k)
+		while k do
+			if type(v) == "table" then
+				v = table.concat(v," ")
+			end
+			if string.find(v, m) then
+				return k, t[k]
+			end
+			k, v = next(t, k)
+		end
+	end
+end
+
+local all_qdiscs = read_caps(qdisc_caps_path)
+
+local avail_leafs = {}
+for k, v in match_caps_pairs(all_qdiscs,"leaf") do
+	avail_leafs[k] = all_qdiscs[k]
+end
+
+local avail_shapers = {}
+for k, v in match_caps_pairs(all_qdiscs,"shaper") do
+	avail_shapers[k] = all_qdiscs[k]
+end
 
 
 -- QDISC
 
-local val_qdisc_name = ""
 c = s:taboption("tab_qdisc", ListValue, "qdisc", translate("Queuing disciplines useable on this system. After installing a new qdisc, you need to restart the router to see updates!"))
 c:value("fq_codel", "fq_codel ("..translate("default")..")")
 
-if fs.stat(run_path) then
-	for file in fs.dir(run_path) do
-		c:value( file )
-	end
+for k, _ in pairs(avail_leafs) do
+	c:value(k)
 end
+
 c.default = "fq_codel"
 c.rmempty = false
 
 
+-- SHAPER
 
-local qos_desc = ""
-sc = s:taboption("tab_qdisc", ListValue, "script", translate("Queue setup script"))
-for file in fs.dir(path) do
-	if string.find(file, ".qos$") and not fs.stat(path .. "/" .. file .. ".hidden") then
-		sc:value(file)
-		qos_desc = qos_desc .. "<p><b>" .. file .. ":</b><br />"
-		fh = io.open(path .. "/" .. file .. ".help", "r")
-		if fh then
-			qos_desc = qos_desc .. fh:read("*a") .. "</p>"
-		else
-			qos_desc = qos_desc .. "No help text</p>"
+shp = s:varianttaboption("tab_qdisc", ListValue, "shaper", {"tc", "cake"}, translate("Shapers useable on this system."))
+shp.rmempty = false
+
+shp.variants["tc"].yield(function(o)
+		o:value("htb", "htb ("..translate("default")..")")
+
+		for k, _ in pairs(avail_shapers) do
+			if k ~= "cake" then
+				o:value(k)
+			end
 		end
-	end
-end
-sc.default = "simple.qos"
-sc.rmempty = false
-sc.description = qos_desc
+
+		o.default = "htb"
+		o.rmempty = false
+
+		for k, _ in pairs(avail_leafs) do
+			if k ~= "cake" then
+				o:depends("qdisc",k)
+			end
+		end
+	end)
+
+-- This implements a pseudo-shaper "cake" only usable with the cake qdisc
+-- but also allow for cake as a leaf qdisc with other shapers
+
+shp.variants["cake"].yield(function(o)
+		o:value("cake", "cake ("..translate("default")..")")
+
+		for k, _ in pairs(avail_shapers) do
+			o:value(k)
+		end
+
+		o.default = "cake"
+		o.rmempty = false
+		o:depends("qdisc","cake")
+	end)
+
 
 ad = s:taboption("tab_qdisc", Flag, "qdisc_advanced", translate("Show and Use Advanced Configuration. Advanced options will only be used as long as this box is checked."))
 ad.default = false
@@ -211,6 +277,26 @@ ad2 = s:taboption("tab_qdisc", Flag, "qdisc_really_really_advanced", translate("
 ad2.default = false
 ad2.rmempty = true
 ad2:depends("qdisc_advanced", "1")
+
+local qos_desc = ""
+sc = s:taboption("tab_qdisc", ListValue, "script", translate("Custom setup script"))
+sc:value("","<none> ("..translate("default")..")")
+for file in fs.dir(path) do
+	if string.find(file, ".qos$") and not fs.stat(path .. "/" .. file .. ".hidden") then
+		sc:value(file)
+		qos_desc = qos_desc .. "<p><b>" .. file .. ":</b><br />"
+		fh = io.open(path .. "/" .. file .. ".help", "r")
+		if fh then
+			qos_desc = qos_desc .. fh:read("*a") .. "</p>"
+		else
+			qos_desc = qos_desc .. "No help text</p>"
+		end
+	end
+end
+sc.default = ""
+sc.rmempty = true
+sc:depends("qdisc_really_really_advanced", "1")
+sc.description = qos_desc
 
 ilim = s:taboption("tab_qdisc", Value, "ilimit", translate("Hard limit on ingress queues; leave empty for default."))
 -- ilim.default = 1000
