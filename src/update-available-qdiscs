@@ -2,6 +2,7 @@
 
 . /etc/sqm/sqm.conf
 . ${SQM_LIB_DIR}/functions.sh
+. ${SQM_LIB_DIR}/qdisc_funcs.sh
 . ${SQM_LIB_DIR}/defaults.sh
 
 [ -d "${SQM_QDISC_STATE_DIR}" ] || mkdir -p "${SQM_QDISC_STATE_DIR}"
@@ -10,5 +11,6 @@ SQM_VERBOSITY_MIN=5 # Silence errors while checkimg
 
 for qdisc in $SQM_CHECK_QDISCS; do
     [ -f ${SQM_QDISC_STATE_DIR}/$qdisc ] && continue
-    verify_qdisc $qdisc && touch ${SQM_QDISC_STATE_DIR}/$qdisc
+    verify_qdisc $qdisc &&
+    get_qdisc_caps $qdisc > ${SQM_QDISC_STATE_DIR}/$qdisc
 done
