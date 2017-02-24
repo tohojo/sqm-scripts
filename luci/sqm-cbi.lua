@@ -3,6 +3,7 @@ LuCI - Lua Configuration Interface
 
 Copyright 2014 Steven Barth <steven@midlink.org>
 Copyright 2014 Dave Taht <dave.taht@bufferbloat.net>
+Copyright 2017 Tony Ambardar
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -35,6 +36,30 @@ s:tab("tab_qdisc", translate("Queue Discipline"))
 s:tab("tab_linklayer", translate("Link Layer Adaptation"))
 s.addremove = true -- set to true to allow adding SQM instances in the GUI
 s.anonymous = true
+
+
+-- Implement a local "variant" form of option to handle complex dependencies
+-- This allows for varying the displayed option values based on dependencies
+
+function s:varianttaboption(tab, class, opt, vars, desc)
+	assert(type(vars) == "table" and #vars > 0,
+		"Cannot use variant option without table of variants")
+	local s = self
+	local o = s:taboption(tab, class, opt, desc)
+	o:depends("_nosuchoption", "_nosuchvalue")
+	o.optional = true
+	o.variants = {}
+	for _, v in ipairs(vars) do
+		o.variants[v] = s:taboption(tab, class, "_%s_%s" % {v, opt}, desc)
+		o.variants[v].optional = true
+		o.variants[v].cfgvalue = function(s, sc) return o:cfgvalue(sc) end
+		o.variants[v].write = function(s, sc, vl) return o:write(sc, vl) end
+--		o.variants[v].remove = function(s, sc) return o:remove(sc) end
+		o.variants[v].yield = function(y) y(o.variants[v]) end
+	end
+	return o
+end
+
 
 -- BASIC
 e = s:taboption("tab_basic", Flag, "enabled", translate("Enable this SQM instance."))
