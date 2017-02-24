@@ -54,6 +54,7 @@ start_sqm_section() {
     export SHAPER_BURST=$(config_get "$section" shaper_burst)
     export HTB_QUANTUM_FUNCTION=$(config_get "$section" htb_quantum_function)
     export QDISC=$(config_get "$section" qdisc)
+    export SHAPER=$(config_get "$section" shaper)
     export SCRIPT=$(config_get "$section" script)
 
     # The UCI names for these two variables are confusing and should have been

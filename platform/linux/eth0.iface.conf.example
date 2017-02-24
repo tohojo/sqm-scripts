@@ -6,6 +6,7 @@ DOWNLINK=85000
 
 #ENABLED=1
 #QDISC=fq_codel
+#SHAPER=htb
 
 #LLAM=tc_stab
 #LINKLAYER=none
