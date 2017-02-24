@@ -39,3 +39,7 @@ DOWNLINK=85000
 #IGNORE_DSCP_INGRESS=1
 #IGNORE_DSCP_EGRESS=1
 
+# Prioritization scheme if enabled (defaults)
+#DIFFSERV_INGRESS="diffserv3"
+#DIFFSERV_EGRESS="diffserv3"
+

@@ -67,6 +67,10 @@ start_sqm_section() {
     export ZERO_DSCP_EGRESS=$(config_get "$section" zero_dscp_egress)
     export IGNORE_DSCP_EGRESS=$(config_get "$section" ignore_dscp_egress)
 
+    # These two variables determine the prioritization scheme if enabled.
+    export DIFFSERV_INGRESS=$(config_get "$section" diffserv_ingress)
+    export DIFFSERV_EGRESS=$(config_get "$section" diffserv_egress)
+
     # If SQM_DEBUG or SQM_VERBOSITY_* were passed in via the command line make
     # them available to the other scripts this allows to override sqm's log
     # level as set in the GUI for quick debugging without GUI accesss.
