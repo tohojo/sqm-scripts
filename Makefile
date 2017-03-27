@@ -36,8 +36,11 @@ install-linux: install-lib
 install-lib:
 	install -m 0755 -d $(DESTDIR)/etc/sqm $(DESTDIR)$(PREFIX)/lib/sqm
 	install -m 0644 platform/$(PLATFORM)/sqm.conf $(DESTDIR)/etc/sqm/sqm.conf
-	install -m 0644  src/functions.sh src/defaults.sh \
-		src/*.qos src/*.help $(DESTDIR)$(PREFIX)/lib/sqm
+	install -m 0644  src/functions.sh src/defaults.sh src/qdisc_funcs.sh \
+		src/qos_funcs.sh  $(DESTDIR)$(PREFIX)/lib/sqm
+	test -z "$(find src -name *.qos -o -name *.help -o -name *.hidden)" || \
+		install -m 0644 src/*.qos src/*.help src/*.hidden \
+		$(DESTDIR)$(PREFIX)/lib/sqm
 	install -m 0744  src/start-sqm src/stop-sqm src/update-available-qdiscs \
 		$(DESTDIR)$(PREFIX)/lib/sqm
 
