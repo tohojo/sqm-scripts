@@ -187,6 +187,20 @@ for k, p in match_caps_pairs(all_qdiscs, "diffserv") do
 	end
 end
 
+-- Extract details of "preset" capabilities, including UCI variable values
+-- and related descriptive text
+
+local qdisc_presets = {}
+local qdiscs_with_presets = {}
+for k, p in match_caps_pairs(all_qdiscs, "preset") do
+	qdisc_presets[k] = {}
+	table.insert(qdiscs_with_presets, k)
+	for _, s in match_caps_pairs(p, "preset") do
+		local _, v, d = string.match(s, "(%S+):(%S+):(%S+)")
+		table.insert(qdisc_presets[k], { val = v, desc = d:gsub("_", " ") })
+	end
+end
+
 
 -- QDISC
 
@@ -240,6 +254,27 @@ shp.variants["cake"].yield(function(o)
 		o:depends("qdisc","cake")
 	end)
 
+
+-- QDISC PRESET
+
+qdp = s:varianttaboption("tab_qdisc", ListValue, "qdisc_preset", qdiscs_with_presets, translate("Predefined configurations for this qdisc."))
+qdp.rmempty = true
+
+for _, q in pairs(qdiscs_with_presets) do
+	qdp.variants[q].yield(function(o)
+			o:value("", "<do not use>")
+			for _, p in pairs(qdisc_presets[q]) do
+				o:value(p.val, p.desc)
+			end
+
+			o.default = ""
+			o.rmempty = false
+			o:depends("qdisc", q)
+		end)
+end
+
+
+-- ADVANCED
 
 ad = s:taboption("tab_qdisc", Flag, "qdisc_advanced", translate("Show and Use Advanced Configuration. Advanced options will only be used as long as this box is checked."))
 ad.default = false
