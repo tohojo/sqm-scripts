@@ -291,15 +291,6 @@ sqm_stop() {
     [ -n "$CUR_IFB" ] && $IP link delete ${CUR_IFB} type ifb
     [ -n "$CUR_IFB" ] && sqm_debug "${0}: ${CUR_IFB} interface deleted"
 }
-# Note this has side effects on the prio variable
-# and depends on the interface global too
-
-fc() {
-    $TC filter add dev $interface protocol ip parent $1 prio $prio u32 match ip tos $2 0xfc classid $3
-    prio=$(($prio + 1))
-    $TC filter add dev $interface protocol ipv6 parent $1 prio $prio u32 match ip6 priority $2 0xfc classid $3
-    prio=$(($prio + 1))
-}
 
 # Scale quantum with bandwidth to lower computation cost.
 get_htb_quantum() {
@@ -636,34 +627,6 @@ get_ecn() {
     sqm_debug "get_ECN: $1 CURECN: ${CURECN} IECN: ${IECN} EECN: ${EECN}"
     echo ${CURECN}
 
-}
-
-# This could be a complete diffserv implementation
-
-diffserv() {
-
-    interface=$1
-    prio=1
-
-    # Catchall
-
-    $TC filter add dev $interface parent 1:0 protocol all prio 999 u32 \
-        match ip protocol 0 0x00 flowid 1:12
-
-    # Find the most common matches fast
-
-    fc 1:0 0x00 1:12 # BE
-    fc 1:0 0x20 1:13 # CS1
-    fc 1:0 0x10 1:11 # IMM (TOS4)
-    fc 1:0 0xb0 1:11 # VA
-    fc 1:0 0xb8 1:11 # EF
-    fc 1:0 0xc0 1:11 # CS6
-    fc 1:0 0xe0 1:11 # CS7
-
-    # Arp traffic
-    $TC filter add dev $interface protocol arp parent 1:0 prio $prio u32 match u32 0 0 flowid 1:11
-
-    prio=$(($prio + 1))
 }
 
 eth_setup() {
