@@ -268,6 +268,76 @@ get_cake_lla_string() {
 }
 
 
+# The following three functions provide built-in support for configuring
+# arbitrary shaper, leaf qdisc and prioritisation schemes. They utilize the
+# tree, qdisc and qos functions developed in qdisc_funcs.sh and qos_funcs.sh
+# to cleanly replace functionality of existing scripts. These functions or
+# other subfunctions can be overridden for user customization by passing a
+# supplementary script via the SCRIPT configuration variable.
+
+egress() {
+    qdisc_tree_build egress $IFACE
+
+    # setup classful diffserv if necessary
+    qos_setup_egress
+
+    [ "$QDISC" != "cake" ] && ipt_squash_egress
+}
+
+
+ingress() {
+    $TC qdisc del dev $IFACE handle ffff: ingress 2> /dev/null
+    $TC qdisc add dev $IFACE handle ffff: ingress
+
+    qdisc_tree_build ingress $DEV
+
+    # setup classful diffserv if necessary
+    qos_setup_ingress
+
+    [ "$QDISC" != "cake" ] && ipt_squash_ingress
+
+    $IP link set dev $DEV up
+
+    # redirect all IP packets arriving in $IFACE to $DEV
+    $TC filter add dev $IFACE parent ffff: protocol all prio 10 u32 \
+        match u32 0 0 flowid 1:1 action mirred egress redirect dev $DEV
+}
+
+
+sqm_start() {
+    [ -n "$IFACE" ] || return 1
+    do_modules
+    verify_configs || return 1
+    sqm_debug "Starting built-in sqm_start()"
+
+    [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
+
+    qos_setup_common
+
+    if [ "$UPLINK" -ne 0 ]; then
+        egress
+        sqm_debug "egress shaping activated"
+    else
+        ipt_squash_egress
+        sqm_debug "egress shaping deactivated"
+        $TC qdisc del dev $IFACE root 2> /dev/null
+    fi
+
+    if [ "$DOWNLINK" -ne 0 ]; then
+        verify_qdisc ingress "ingress" || return 1
+        ingress
+        sqm_debug "ingress shaping activated"
+    else
+        ipt_squash_ingress
+        sqm_debug "ingress shaping deactivated"
+        $TC qdisc del dev $DEV root 2> /dev/null
+        $TC qdisc del dev $IFACE ingress 2> /dev/null
+    fi
+
+    return 0
+}
+
+
 sqm_stop() {
     $TC qdisc del dev $IFACE ingress #2>> ${OUTPUT_TARGET}
     $TC qdisc del dev $IFACE root #2>> ${OUTPUT_TARGET}
