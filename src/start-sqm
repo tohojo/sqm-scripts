@@ -14,12 +14,6 @@
 . ${SQM_LIB_DIR}/defaults.sh
 STATE_FILE="${SQM_STATE_DIR}/${IFACE}.state"
 
-if [ -z "${SCRIPT}" ] ; then
-    sqm_error "SCRIPT value is not defined in /etc/sqm/${IFACE}.iface.conf"
-    sqm_error "Please check your configuration and try again."
-    exit 1
-fi
-
 [ -d "${SQM_STATE_DIR}" ] || mkdir -p "${SQM_STATE_DIR}"
 
 if [ -f "${STATE_FILE}" ]; then
@@ -38,15 +32,19 @@ if [ "${ENABLED:-1}" -ne "1" ]; then
     exit 0
 fi
 
-if [ ! -f "${SQM_LIB_DIR}/$SCRIPT" ]; then
-    sqm_error "SQM script ${SCRIPT} not found!"
-    exit 1
+sqm_trace; sqm_trace "$(date): Starting." # Add some space and a date stamp to verbose log output and log files to separate runs
+sqm_log "Starting SQM on ${IFACE}, in: ${DOWNLINK} Kbps, out: ${UPLINK} Kbps"
+
+if [ -n "${SCRIPT}" ]; then
+    if [ -f "${SQM_LIB_DIR}/$SCRIPT" ]; then
+        sqm_log "Using custom SQM script: ${SCRIPT}"
+        . "${SQM_LIB_DIR}/$SCRIPT"
+    else
+        sqm_error "Custom SQM script ${SCRIPT} not found!"
+        exit 1
+    fi
 fi
 
-. "${SQM_LIB_DIR}/$SCRIPT"
-
-sqm_trace; sqm_trace "$(date): Starting." # Add some space and a date stamp to verbose log output and log files to separate runs
-sqm_log "Starting SQM script: ${SCRIPT} on ${IFACE}, in: ${DOWNLINK} Kbps, out: ${UPLINK} Kbps"
-sqm_start && write_state_file ${STATE_FILE} ${ALL_SQM_VARS} && sqm_log "${SCRIPT} was started on ${IFACE} successfully"
+sqm_start && write_state_file ${STATE_FILE} ${ALL_SQM_VARS} && sqm_log "SQM was started on ${IFACE} successfully"
 
 exit 0
