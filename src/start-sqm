@@ -11,6 +11,8 @@
 
 . /etc/sqm/sqm.conf
 . ${SQM_LIB_DIR}/functions.sh
+. ${SQM_LIB_DIR}/qdisc_funcs.sh
+. ${SQM_LIB_DIR}/qos_funcs.sh
 . ${SQM_LIB_DIR}/defaults.sh
 STATE_FILE="${SQM_STATE_DIR}/${IFACE}.state"
 
@@ -39,6 +41,13 @@ if [ -n "${SCRIPT}" ]; then
     if [ -f "${SQM_LIB_DIR}/$SCRIPT" ]; then
         sqm_log "Using custom SQM script: ${SCRIPT}"
         . "${SQM_LIB_DIR}/$SCRIPT"
+    elif is_legacy_script "${SCRIPT}"; then
+        # Emulate the old scripts but warn about usage
+        eval "$(legacy_script_emulate ${SCRIPT})"
+        sqm_warn "Legacy script ${SCRIPT} is deprecated and should not be used."
+        sqm_warn "You can achieve the same effect by setting the following"
+        sqm_warn "equivalent configuration variables:"
+        sqm_warn "$(legacy_script_emulate ${SCRIPT})"
     else
         sqm_error "Custom SQM script ${SCRIPT} not found!"
         exit 1

@@ -12,6 +12,7 @@
 
 . /etc/sqm/sqm.conf
 . ${SQM_LIB_DIR}/functions.sh
+. ${SQM_LIB_DIR}/qdisc_funcs.sh
 . ${SQM_LIB_DIR}/defaults.sh
 
 if [ ! -f "${SQM_STATE_DIR}/${IFACE}.state" ] ; then
@@ -31,6 +32,9 @@ if [ -n "${SCRIPT}" ]; then
     if [ -f "${SQM_LIB_DIR}/$SCRIPT" ]; then
         sqm_log "Using custom SQM script: ${SCRIPT}"
         . "${SQM_LIB_DIR}/$SCRIPT"
+    elif is_legacy_script "${SCRIPT}"; then
+        sqm_warn "Legacy script ${SCRIPT} is deprecated and should not be used."
+        sqm_warn "Using built-in sqm_stop() to shut down SQM"
     else
         sqm_error "Custom SQM script ${SCRIPT} not found!"
         exit 1
