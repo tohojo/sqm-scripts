@@ -7,9 +7,9 @@
 #       Copyright (C) 2012-4 Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller
 
 
-. /lib/functions.sh
-
 . /etc/sqm/sqm.conf
+. /lib/functions.sh
+. ${SQM_LIB_DIR}/legacy_funcs.sh
 
 ACTION="${1:-start}"
 RUN_IFACE="$2"
@@ -93,5 +93,6 @@ if [ "$ACTION" = "stop" ]; then
     fi
 else
     config_load sqm
+    config_foreach legacy_vars_rename
     config_foreach start_sqm_section
 fi
