@@ -90,76 +90,6 @@ verify_configs() {
 }
 
 
-# Capture various qdisc capabilities, to support querying in both the scripts
-# and the Luci GUI. There are two capability types: individual keywords
-# express a property possessed, while more general 3-tuples express a range
-# of mutually exclusive values for a property.
-
-# The 3-tuple property format consists of 3 whitespace-free fields delimited
-# by a ':' (colon) as follows: <property-type>:<var-value>:<descrition>.
-# The <var-value> is the value of the related configuration variable, and
-# the <description> text may be used in the GUI as a selection aid. Note that
-# a '_' (underscore) in <description> will be rendered as a space in the GUI.
-
-# The following is a summary of currently used capabilities:
-#
-# Capability     Description
-# ==========     ===========
-# leaf           The qdisc can act as a leaf
-# shaper         The qdisc can act as a shaper
-# classful       The shaper is classful and capable of priority tiers
-# ecn            The qdisc is affected by ECN configuration variables
-# diffserv       A supported priority scheme and DIFFSERV_ variable value
-# preset         A qdisc-specific, supplementary configuration option
-
-get_qdisc_caps() {
-    local qdisc=$1
-    local caps=""
-
-    case $qdisc in
-        fq_codel) caps="leaf ecn";;
-        codel) caps="leaf ecn";;
-        pie) caps="leaf ecn";;
-        sfq) caps="leaf";;
-        # Note: CAKE is an exception as both a leaf and pseudo-shaper
-        cake) caps="leaf shaper
-            diffserv:diffserv3:3-Tier_[diffserv3]
-            diffserv:diffserv4:4-Tier_[diffserv4]
-            diffserv:diffserv8:8-Tier_[diffserv8]
-            diffserv:diffserv-llt:Latency/Loss_Tradeoff_[diffserv-llt]
-            preset:int-host-fair:Internal_Host_Fairness
-            preset:ext-host-fair:External_Host_Fairness
-            preset:int-ext-host-fair:Internal/External_Host_Fairness";;
-        # Any classful shaper should be similar to this
-        htb) caps="shaper classful diffserv:diffserv3:General_3-Tier";;
-        hfsc) caps="shaper classful diffserv:diffserv3:General_3-Tier";;
-        # Any classless shaper should be similar to this
-        tbf) caps="shaper";;
-        *) sqm_warn "QDISC $qdisc has unknown capabilities.";;
-    esac
-
-    echo "$caps"
-}
-
-
-# Verify that a qdisc has the specified capability.
-
-qdisc_has_cap() {
-    local qdisc=$1
-    local cap=$2
-    [ -z "$qdisc" -o -z "$cap" ] && return 1
-
-    local caps="$(get_qdisc_caps $qdisc)"
-    [ -z "$caps" ] && return 1
-
-    for c in $caps; do
-        expr match "$c" "$cap" >/dev/null && return 0
-    done
-
-    return 1
-}
-
-
 # Check if the current variables and shaper are configured for multi-tier
 # classification.
 
@@ -182,35 +112,109 @@ is_multitier_classful() {
 }
 
 
-# Check if the supplied script is deprecated and needs emulation for
-# backwards compatibility.
+# Capture various qdisc capabilities, to support querying in both the scripts
+# and the Luci GUI. There are two capability types: individual keywords
+# express a property possessed, while more general 3-tuples express a range
+# of mutually exclusive values for a property.
 
-is_legacy_script() {
-    local script=$1
+# The 3-tuple property format consists of 3 whitespace-free fields delimited
+# by a ':' (colon) as follows: <property-type>:<var-value>:<description>.
+# The <var-value> is the value of the related configuration variable, and
+# the <description> text may be used in the GUI as a selection aid. Note that
+# a '_' (underscore) in <description> will be rendered as a space in the GUI.
 
-    # Legacy scripts removed from the distribution
-    local regex="\(simpl\(e\|est\|est_tbf\)\|\(piece_of\|layer\)_cake\).qos"
-    expr match "$script" "$regex" >/dev/null && return 0
+# The following is a summary of currently used capabilities:
+#
+# Capability     Description
+# ==========     ===========
+# leaf           The qdisc can act as a leaf
+# shaper         The qdisc can act as a shaper
+# classful       The shaper is classful and capable of priority tiers
+# ecn            The qdisc is affected by ECN configuration variables
+# diffserv       A supported priority scheme and DIFFSERV_ variable value
+# preset         A qdisc-specific, supplementary configuration option
+
+# All capabilities should be applicable to multiple qdiscs, both simplifying
+# code and supporting decision logic. (And not to be abused as a general
+# key/value store!)
+
+
+# Look up the capabilities for a specific qdisc.
+
+get_qdisc_caps() {
+    local qdisc=$1
+    local caps="$(get_caps_$qdisc 2>/dev/null)"
+
+    [ -z "$caps" ] && sqm_warn "QDISC $qdisc has unknown capabilities."
+    echo "$caps"
+}
+
+
+# Verify that a qdisc has the specified capability.
+
+qdisc_has_cap() {
+    local qdisc=$1
+    local cap=$2
+    [ -z "$qdisc" -o -z "$cap" ] && return 1
+
+    local caps="$(get_qdisc_caps $qdisc)"
+    [ -z "$caps" ] && return 1
+
+    for c in $caps; do
+        expr match "$c" "$cap" >/dev/null && return 0
+    done
+
     return 1
 }
 
 
-# Given a legacy script, generate the configuration variables required to
-# emulate its function within the new framework.
+# The following functions define the capabilities of individual qdiscs,
+# allowing them to be looked up dynamically, overridden or new ones defined
+# by users.
 
-legacy_script_emulate() {
-    local script=$1
 
-    case $script in
-        simple.qos) echo 'IGNORE_DSCP_EGRESS="0"';;
-        simplest.qos) echo 'IGNORE_DSCP_INGRESS="1"; IGNORE_DSCP_EGRESS="1"';;
-        simplest_tbf.qos) echo 'SHAPER="tbf"; IGNORE_DSCP_INGRESS="1"; IGNORE_DSCP_EGRESS="1"';;
-        piece_of_cake.qos) echo 'QDISC=cake; SHAPER=cake; IGNORE_DSCP_INGRESS="1"; IGNORE_DSCP_EGRESS="1"';;
-        layer_cake.qos) echo 'QDISC=cake; SHAPER=cake; IGNORE_DSCP_EGRESS="0"';;
-    esac
+get_caps_fq_codel() {
+    echo "leaf ecn"
 }
 
+get_caps_codel() {
+    echo "leaf ecn"
+}
 
+get_caps_pie() {
+    echo "leaf ecn"
+}
+
+get_caps_sfq() {
+    echo "leaf"
+}
+
+get_caps_cake() {
+    # NOTE: a qdisc should be defined as either a leaf or shaper, and CAKE was
+    # previsouly assigned as "leaf", with additional code throughout to
+    # accomodate its shaping aspects. But although CAKE is not a true shaper,
+    # defining it as such does simplify the additional code overall.
+    echo "leaf shaper
+    diffserv:diffserv3:3-Tier_[diffserv3]
+    diffserv:diffserv4:4-Tier_[diffserv4]
+    diffserv:diffserv8:8-Tier_[diffserv8]
+    diffserv:diffserv-llt:Latency/Loss_Tradeoff_[diffserv-llt]
+    preset:int-host-fair:Internal_Host_Fairness
+    preset:ext-host-fair:External_Host_Fairness
+    preset:int-ext-host-fair:Internal/External_Host_Fairness"
+}
+
+get_caps_htb() {
+    echo "shaper classful diffserv:diffserv3:3-Tier_[diffserv3]"
+}
+
+get_caps_hfsc() {
+    echo "shaper classful diffserv:diffserv3:3-Tier_[diffserv3]"
+}
+
+get_caps_tbf() {
+    echo "shaper"
+}
 # Central function for building a qdisc/class tree, while abstracting away
 # specific leaf or shaper qdisc details using generator functions. It uses
 # configuration settings and qdisc capabilities to distinguish between three
