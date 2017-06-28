@@ -166,6 +166,24 @@ function match_caps_pairs(t,m)
 	end
 end
 
+-- Extract details of 3-tuple capabilities, including type, variable values
+-- and related descriptive text
+
+function parse_tuple_caps(q, m)
+	local type_data, qdiscs_with_type = {}, {}
+	for k, c in match_caps_pairs(q, m) do
+		type_data[k] = {}
+		table.insert(qdiscs_with_type, k)
+		for _, s in match_caps_pairs(c, m) do
+			local _, v, d = string.match(s, "(%S+):(%S+):(%S+)")
+			table.insert(type_data[k], { val = v, desc = d:gsub("_", " ") })
+		end
+	end
+	return qdiscs_with_type, type_data
+end
+
+-- Read capabilities and filter out shaper and leaf qdiscs
+
 local all_qdiscs = read_caps(qdisc_caps_path)
 
 local avail_leafs = {}
