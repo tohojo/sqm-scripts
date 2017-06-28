@@ -68,18 +68,14 @@ verify_configs() {
     fi
 
     # Ensure egress DSCP prioritization uses a valid diffserv scheme
-    # with cake or any classful shaper
-    if ( [ "$SHAPER" = "cake" ] || qdisc_has_cap $SHAPER classful ) &&
-    [ "$IGNORE_DSCP_EGRESS" = "0" ] &&
+    if [ "$IGNORE_DSCP_EGRESS" = "0" ] &&
     ! qdisc_has_cap $SHAPER "diffserv:$DIFFSERV_EGRESS"; then
         sqm_error "Prioritization enabled on egress with invalid scheme (DIFFSERV_EGRESS=${DIFFSERV_EGRESS})."
         return 1
     fi
 
     # Ensure ingress DSCP prioritization uses a valid diffserv scheme
-    # with cake or any classful shaper
-    if ( [ "$SHAPER" = "cake" ] || qdisc_has_cap $SHAPER classful ) &&
-    [ "$IGNORE_DSCP_INGRESS" = "0" ] &&
+    if [ "$IGNORE_DSCP_INGRESS" = "0" ] &&
     ! qdisc_has_cap $SHAPER "diffserv:$DIFFSERV_INGRESS"; then
         sqm_error "Prioritization enabled on ingress with invalid scheme (DIFFSERV_INGRESS=${DIFFSERV_INGRESS})."
         return 1
