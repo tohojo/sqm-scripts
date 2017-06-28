@@ -13,6 +13,7 @@
 . /etc/sqm/sqm.conf
 . ${SQM_LIB_DIR}/functions.sh
 . ${SQM_LIB_DIR}/qdisc_funcs.sh
+. ${SQM_LIB_DIR}/legacy_funcs.sh
 . ${SQM_LIB_DIR}/defaults.sh
 
 if [ ! -f "${SQM_STATE_DIR}/${IFACE}.state" ] ; then
