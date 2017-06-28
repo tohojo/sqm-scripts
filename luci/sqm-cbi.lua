@@ -325,7 +325,7 @@ local function dfsrv_setup(q, var)
 	end
 end
 
-ign_dscp_in = s:taboption("tab_qdisc", ListValue, "squash_ingress", translate("Prioritize by DSCP on inbound packets (ingress):"))
+ign_dscp_in = s:taboption("tab_qdisc", ListValue, "ignore_dscp_ingress", translate("Prioritize by DSCP on inbound packets (ingress):"))
 ign_dscp_in:value("1", "DO NOT PRIORITIZE ("..translate("default")..")")
 ign_dscp_in:value("0", "PRIORITIZE")
 ign_dscp_in.default = "1"
@@ -337,7 +337,7 @@ end
 dfsrv_in = s:varianttaboption("tab_qdisc", ListValue, "diffserv_ingress", qdiscs_with_diffserv, translate("Priority scheme on inbound packets (ingress):"))
 
 for _, v in pairs(qdiscs_with_diffserv) do
-	dfsrv_in.variants[v].yield(dfsrv_setup(v, "squash_ingress"))
+	dfsrv_in.variants[v].yield(dfsrv_setup(v, "ignore_dscp_ingress"))
 end
 
 ign_dscp_eg = s:taboption("tab_qdisc", ListValue, "ignore_dscp_egress", translate("Prioritize by DSCP on outbound packets (egress):"))
