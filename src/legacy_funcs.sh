@@ -61,3 +61,63 @@ legacy_script_emulate() {
     sqm_warn "$vars"
     eval "$vars"
 }
+
+
+# Warn if deprecated variables are found in the environment. This is more
+# relevant on Linux since no automatic upgrade is possible. The legacy
+# variables are IGNORE_DSCP,SQUASH_INGRESS and ZERO_DSCP,SQUASH_DSCP.
+
+legacy_vars_warn() {
+    [ -n "$IGNORE_DSCP" -o -n "$SQUASH_INGRESS" ] &&
+    sqm_warn "Variables IGNORE_DSCP and SQUASH_INGRESS are deprecated." &&
+    sqm_warn "Replace their usage with IGNORE_DSCP_INGRESS."
+
+    [ -n "$ZERO_DSCP" -o -n "$SQUASH_DSCP" ] &&
+    sqm_warn "Variables ZERO_DSCP and SQUASH_DSCP are deprecated." &&
+    sqm_warn "Replace their usage with ZERO_DSCP_INGRESS."
+}
+
+
+# When passed to config_foreach() within a UCI-enabled shell script, this
+# function renames the legacy UCI options 'squash_dscp' and 'squash_ingress'
+# to the new 'zero_dscp_ingress' and 'ignore_dscp_ingress'. This renaming is
+# first done for the current UCI-loaded sqm config environment, to allow
+# later invocations of config_foreach() to see the updated names. Then the
+# renaming is done again within the UCI database and committed for future use.
+
+legacy_vars_rename() {
+    local sec="$1"
+
+    local pkg="sqm"
+    local to_convert="squash_dscp:zero_dscp_ingress \
+                      squash_ingress:ignore_dscp_ingress"
+
+    for var in $to_convert; do
+        local old_var=${var%:*}
+        local new_var=${var#*:}
+        local old_val=$(config_get "$sec" $old_var)
+
+        [ -z "$old_val" ] && continue
+        config_set $sec $new_var $old_val &&
+        uci_rename $pkg $sec $old_var $new_var && uci_commit $pkg
+
+        if [ $? -eq 0 ]; then
+            echo "Updated legacy variable: $old_var -> $new_var." >&2
+        else
+            echo "Problem updating legacy variable: $old_var." >&2
+        fi
+    done
+}
+
+
+# Override the system UCI shell wrapper which is broken and does not allow
+# renaming of a section option. Remove this once fixed upstream and in LEDE.
+
+uci_rename() {
+    local PACKAGE="$1"
+    local CONFIG="$2"
+    local OPTION="$3"
+    local VALUE="$4"
+
+    /sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} rename "$PACKAGE.$CONFIG${VALUE:+.$OPTION}=${VALUE:-$OPTION}"
+}
