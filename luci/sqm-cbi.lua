@@ -200,19 +200,9 @@ end
 
 qdiscs_with_diffserv, qdisc_diffserv = parse_tuple_caps(all_qdiscs, "diffserv")
 
--- Extract details of "preset" capabilities, including UCI variable values
--- and related descriptive text
+-- Extract details of "preset" capabilities
 
-local qdisc_presets = {}
-local qdiscs_with_presets = {}
-for k, p in match_caps_pairs(all_qdiscs, "preset") do
-	qdisc_presets[k] = {}
-	table.insert(qdiscs_with_presets, k)
-	for _, s in match_caps_pairs(p, "preset") do
-		local _, v, d = string.match(s, "(%S+):(%S+):(%S+)")
-		table.insert(qdisc_presets[k], { val = v, desc = d:gsub("_", " ") })
-	end
-end
+qdiscs_with_presets, qdisc_presets = parse_tuple_caps(all_qdiscs, "preset")
 
 
 -- QDISC
