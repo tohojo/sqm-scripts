@@ -196,19 +196,9 @@ for k, v in match_caps_pairs(all_qdiscs,"shaper") do
 	avail_shapers[k] = all_qdiscs[k]
 end
 
--- Extract details of "diffserv" capabilities, including UCI variable values
--- and related descriptive text
+-- Extract details of "diffserv" capabilities
 
-local qdisc_diffserv = {}
-local qdiscs_with_diffserv = {}
-for k, p in match_caps_pairs(all_qdiscs, "diffserv") do
-	qdisc_diffserv[k] = {}
-	table.insert(qdiscs_with_diffserv, k)
-	for _, s in match_caps_pairs(p, "diffserv") do
-		local _, v, d = string.match(s, "(%S+):(%S+):(%S+)")
-		table.insert(qdisc_diffserv[k], { val = v, desc = d:gsub("_", " ") })
-	end
-end
+qdiscs_with_diffserv, qdisc_diffserv = parse_tuple_caps(all_qdiscs, "diffserv")
 
 -- Extract details of "preset" capabilities, including UCI variable values
 -- and related descriptive text
