@@ -58,11 +58,10 @@ start_sqm_section() {
     export SHAPER=$(config_get "$section" shaper)
     export SCRIPT=$(config_get "$section" script)
 
-    # The UCI names for these two variables are confusing and should have been
-    # changed ages ago. For now, keep the bad UCI names but use meaningful
-    # variable names in the scripts to not break user configs.
-    export ZERO_DSCP_INGRESS=$(config_get "$section" squash_dscp)
-    export IGNORE_DSCP_INGRESS=$(config_get "$section" squash_ingress)
+    # The old UCI names for these two variables were confusing but are now
+    # updated at runtime, so use the new, more meaningful names.
+    export ZERO_DSCP_INGRESS=$(config_get "$section" zero_dscp_ingress)
+    export IGNORE_DSCP_INGRESS=$(config_get "$section" ignore_dscp_ingress)
 
     # These two variables are new so the UCI names can be kept consistent.
     export ZERO_DSCP_EGRESS=$(config_get "$section" zero_dscp_egress)
