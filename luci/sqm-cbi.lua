@@ -28,7 +28,12 @@ m = Map("sqm", translate("Smart Queue Management"),
                   "can enable traffic shaping, better mixing (Fair Queueing)," ..
                   " active queue length management (AQM) " ..
                   " and prioritisation on one " ..
-                  "network interface."))
+                  "network interface." ..
+                  "<br />LEDE Documentation: " ..
+                  "<a href=\"https://lede-project.org/docs/howto/sqm\" " ..
+                  "target=\"_blank\">" ..
+                  "Smart Queue Management (SQM) - Minimizing Bufferbloat" ..
+                  "</a>"))
 
 s = m:section(TypedSection, "queue", translate("Queues"))
 s:tab("tab_basic", translate("Basic Settings"))
