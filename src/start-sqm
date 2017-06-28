@@ -38,6 +38,9 @@ fi
 sqm_trace; sqm_trace "$(date): Starting." # Add some space and a date stamp to verbose log output and log files to separate runs
 sqm_log "Starting SQM on ${IFACE}, in: ${DOWNLINK} Kbps, out: ${UPLINK} Kbps"
 
+# Warn and indicate replacements if using retired variables
+legacy_vars_warn
+
 if [ -n "${SCRIPT}" ]; then
     if [ -f "${SQM_LIB_DIR}/$SCRIPT" ]; then
         sqm_log "Using custom SQM script: ${SCRIPT}"
