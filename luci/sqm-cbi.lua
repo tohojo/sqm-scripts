@@ -322,8 +322,9 @@ zero_dscp_eg:depends("qdisc_advanced", "1")
 
 deps_prioritize = {}
 for _, v in pairs(qdiscs_with_diffserv) do
-	table.insert(deps_prioritize, {["qdisc_advanced"]="1", [shp.variants["tc"].option]=v})
-	table.insert(deps_prioritize, {["qdisc_advanced"]="1", [shp.variants["cake"].option]=v})
+	for k, _ in pairs(shp.variants) do
+		table.insert(deps_prioritize, {["qdisc_advanced"]="1", [shp.variants[k].option]=v})
+	end
 end
 
 local function dfsrv_setup(q, var)
@@ -338,8 +339,9 @@ local function dfsrv_setup(q, var)
 		o.widget = "radio"
 		o.orientation = "horizontal"
 
-		o:depends({[var]="0", [shp.variants["tc"].option]=q})
-		o:depends({[var]="0", [shp.variants["cake"].option]=q})
+		for k, _ in pairs(shp.variants) do
+			o:depends({[var]="0", [shp.variants[k].option]=q})
+		end
 	end
 end
 
