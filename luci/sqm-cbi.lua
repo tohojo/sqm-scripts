@@ -285,7 +285,7 @@ ad = s:taboption("tab_qdisc", Flag, "qdisc_advanced", translate("Show and Use Ad
 ad.default = false
 ad.rmempty = true
 
-zero_dscp_in = s:taboption("tab_qdisc", ListValue, "squash_dscp", translate("Pass-through DSCP on inbound packets (ingress):"))
+zero_dscp_in = s:taboption("tab_qdisc", ListValue, "zero_dscp_ingress", translate("Pass-through DSCP on inbound packets (ingress):"))
 zero_dscp_in:value("1", "DO NOT PASS ("..translate("default")..")")
 zero_dscp_in:value("0", "PASS")
 zero_dscp_in.default = "1"
