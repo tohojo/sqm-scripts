@@ -31,7 +31,7 @@ start_sqm_section() {
     export IFACE=$(config_get "$section" interface)
 
     [ -z "$RUN_IFACE" -o "$RUN_IFACE" = "$IFACE" ] || return
-    [ "$(config_get "$section" enabled)" -eq 1 ] || return
+    [ "$(config_get "$section" enabled)" -eq 1 ] || return 0
     [ -f "${SQM_STATE_DIR}/${IFACE}.state" ] && return
 
     export UPLINK=$(config_get "$section" upload)
