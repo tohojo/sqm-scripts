@@ -1,0 +1,9 @@
+SQM_CHECK_QDISCS="$SQM_CHECK_QDISCS bfifo"
+
+get_caps_bfifo() {
+    echo "leaf"
+}
+
+tier_leaf_bfifo() {
+    tier_leaf_generic $*
+}

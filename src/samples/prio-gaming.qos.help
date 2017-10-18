@@ -1,0 +1,3 @@
+This example enables TCP/UDP gaming port prioritization for "The Last of Us". The prioritization is in addition to the existing DSCP-based QOS. Egress prioritization is ipt-based and works with any diffserv-capable QDISC. Ingress prioritization is tc-based and works only with classfull qdiscs, but is usually less important than the egress.
+
+Note that the best and simplest way to implement port-based prioritization is by using ipt rules in your firewall configuration to set DSCP marks.

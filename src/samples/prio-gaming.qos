@@ -1,0 +1,53 @@
+# QOS Port Setup for "The Last of Us Playstation 3"
+
+GAME_TCP="5223" 
+GAME_UDP="5223,3478,3479,3658"
+GAME_IFACE="br-lan"
+
+ipt_game_ports() {
+    ipt -t mangle -I PREROUTING -i $GAME_IFACE -p tcp -m multiport \
+        --dports $GAME_TCP -j DSCP --set-dscp-class EF
+    ipt -t mangle -I PREROUTING -i $GAME_IFACE -p udp -m multiport \
+        --dports $GAME_UDP -j DSCP --set-dscp-class EF
+}
+
+
+tc_classify_gaming() {
+    local iface=$1
+
+    for p in $(echo $GAME_TCP|tr ',' ' '); do
+        $TC filter add dev $iface parent 1:0 protocol ip prio $prio u32 \
+            match ip protocol 6 0xff match ip dport $p 0xffff flowid 1:11
+        prio=$(($prio + 1))
+        $TC filter add dev $iface parent 1:0 protocol ipv6 prio $prio u32 \
+            match ip6 protocol 6 0xff match ip dport $p 0xffff flowid 1:11
+        prio=$(($prio + 1))
+    done
+
+    for p in $(echo $GAME_UDP|tr ',' ' '); do
+        $TC filter add dev $iface parent 1:0 protocol ip prio $prio u32 \
+            match ip protocol 17 0xff match ip dport $p 0xffff flowid 1:11
+        prio=$(($prio + 1))
+        $TC filter add dev $iface parent 1:0 protocol ipv6 prio $prio u32 \
+            match ip6 protocol 17 0xff match ip dport $p 0xffff flowid 1:11
+        prio=$(($prio + 1))
+    done
+}
+
+
+qos_setup_common() {
+    ipt_game_ports
+    ipt_vtun_dns_ntp_dscp
+}
+
+
+qos_setup_ingress() {
+    local prio=1  # dynamically scoped priority var for local tc_ func calls
+
+    # setup diffserv if prioritization enabled with a classful shaper qdisc
+    if is_multitier_classful ingress; then
+        tc_classify_gaming $DEV
+        tc_classify_dscp $DEV
+        tc_classify_arp $DEV
+    fi
+}
