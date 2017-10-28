@@ -43,6 +43,6 @@ if [ -n "${SCRIPT}" ]; then
 fi
 
 sqm_stop
-rm -f "${STATE_FILE}"
+rm -f "${STATE_FILE}" && sqm_log "SQM was stopped on ${IFACE} successfully"
 
 exit 0
