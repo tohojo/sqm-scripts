@@ -38,16 +38,16 @@ install-lib:
 	install -m 0644 platform/$(PLATFORM)/sqm.conf $(DESTDIR)/etc/sqm/sqm.conf
 	install -m 0644  src/functions.sh src/defaults.sh src/qdisc_funcs.sh \
 		src/qos_funcs.sh src/legacy_funcs.sh $(DESTDIR)$(PREFIX)/lib/sqm
-	test -z "$(find src -name *.qos -o -name *.help -o -name *.hidden)" || \
-		install -m 0644 src/*.qos src/*.help src/*.hidden \
-		$(DESTDIR)$(PREFIX)/lib/sqm
-	install -m 0744  src/start-sqm src/stop-sqm src/update-available-qdiscs \
+	install -m 0744  src/start-sqm src/stop-sqm src/get-qdisc-caps \
 		$(DESTDIR)$(PREFIX)/lib/sqm
 
 .PHONY: install-luci
 install-luci:
-	install -m 0755 -d $(LUCI_DIR)/controller $(LUCI_DIR)/model/cbi
-	install -m 0644 luci/sqm-controller.lua $(LUCI_DIR)/controller/sqm.lua
-	install -m 0644 luci/sqm-cbi.lua $(LUCI_DIR)/model/cbi/sqm.lua
+	install -m 0755 -d $(LUCI_DIR)/controller $(LUCI_DIR)/model/cbi/sqm
+	install -m 0755 -d $(LUCI_DIR)/tools $(LUCI_DIR)/view/sqm
+	install -m 0644 luci/luasrc/controller/sqm.lua $(LUCI_DIR)/controller
+	install -m 0644 luci/luasrc/model/cbi/sqm/*.lua $(LUCI_DIR)/model/cbi/sqm
+	install -m 0644 luci/luasrc/view/sqm/*.htm $(LUCI_DIR)/view/sqm
+	install -m 0644 luci/luasrc/tools/sqm.lua $(LUCI_DIR)/tools
 	install -m 0755 -d $(DESTDIR)/etc/uci-defaults
-	install -m 0755 luci/uci-defaults-sqm $(DESTDIR)/etc/uci-defaults/luci-sqm
+	install -m 0755 luci/root/etc/uci-defaults/* $(DESTDIR)/etc/uci-defaults
