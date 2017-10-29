@@ -14,78 +14,38 @@ You may obtain a copy of the License at
 $Id$
 ]]--
 
-local wa = require "luci.tools.webadmin"
+local disp = require "luci.dispatcher"
 local fs = require "nixio.fs"
 local net = require "luci.model.network".init()
 local sys = require "luci.sys"
---local ifaces = net:get_interfaces()
 local ifaces = sys.net:devices()
+local ctrl = require "luci.controller.sqm"
+local sqm = require "luci.tools.sqm"
 local path = "/usr/lib/sqm"
-local qdisc_caps_path = "/tmp/run/sqm/available_qdiscs"
 
-m = Map("sqm", translate("Smart Queue Management"),
-	translate("With <abbr title=\"Smart Queue Management\">SQM</abbr> you " ..
-                  "can enable traffic shaping, better mixing (Fair Queueing)," ..
-                  " active queue length management (AQM) " ..
-                  " and prioritisation on one " ..
-                  "network interface." ..
-                  "<br />LEDE Documentation: " ..
-                  "<a href=\"https://lede-project.org/docs/howto/sqm\" " ..
-                  "target=\"_blank\">" ..
-                  "Smart Queue Management (SQM) - Minimizing Bufferbloat" ..
-                  "</a>"))
+-- Argument passed from overview page
+local section = arg[1]
 
-s = m:section(TypedSection, "queue", translate("Queues"))
+m = Map("sqm")
+m.title	= ctrl.app_title_back()
+m.description = ctrl.app_description()
+m.redirect = disp.build_url("admin", "network", "sqm")
+
+s = m:section(NamedSection, section, "queue", translate("Queue Details"))
 s:tab("tab_basic", translate("Basic Settings"))
 s:tab("tab_qdisc", translate("Queue Discipline"))
 s:tab("tab_linklayer", translate("Link Layer Adaptation"))
-s.addremove = true -- set to true to allow adding SQM instances in the GUI
+s.addremove = false
 s.anonymous = true
-
-
--- Implement a local "variant" form of option to handle complex dependencies
--- This allows for varying the displayed option values based on dependencies
-
-function s:varianttaboption(tab, class, opt, vars, desc)
-	assert(type(vars) == "table" and #vars > 0,
-		"Cannot use variant option without table of variants")
-	local s = self
-	local o = s:taboption(tab, class, opt, desc)
-	o:depends("_nosuchoption", "_nosuchvalue")
-	o.optional = true
-	o.variants = {}
-	for _, v in ipairs(vars) do
-		o.variants[v] = s:taboption(tab, class, "_%s_%s" % {v, opt}, desc)
-		o.variants[v].optional = true
-		o.variants[v].cfgvalue = function(s, sc) return o:cfgvalue(sc) end
-		o.variants[v].write = function(s, sc, vl) return o:write(sc, vl) end
---		o.variants[v].remove = function(s, sc) return o:remove(sc) end
-		o.variants[v].yield = function(y) y(o.variants[v]) end
-	end
-	return o
-end
 
 
 -- BASIC
 e = s:taboption("tab_basic", Flag, "enabled", translate("Enable this SQM instance."))
 e.rmempty = false
 
--- sm: following jow's advise, be helpful to the user and enable
---     sqm's init script if even a single sm instance/interface
---     is enabled; this is unexpected in that the init script gets
---     enabled as soon as at least one sqm instance is enabled
---     and that state is saved, so it does not require "Save & Apply"
---     to effect the init scripts.
---     the implementation was inpired/lifted from 
---     https://github.com/openwrt/luci/blob/master/applications/luci-app-minidlna/luasrc/model/cbi/minidlna.lua
-function e.write(self, section, value)
-	if value == "1" then
-		luci.sys.init.enable("sqm")
-		m.message = translate("The SQM GUI has just enabled the sqm initscript on your behalf. Remember to disable the sqm initscript manually under System Startup menu in case this change was not wished for.")
-	end
-	return Flag.write(self, section, value)
-end
--- TODO: inform the user what we just did...
+-- Be helpful and enable sqm's init script if a sqm instance is enabled and
+-- any state is saved, whether by pressing "Save" or "Save & Apply"
+e.write = sqm.write_enable_init(e, "sqm")
 
 
 -- Add to physical interface list a hint of the correpsonding network names,
@@ -130,79 +90,27 @@ verb.default = "5"
 verb.rmempty = true
 
 
--- Read qdisc and shaper capabilities
-
-function read_caps(path)
-	local result = {}
-	if fs.stat(path) then
-		for fname in fs.dir(path) do
-			local caps = {}
-			for line in io.lines(path .. "/" .. fname) do
-				for word in string.gmatch(line,"%S+") do
-					table.insert(caps, word)
-				end
-			end
-			result[fname] = caps
-		end
-	end
-	return result
-end
-
--- Use capability filter to iterate over qdisc list or capability list
-
-function match_caps_pairs(t,m)
-	local k, v = nil, nil
-	return function ()
-		k, v = next(t, k)
-		while k do
-			if type(v) == "table" then
-				v = table.concat(v," ")
-			end
-			if string.find(v, m) then
-				return k, t[k]
-			end
-			k, v = next(t, k)
-		end
-	end
-end
-
--- Extract details of 3-tuple capabilities, including type, variable values
--- and related descriptive text
-
-function parse_tuple_caps(q, m)
-	local type_data, qdiscs_with_type = {}, {}
-	for k, c in match_caps_pairs(q, m) do
-		type_data[k] = {}
-		table.insert(qdiscs_with_type, k)
-		for _, s in match_caps_pairs(c, m) do
-			local _, v, d = string.match(s, "(%S+):(%S+):(%S+)")
-			table.insert(type_data[k], { val = v, desc = d:gsub("_", " ") })
-		end
-	end
-	return qdiscs_with_type, type_data
-end
-
 -- Read capabilities and filter out shaper and leaf qdiscs
 
-local all_qdiscs = read_caps(qdisc_caps_path)
+local all_qdiscs = sqm.read_caps(m, section)
 
 local avail_leafs = {}
-for k, v in match_caps_pairs(all_qdiscs,"leaf") do
+for k, v in sqm.match_caps_pairs(all_qdiscs,"leaf") do
 	avail_leafs[k] = all_qdiscs[k]
 end
 
 local avail_shapers = {}
-for k, v in match_caps_pairs(all_qdiscs,"shaper") do
+for k, v in sqm.match_caps_pairs(all_qdiscs,"shaper") do
 	avail_shapers[k] = all_qdiscs[k]
 end
 
 -- Extract details of "diffserv" capabilities
 
-qdiscs_with_diffserv, qdisc_diffserv = parse_tuple_caps(all_qdiscs, "diffserv")
+qdiscs_with_diffserv, qdisc_diffserv = sqm.parse_tuple_caps(all_qdiscs, "diffserv")
 
 -- Extract details of "preset" capabilities
 
-qdiscs_with_presets, qdisc_presets = parse_tuple_caps(all_qdiscs, "preset")
+qdiscs_with_presets, qdisc_presets = sqm.parse_tuple_caps(all_qdiscs, "preset")
 
 
 -- QDISC
@@ -220,10 +128,11 @@ c.rmempty = false
 
 -- SHAPER
 
-shp = s:varianttaboption("tab_qdisc", ListValue, "shaper", {"tc", "cake"}, translate("Shapers useable on this system."))
+shp = s:varianttaboption({"tc", "cake"}, "tab_qdisc", ListValue, "shaper", translate("Shapers useable on this system."))
 shp.rmempty = false
 
-shp.variants["tc"].yield(function(o)
+for q, o in shp.vpairs() do
+	if q == "tc" then
 		o:value("htb", "htb ("..translate("default")..")")
 
 		for k, _ in pairs(avail_shapers) do
@@ -240,12 +149,11 @@ shp.variants["tc"].yield(function(o)
 				o:depends("qdisc",k)
 			end
 		end
-	end)
 
 -- This implements a pseudo-shaper "cake" only usable with the cake qdisc
 -- but also allow for cake as a leaf qdisc with other shapers
 
-shp.variants["cake"].yield(function(o)
+	elseif q == "cake" then
 		o:value("cake", "cake ("..translate("default")..")")
 
 		for k, _ in pairs(avail_shapers) do
@@ -255,25 +163,24 @@ shp.variants["cake"].yield(function(o)
 		o.default = "cake"
 		o.rmempty = false
 		o:depends("qdisc","cake")
-	end)
+	end
+end
 
 
 -- QDISC PRESET
 
-qdp = s:varianttaboption("tab_qdisc", ListValue, "qdisc_preset", qdiscs_with_presets, translate("Predefined configurations for this qdisc."))
+qdp = s:varianttaboption(qdiscs_with_presets, "tab_qdisc", ListValue, "qdisc_preset", translate("Predefined configurations for this qdisc."))
 qdp.rmempty = true
 
-for _, q in pairs(qdiscs_with_presets) do
-	qdp.variants[q].yield(function(o)
-			o:value("", "<do not use>")
-			for _, p in pairs(qdisc_presets[q]) do
-				o:value(p.val, p.desc)
-			end
+for q, o in qdp.vpairs() do
+	o:value("", "<do not use>")
+	for _, p in pairs(qdisc_presets[q]) do
+		o:value(p.val, p.desc)
+	end
 
-			o.default = ""
-			o.rmempty = false
-			o:depends("qdisc", q)
-		end)
+	o.default = ""
+	o.rmempty = false
+	o:depends("qdisc", q)
 end
 
 
@@ -302,26 +209,24 @@ zero_dscp_eg:depends("qdisc_advanced", "1")
 
 deps_prioritize = {}
 for _, v in pairs(qdiscs_with_diffserv) do
-	for k, _ in pairs(shp.variants) do
-		table.insert(deps_prioritize, {["qdisc_advanced"]="1", [shp.variants[k].option]=v})
+	for _, vo in shp.vpairs() do
+		table.insert(deps_prioritize, {["qdisc_advanced"]="1", [vo.option]=v})
 	end
 end
 
-local function dfsrv_setup(q, var)
-	return function(o)
-		o:value("diffserv3", "3-Tier [diffserv3] ("..translate("default")..")")
-		for _, d in pairs(qdisc_diffserv[q]) do
-			o:value(d.val, d.desc)
-		end
+local function dfsrv_setup(var, q, o)
+	o:value("diffserv3", "3-Tier [diffserv3] ("..translate("default")..")")
+	for _, d in pairs(qdisc_diffserv[q]) do
+		o:value(d.val, d.desc)
+	end
 
-		o.default = "diffserv3"
-		o.rmempty = true
-		o.widget = "radio"
-		o.orientation = "horizontal"
+	o.default = "diffserv3"
+	o.rmempty = true
+	o.widget = "radio"
+	o.orientation = "horizontal"
 
-		for k, _ in pairs(shp.variants) do
-			o:depends({[var]="0", [shp.variants[k].option]=q})
-		end
+	for _, vo in shp.vpairs() do
+		o:depends({[var]="0", [vo.option]=q})
 	end
 end
 
@@ -334,10 +239,10 @@ for _, v in pairs(deps_prioritize) do
 	ign_dscp_in:depends(v)
 end
 
-dfsrv_in = s:varianttaboption("tab_qdisc", ListValue, "diffserv_ingress", qdiscs_with_diffserv, translate("Priority scheme on inbound packets (ingress):"))
+dfsrv_in = s:varianttaboption(qdiscs_with_diffserv, "tab_qdisc", ListValue, "diffserv_ingress", translate("Priority scheme on inbound packets (ingress):"))
 
-for _, v in pairs(qdiscs_with_diffserv) do
-	dfsrv_in.variants[v].yield(dfsrv_setup(v, "ignore_dscp_ingress"))
+for q, o in dfsrv_in.vpairs() do
+	dfsrv_setup("ignore_dscp_ingress", q, o)
 end
 
 ign_dscp_eg = s:taboption("tab_qdisc", ListValue, "ignore_dscp_egress", translate("Prioritize by DSCP on outbound packets (egress):"))
@@ -349,14 +254,14 @@ for _, v in pairs(deps_prioritize) do
 	ign_dscp_eg:depends(v)
 end
 
-dfsrv_eg = s:varianttaboption("tab_qdisc", ListValue, "diffserv_egress", qdiscs_with_diffserv, translate("Priority scheme on outbound packets (egress):"))
+dfsrv_eg = s:varianttaboption(qdiscs_with_diffserv, "tab_qdisc", ListValue, "diffserv_egress", translate("Priority scheme on outbound packets (egress):"))
 
-for _, v in pairs(qdiscs_with_diffserv) do
-	dfsrv_eg.variants[v].yield(dfsrv_setup(v, "ignore_dscp_egress"))
+for q, o in dfsrv_eg.vpairs() do
+	dfsrv_setup("ignore_dscp_egress", q, o)
 end
 
 deps_ecn = {}
-for k, _ in match_caps_pairs(avail_leafs, "ecn") do
+for k, _ in sqm.match_caps_pairs(avail_leafs, "ecn") do
 	table.insert(deps_ecn, {["qdisc_advanced"]="1", ["qdisc"]=k})
 end
 
