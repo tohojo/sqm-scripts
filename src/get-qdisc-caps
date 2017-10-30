@@ -1,0 +1,64 @@
+#!/bin/sh
+
+. /etc/sqm/sqm.conf
+. /lib/functions.sh
+. /usr/share/libubox/jshn.sh
+. ${SQM_LIB_DIR}/defaults.sh
+
+SQM_VERBOSITY_MIN=$VERBOSITY_INFO # Silence errors while checking
+
+
+# These source files affect QDISC definitions and their capabilities
+
+QDISC_INCLUDES="/etc/sqm/sqm.conf
+	${SQM_LIB_DIR}/functions.sh
+	${SQM_LIB_DIR}/qdisc_funcs.sh"
+
+
+# Generate a simple MD5 hash of all the QDISC-related source files
+
+hash_includes() {
+    { cat $QDISC_INCLUDES;
+    [ -f "${SQM_LIB_DIR}/$SCRIPT" ] && cat "${SQM_LIB_DIR}/$SCRIPT"; } |
+    md5sum | cut -f1 -d' '
+}
+
+
+# Create a JSON representation of the QDISCs and capabilities resulting
+# from use of the specified $SCRIPT, for import by Luci Lua code
+
+build_json_qdiscs() {
+    for f in $QDISC_INCLUDES; do
+        . $f
+    done
+    [ -f "${SQM_LIB_DIR}/$SCRIPT" ] && . "${SQM_LIB_DIR}/$SCRIPT"
+
+    json_init
+    for qdisc in $SQM_CHECK_QDISCS; do
+        json_add_array "$qdisc"
+        verify_qdisc $qdisc && {
+            local idx="1"
+            for cap in $(get_qdisc_caps $qdisc); do
+                json_add_string "$((idx++))" "$cap"
+            done
+        }
+        json_close_array
+    done
+    json_dump
+}
+
+SCRIPT="$1"
+[ -z "$SCRIPT" -o ! -f "${SQM_LIB_DIR}/$SCRIPT" ] && SCRIPT="default"
+
+[ -d "$SQM_QDISC_STATE_DIR" ] || mkdir -p "$SQM_QDISC_STATE_DIR"
+
+# Recalculate and cache qdiscs caps on source changes, and otherwise
+# return the cached values
+
+file_hash=$(hash_includes)
+json_file="$SQM_QDISC_STATE_DIR/qdiscs.$SCRIPT.$file_hash"
+
+[ -f "$json_file" ] && cat "$json_file" && return 0
+
+rm -f "$SQM_QDISC_STATE_DIR/qdiscs.$SCRIPT."????????????????????????????????
+build_json_qdiscs | tee $json_file
