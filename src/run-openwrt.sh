@@ -14,8 +14,6 @@
 ACTION="${1:-start}"
 RUN_IFACE="$2"
 
-[ -d "${SQM_QDISC_STATE_DIR}" ] || ${SQM_LIB_DIR}/update-available-qdiscs
-
 stop_statefile() {
     local f="$1"
     # Source the state file prior to stopping; we need the variables saved in
