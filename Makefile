@@ -34,10 +34,13 @@ install-linux: install-lib
 .PHONY: install-lib
 
 install-lib:
-	install -m 0755 -d $(DESTDIR)/etc/sqm $(DESTDIR)$(PREFIX)/lib/sqm
+	install -m 0755 -d $(DESTDIR)/etc/sqm $(DESTDIR)$(PREFIX)/lib/sqm \
+	    $(DESTDIR)$(PREFIX)/lib/sqm/samples
 	install -m 0644 platform/$(PLATFORM)/sqm.conf $(DESTDIR)/etc/sqm/sqm.conf
 	install -m 0644  src/functions.sh src/defaults.sh src/qdisc_funcs.sh \
 		src/qos_funcs.sh src/legacy_funcs.sh $(DESTDIR)$(PREFIX)/lib/sqm
+	install -m 0644  src/samples/*.qos src/samples/*.qos.help \
+		$(DESTDIR)$(PREFIX)/lib/sqm/samples
 	install -m 0744  src/start-sqm src/stop-sqm src/get-qdisc-caps \
 		$(DESTDIR)$(PREFIX)/lib/sqm
 
