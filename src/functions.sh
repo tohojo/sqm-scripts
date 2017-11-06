@@ -77,21 +77,43 @@ fn_exists() {
     return ${RET}
 }
 
+    
+# Transaction logging for ipt rules to allow for gracefull final teardown
+ipt_log_restart() {
+    [ -f "$IPT_TRANS_LOG" ] && rm -f "$IPT_TRANS_LOG"
+}
+
+
+ipt_log() {
+    echo "$@" >> "$IPT_TRANS_LOG"
+}
+
+
+# Read the transaction log in reverse and execute using ipt to undo changes.
+# Since we logged only ipt '-D' commands, ipt won't add them again to the
+# transaction log, but will include them in the syslog/debug log.
+ipt_log_rewind() {
+    [ -f "$IPT_TRANS_LOG" ] || return 0
+    sed -n '1{h;T;};G;h;$p' "$IPT_TRANS_LOG" |
+    while IFS= read d; do
+        ipt $d
+    done
+}
+
 
 # to avoid unexpected side-effects first delete rules before adding them (again)
 ipt() {
-    d=$(echo "$*" | sed s/-A/-D/g)
-    [ "$d" != "$*" ] && {
-        SILENT=1 ${IPTABLES} $d
-        SILENT=1 ${IP6TABLES} $d
-    }
-
-    d=$(echo "$*" | sed s/-I/-D/g)
-    [ "$d" != "$*" ] && {
-        SILENT=1 ${IPTABLES} $d
-        SILENT=1 ${IP6TABLES} $d
-    }
-
+    # Try to wipe pre-existing rules and chains, and prepare the transation
+    # log to do the same at shutdown.
+    for rep in "s/-A/-D/g" "s/-I/-D/g" "s/-N/-X/g"; do
+        local d=$(echo $* | sed $rep)
+        [ "$d" != "$*" ] && {
+    	    SILENT=1 ${IPTABLES} $d
+    	    SILENT=1 ${IP6TABLES} $d
+            ipt_log $d
+        }
+    done
+    
     SILENT=1 ${IPTABLES} "$@"
     SILENT=1 ${IP6TABLES} "$@"
 }
@@ -365,6 +387,9 @@ get_cake_lla_string() {
 sqm_start_default() {
     #sqm_error "sqm_start_default"
     [ -n "$IFACE" ] || return 1
+
+    # reset the iptables trace log
+    ipt_log_restart
     
     if fn_exists sqm_prepare_script ; then
 	sqm_debug "sqm_start_default: starting sqm_prepare_script"
@@ -413,18 +438,21 @@ sqm_stop() {
     [ -n "$CUR_IFB" ] && $TC qdisc del dev $CUR_IFB root #2>> ${OUTPUT_TARGET}
     [ -n "$CUR_IFB" ] && sqm_debug "${0}: ${CUR_IFB} shaper deleted"
 
-    [ -n "$CUR_IFB" ] && ipt -t mangle -D POSTROUTING -o $CUR_IFB -m mark --mark 0x00 -g QOS_MARK_${IFACE}
-    ipt -t mangle -D POSTROUTING -o $IFACE -m mark --mark 0x00/${IPT_MASK} -g QOS_MARK_${IFACE}
-    ipt -t mangle -D PREROUTING -i vtun+ -p tcp -j MARK --set-mark 0x2/${IPT_MASK}
-    # not sure whether we need to make this conditional or whether they are
-    # silent if the deletion does not work out
-    ipt -t mangle -D PREROUTING -i $IFACE -m dscp ! --dscp 0 -j DSCP --set-dscp-class be
-    ipt -t mangle -D PREROUTING -i $IFACE -m mark --mark 0x00/${IPT_MASK} -g QOS_MARK_${IFACE}
 
-    ipt -t mangle -D OUTPUT -p udp -m multiport --ports 123,53 -j DSCP --set-dscp-class AF42
-    ipt -t mangle -F QOS_MARK_${IFACE}
-    ipt -t mangle -X QOS_MARK_${IFACE}
+#    [ -n "$CUR_IFB" ] && ipt -t mangle -D POSTROUTING -o $CUR_IFB -m mark --mark 0x00 -g QOS_MARK_${IFACE}
+#    ipt -t mangle -D POSTROUTING -o $IFACE -m mark --mark 0x00/${IPT_MASK} -g QOS_MARK_${IFACE}
+#    ipt -t mangle -D PREROUTING -i vtun+ -p tcp -j MARK --set-mark 0x2/${IPT_MASK}
+#    # not sure whether we need to make this conditional or whether they are
+#    # silent if the deletion does not work out
+#    ipt -t mangle -D PREROUTING -i $IFACE -m dscp ! --dscp 0 -j DSCP --set-dscp-class be
+#    ipt -t mangle -D PREROUTING -i $IFACE -m mark --mark 0x00/${IPT_MASK} -g QOS_MARK_${IFACE}
+#
+#    ipt -t mangle -D OUTPUT -p udp -m multiport --ports 123,53 -j DSCP --set-dscp-class AF42
+#    ipt -t mangle -F QOS_MARK_${IFACE}
+#    ipt -t mangle -X QOS_MARK_${IFACE}
 
+    # undo accumulated ipt commands during shutdown
+    ipt_log_rewind
 
     [ -n "$CUR_IFB" ] && $IP link set dev ${CUR_IFB} down
     [ -n "$CUR_IFB" ] && $IP link delete ${CUR_IFB} type ifb
