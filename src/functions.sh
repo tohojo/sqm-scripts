@@ -48,23 +48,41 @@ sqm_log() { sqm_logger $VERBOSITY_INFO "$@"; }
 sqm_debug() { sqm_logger $VERBOSITY_DEBUG "$@"; }
 sqm_trace() { sqm_logger $VERBOSITY_TRACE "$@"; }
 
+# Transaction logging for ipt rules to allow for gracefull final teardown
+ipt_log_restart() {
+    [ -f "$IPT_TRANS_LOG" ] && rm -f "$IPT_TRANS_LOG"
+}
+
+ipt_log() {
+    echo "$@" >> "$IPT_TRANS_LOG"
+}
+
+# Read the transaction log in reverse and execute using ipt to undo changes.
+# Since we logged only ipt '-D' commands, ipt won't add them again to the
+# transaction log, but will include them in the syslog/debug log.
+ipt_log_rewind() {
+    [ -f "$IPT_TRANS_LOG" ] || return 0
+    sed -n '1{h;T;};G;h;$p' "$IPT_TRANS_LOG" |
+    while IFS= read d; do
+        ipt $d
+    done
+}
+
 # ipt needs a toggle to show the outputs for debugging (as do all users of >
 # /dev/null 2>&1 and friends)
 ipt() {
-    d=$(echo $* | sed s/-A/-D/g)
-    [ "$d" != "$*" ] && {
-        sqm_trace "iptables ${d}"
-        iptables $d >> ${OUTPUT_TARGET} 2>&1
-        sqm_trace "ip6tables ${d}"
-        ip6tables $d >> ${OUTPUT_TARGET} 2>&1
-    }
-    d=$(echo $* | sed s/-I/-D/g)
-    [ "$d" != "$*" ] && {
-        sqm_trace "iptables ${d}"
-        iptables $d >> ${OUTPUT_TARGET} 2>&1
-        sqm_trace "ip6tables ${d}"
-        ip6tables $d >> ${OUTPUT_TARGET} 2>&1
-    }
+    # Try to wipe pre-existing rules and chains, and prepare the transation
+    # log to do the same at shutdown.
+    for rep in "s/-A/-D/g" "s/-I/-D/g" "s/-N/-X/g"; do
+        local d=$(echo $* | sed $rep)
+        [ "$d" != "$*" ] && {
+            sqm_trace "iptables ${d}"
+            iptables $d >> ${OUTPUT_TARGET} 2>&1
+            sqm_trace "ip6tables ${d}"
+            ip6tables $d >> ${OUTPUT_TARGET} 2>&1
+            ipt_log $d
+        }
+    done
     sqm_trace "iptables $*"
     iptables $* >> ${OUTPUT_TARGET} 2>&1
     sqm_trace "ip6tables $*"
@@ -312,6 +330,7 @@ sqm_start() {
 
     [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
 
+    ipt_log_restart
     qos_setup_common
 
     if [ "$UPLINK" -ne 0 ]; then
@@ -344,18 +363,8 @@ sqm_stop() {
     [ -n "$CUR_IFB" ] && $TC qdisc del dev $CUR_IFB root #2>> ${OUTPUT_TARGET}
     [ -n "$CUR_IFB" ] && sqm_debug "${0}: ${CUR_IFB} shaper deleted"
 
-    ipt -t mangle -D POSTROUTING -o $IFACE -m dscp ! --dscp 0 -j DSCP --set-dscp-class be
-    ipt -t mangle -D POSTROUTING -o $IFACE -m mark --mark 0x00/${IPT_MASK} -j QOS_MARK_${IFACE}
-    ipt -t mangle -D PREROUTING -i vtun+ -p tcp -j DSCP --set-dscp-class BE
-    # not sure whether we need to make this conditional or whether they are
-    # silent if the deletion does not work out
-    ipt -t mangle -D PREROUTING -i $IFACE -m dscp ! --dscp 0 -j DSCP --set-dscp-class be
-    ipt -t mangle -D PREROUTING -i $IFACE -m mark --mark 0x00/${IPT_MASK} -j QOS_MARK_${IFACE}
-
-    ipt -t mangle -D OUTPUT -p udp -m multiport --ports 123,53 -j DSCP --set-dscp-class EF
-    ipt -t mangle -F QOS_MARK_${IFACE}
-    ipt -t mangle -X QOS_MARK_${IFACE}
-
+    # undo accumulated ipt commands during shutdown
+    ipt_log_rewind
 
     [ -n "$CUR_IFB" ] && $IP link set dev ${CUR_IFB} down
     [ -n "$CUR_IFB" ] && $IP link delete ${CUR_IFB} type ifb
