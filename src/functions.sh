@@ -251,6 +251,7 @@ get_stab_string() {
 get_cake_lla_string() {
     STABSTRING=""
     local TMP_LLAM=${LLAM}
+    local CAKE_MPU_SUPPORTED=$( verify_qdisc_parameter_against_tc_help ${QDISC} mpu )
     if [ "${LLAM}" = "default" -a "$QDISC" = "cake" ]; then
 	sqm_debug "LLA: default link layer adjustment method for cake is cake"
 	TMP_LLAM="cake"
@@ -262,6 +263,11 @@ get_cake_lla_string() {
         fi
 
         STABSTRING="${STABSTRING} overhead ${OVERHEAD}"
+        
+        if [ "${CAKE_MPU_SUPPORTED}" == "TRUE" ] ; then
+    	    STABSTRING="${STABSTRING} mpu ${STAB_MPU}"
+        fi
+        
         sqm_debug "cake link layer adjustments: ${STABSTRING}"
     fi
     echo ${STABSTRING}
@@ -677,5 +683,43 @@ eth_setup() {
        do
           echo $(( 4 * $( get_mtu ${IFACE} ) )) > $i/limit_max
        done
+    fi
+}
+
+
+# try to check whether a given qdisc parameter is supported by the installed tc.
+verify_qdisc_parameter_against_tc_help() {
+    local qdisc_2_check=$1
+    local parameter_2_check=$2
+    local tmp_tc_parameter_found
+    tmp_tc_parameter_found=$( tc qdisc add root ${qdisc_2_check} help 2>&1 | grep -o -e ${parameter_2_check} )
+    if [ -z "${tmp_tc_parameter_found}" ]; then
+	sqm_error "${qdisc_2_check}: parameter ${parameter_2_check} not supported by tc."
+	echo "FALSE"
+	return 1
+    else
+	sqm_debug "${qdisc_2_check}: parameter ${parameter_2_check} supported by tc."
+	echo "TRUE"
+	return 0
+    fi
+}
+
+
+
+# try to check whether a given qdisc parameter is supported by the installed tc.
+verify_qdisc_parameter_against_tc_help() {
+    local qdisc_2_check=$1
+    local parameter_2_check=$2
+    local tmp_tc_parameter_found
+    tmp_tc_parameter_found=$( tc qdisc add root ${qdisc_2_check} help 2>&1 | grep -o -e "${parameter_2_check}" )
+    #echo $tmp_tc_parameter_found
+    if [ -z "${tmp_tc_parameter_found}" ]; then
+	#sqm_error "${qdisc_2_check}: parameter ${parameter_2_check} not supported by tc."
+	echo "FALSE"
+	return 1
+    else
+	#sqm_debug "${1} parameter ${2} supported by tc."
+	echo "TRUE"
+	>return 0
     fi
 }
