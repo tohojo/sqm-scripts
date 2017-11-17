@@ -701,6 +701,6 @@ verify_qdisc_parameter_against_tc_help() {
     else
 	#sqm_debug "${1} parameter ${2} supported by tc."
 	echo "TRUE"
-	>return 0
+	return 0
     fi
 }
