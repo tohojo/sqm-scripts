@@ -71,8 +71,10 @@ e.write = sqm.write_enable_init(e, "sqm")
 -- INTERFACE
 
 n = s:option(DummyValue, "_interface",
-	translate("Network" .. "<br />" .. "Interface") .. "<br />" ..
-	translate("(device)") .. "<br />" .. translate("(networks)"))
+	translate("Network") .. "<br/>" .. translate("Interface") .. "<br/>" ..
+	"<small>" ..
+	translate("[device]") .. "<br/>" .. translate("[networks]") ..
+	"</small>")
 n.template = "sqm/overview_doubleline"
 
 function n.set_one(self, section)
@@ -94,8 +96,10 @@ end
 -- BANDWIDTH
 
 bw = s:option(DummyValue, "_bandwidth",
-	translate("Bandwidth in kbit/s") .. "<br />" ..
-	translate("(ingress)") .. "<br />" .. translate("(egress)"))
+	translate("Bandwidth") .. "<br/>" ..translate("in kbit/s") .. "<br/>" ..
+	"<small>" ..
+	translate("[ingress]") .. "<br/>" .. translate("[egress]") ..
+	"</small>")
 bw.template = "sqm/overview_doubleline"
 
 function bw.set_one(self, section)
@@ -110,8 +114,10 @@ end
 -- QDISC, SHAPER, QDISC PRESET
 
 qd = s:option(DummyValue, "_qdisc_shaper",
-	translate("Queue Disciplines") .. "<br />" .. translate("(leaf)") ..
-	translate("(shaper)"))
+	translate("Queue") .. "<br/>" .. translate("Disciplines") .. "<br/>" ..
+	"<small>" ..
+	translate("[leaf]") .. "<br/>" .. translate("[shaper]") ..
+	"</small>")
 qd.template = "sqm/overview_doubleline"
 
 function qd.set_one(self, section)
@@ -128,8 +134,11 @@ end
 
 -- DSCP HANDLING
 
-zd = s:option(DummyValue, "_zero_dscp", translate("DSCP Passthrough") ..
-	"<br />" .. translate("(ingress)") .. translate("(egress)"))
+zd = s:option(DummyValue, "_zero_dscp",
+	translate("DSCP") .. "<br/>" .. translate("Passthrough") .. "<br/>" ..
+	"<small>" ..
+	translate("[ingress]") .. "<br/>" .. translate("[egress]") ..
+	"</small>")
 zd.template = "sqm/overview_doubleline"
 
 function zd.set_one(self, section)
@@ -143,8 +152,11 @@ function zd.set_two(self, section)
 end
 
 
-pd = s:option(DummyValue, "_prio_dscp", translate("DSCP Prioritization") ..
-	"<br />" .. translate("(ingress)") .. translate("(egress)"))
+pd = s:option(DummyValue, "_prio_dscp",
+	translate("DSCP") .. "<br/>" .. translate("Prioritization") .. "<br/>" ..
+	"<small>" ..
+	translate("[ingress]") .. "<br/>" .. translate("[egress]") ..
+	"</small>")
 pd.template = "sqm/overview_doubleline"
 
 function pd.set_one(self, section)
@@ -170,23 +182,33 @@ end
 
 -- LINKLAYER
 
-ll = s:option(DummyValue, "_linklayer", translate("Link Layer Adaptation") ..
-	"<br />" .. translate("(layer type)"))
+ll = s:option(DummyValue, "_linklayer",
+	translate("Link Layer") .. "<br/>" .. translate("Adaptation") .. "<br/>" ..
+	"<small>" ..
+	translate("[layer type]") .. "<br/>" .. translate("[overhead]") ..
+	"</small>")
+ll.template = "sqm/overview_doubleline"
 
-ll.rawhtml = true
-ll.value = function(self, section)
+function ll.set_one(self, section)
 	local ll = self.map:get(section, "linklayer") or "none"
-	local ov = self.map:get(section, "overhead") or 0
 	local map = {["none"]="None",["ethernet"]="Ethernet w/Overhead",
 		["atm"]="ATM"}
-	return text_cond_tooltip(map[ll] or "None", ll ~= "none",
-		"Overhead: " .. ov)
+
+	return map[ll] or "None"
+end
+
+function ll.set_two(self, section)
+	local ov = self.map:get(section, "overhead") or 0
+	local ll = self.map:get(section, "linklayer") or "none"
+
+	return ll ~= "none" and ov or "--"
 end
 
 
 -- CUSTOM SCRIPT
 
-sc = s:option(DummyValue, "script", translate("Custom Script"))
+sc = s:option(DummyValue, "script",
+	translate("Custom") .. "<br/>" .. translate("Script"))
 sc.default = ""
 sc.rmempty = true
 
