@@ -199,26 +199,51 @@ get_ifb_for_if() {
 }
 
 
-# Verify that a qdisc works, and optionally that it is part of a set of
-# supported qdiscs. If passed a $2, this function will first check if $1 is in
-# that (space-separated) list and return an error if it's not.
+# Verify that a qdisc is available, using a series of checks that are
+# progressively "heavier" and less desirable. These begin with different
+# passive module introspection methods and end with a full instantiation of
+# the qdisc on a temporary IFB network device.
 #
-# note the ingress qdisc is different in that it requires tc qdisc replace dev
-# tmp_ifb ingress instead of "root ingress"
+# This last approach is to be avoided as much as possible, so we cache results
+# in addition to trying lighter-weight approaches first. It should only be
+# necessary for builtin qdisc modules on minimal (or broken) Linux distros.
 verify_qdisc() {
     local qdisc=$1
-    local supported="$2"
+
+    [ -n "$qdisc" ] || return 1
+
+    # if dynamic module, on standard or minimal Linux distro
+    if [ -n "$MODINFO" ] && $MODINFO sch_$qdisc >/dev/null 2>&1; then
+        sqm_debug "QDISC $qdisc is useable."
+        return 0
+    fi
+
+    # if static module, on standard Linux w/modules.builtin
+    if [ "$(basename $INSMOD)" = "modprobe" ] && $INSMOD -q sch_$qdisc; then
+        sqm_debug "QDISC $qdisc is useable."
+        return 0
+    fi
+
+    # if static module with version/paramters, on minimal Linux distro by now
+    if [ -d /sys/module/sch_$qdisc ]; then
+        sqm_debug "QDISC $qdisc is useable."
+        return 0
+    fi
+
+    # if static module, on minimal/broken Linux, using method of last resort
+    # heavy weight, so cache result and check cache to avoid repeats
+    local cache_file="$SQM_QDISC_STATE_DIR/qdiscs.builtin"
+
+    if grep -x -s -q $qdisc $cache_file; then
+        sqm_debug "QDISC $qdisc is useable."
+        return 0
+    fi
+
+    # not in cache, so try heavy-weight instantiation of qdisc on ifb
     local ifb=TMP_IFB_4_SQM
     local root_string="root" # this works for most qdiscs
     local args=""
 
-    if [ -n "$supported" ]; then
-        local found=0
-        for q in $supported; do
-            [ "$qdisc" = "$q" ] && found=1
-        done
-        [ "$found" -eq "1" ] || return 1
-    fi
     create_ifb $ifb || return 1
     case $qdisc in
         #ingress is special
@@ -231,6 +256,10 @@ verify_qdisc() {
     res=$?
     if [ "$res" = "0" ] ; then
         sqm_debug "QDISC $qdisc is useable."
+
+        # cache result for builtin qdisc
+        [ -d "$SQM_QDISC_STATE_DIR" ] || mkdir -p "$SQM_QDISC_STATE_DIR"
+        echo $qdisc >> $cache_file
     else
         sqm_error "QDISC $qdisc is NOT useable."
     fi
