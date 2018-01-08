@@ -28,7 +28,10 @@
 # Common-path diffserv/classification setup
 
 qos_setup_common() {
-    ipt_vtun_dns_ntp_dscp
+# Disable the following ipt_ call as largely unnecessary, but preserve the
+# function for later use/customization. Return to avoid an empty function.
+#    ipt_vtun_dns_ntp_dscp
+    return
 }
 
 
@@ -44,7 +47,9 @@ qos_setup_egress() {
         ipt_enable_map_dscp_fwmark $IFACE
         tc_classify_fwmark $IFACE
         tc_classify_arp $IFACE
-        tc_classify_icmp $IFACE
+# Disable the following tc_ call as unnecessary in most cases, but preserve
+# the function for future use or customization.
+#        tc_classify_icmp $IFACE
     fi
 }
 
