@@ -249,7 +249,7 @@ verify_qdisc() {
         #ingress is special
         ingress) root_string="" ;;
         #cannot instantiate tbf without args
-        tbf) args="limit 1 burst 1 rate 1kbps" ;;
+        tbf) args="limit 1 burst 1514 rate 1kbps" ;;
     esac
 
     $TC qdisc replace dev $ifb $root_string $qdisc $args
