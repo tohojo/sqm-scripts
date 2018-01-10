@@ -117,7 +117,7 @@ write_state_file() {
     shift
     for var in "$@"; do
         val=$(eval echo '$'$var)
-        echo "$var=\"$val\""
+        echo "export $var=\"$val\""
     done > $filename
 }
 
