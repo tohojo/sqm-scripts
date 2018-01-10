@@ -18,10 +18,7 @@ stop_statefile() {
     local f="$1"
     # Source the state file prior to stopping; we need the variables saved in
     # there.
-    [ -f "$f" ] && ( . "$f";
-                     IFACE=$IFACE SCRIPT=$SCRIPT SQM_DEBUG=$SQM_DEBUG \
-                          SQM_DEBUG_LOG=$SQM_DEBUG_LOG \
-                          OUTPUT_TARGET=$OUTPUT_TARGET ${SQM_LIB_DIR}/stop-sqm )
+    [ -f "$f" ] && ( . "$f"; ${SQM_LIB_DIR}/stop-sqm )
 }
 
 start_sqm_section() {
