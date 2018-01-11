@@ -30,14 +30,14 @@ CUR_IFB=$( get_ifb_associated_with_if ${IFACE} )
 [ -z "$CUR_IFB" ] && CUR_IFB=$( ifb_name ${IFACE} )
 
 if [ -n "${SCRIPT}" ]; then
-    if [ -f "${SQM_LIB_DIR}/$SCRIPT" ]; then
+    if [ -f "${SQM_LIB_DIR}/$SCRIPT" -a "${SCRIPT%.sqm}" != "$SCRIPT" ]; then
         sqm_log "Using custom SQM script: ${SCRIPT}"
         . "${SQM_LIB_DIR}/$SCRIPT"
     elif is_legacy_script "${SCRIPT}"; then
         sqm_warn "Legacy script ${SCRIPT} is deprecated and should not be used."
         sqm_warn "Using built-in sqm_stop() to shut down SQM"
     else
-        sqm_error "Custom SQM script ${SCRIPT} not found!"
+        sqm_error "Custom SQM script ${SCRIPT} not found or unsupported!"
         exit 1
     fi
 fi
