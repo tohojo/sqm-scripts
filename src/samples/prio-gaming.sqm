@@ -1,6 +1,6 @@
 # QOS Port Setup for "The Last of Us Playstation 3"
 
-GAME_TCP="5223" 
+GAME_TCP="5223"
 GAME_UDP="5223,3478,3479,3658"
 GAME_IFACE="br-lan"
 
@@ -37,7 +37,6 @@ tc_classify_gaming() {
 
 qos_setup_common() {
     ipt_game_ports
-    ipt_vtun_dns_ntp_dscp
 }
 
 
