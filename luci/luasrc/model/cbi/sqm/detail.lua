@@ -292,7 +292,7 @@ local qos_desc = ""
 sc = s:taboption("tab_qdisc", ListValue, "script", translate("Custom setup script"))
 sc:value("","<none> ("..translate("default")..")")
 for file in fs.dir(path) do
-	if string.find(file, ".qos$") and not fs.stat(path .. "/" .. file .. ".hidden") then
+	if string.find(file, "%.sqm$") and not fs.stat(path .. "/" .. file .. ".hidden") then
 		sc:value(file)
 		qos_desc = qos_desc .. "<p><b>" .. file .. ":</b><br />"
 		fh = io.open(path .. "/" .. file .. ".help", "r")
