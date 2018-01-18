@@ -18,6 +18,7 @@ local cbi = require "luci.cbi"
 local i18n = require "luci.i18n"
 local fs = require "nixio.fs"
 local sys = require "luci.sys"
+local net = require "luci.model.network".init()
 local util = require "luci.util"
 local json = require "luci.jsonc"
 local qdisc_caps_helper = "/usr/lib/sqm/get-qdisc-caps"
@@ -46,6 +47,19 @@ function write_enable_init(cbi_obj, init)
 			end
 			return old_write(self, section, value)
 		end
+end
+
+
+-- Return the network names associated with a given physical interface.
+-- e.g. get_nets_from_int("eth0.2") -> "wan,wan6"
+
+function get_nets_from_int(int)
+	local nets = net:get_interface(int)
+	nets = nets and nets:get_networks() or {}
+	for k, v in pairs(nets) do
+		nets[k] = nets[k].sid
+	end
+	return table.concat(nets, ",")
 end
 
 
@@ -141,4 +155,33 @@ function parse_tuple_caps(q, m)
 		end
 	end
 	return qdiscs_with_type, type_data
+end
+
+
+-- Generate raw HTML text with conditional tooltip text.
+
+function text_cond_tooltip(text,cond,tip)
+	return cond and "<abbr title=\"%s\">%s</abbr>" % {tip, text} or text
+end
+
+
+-- Helper function to lookup the qdisc capability description associated
+-- with a given UCI option.
+-- e.g. get_tuple_desc(self, sec, "cake", "diffserv_ingress", "diffserv")
+--        -> "3-Tier [diffserv3]"
+
+function get_tuple_desc(self, section, qdisc, tuple_opt, tuple_type)
+	local tup = self.map:get(section, tuple_opt) or ""
+	local desc = ""
+
+	if #tup > 0 then
+		local all_qdiscs = read_caps(self.map, section)
+		local _, tuple_data = parse_tuple_caps(all_qdiscs, tuple_type)
+		for _, d in ipairs(tuple_data[qdisc] or {}) do
+			if d.val == tup then
+				desc = d.desc
+			end
+		end
+	end
+	return desc
 end
