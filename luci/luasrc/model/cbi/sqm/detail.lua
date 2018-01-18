@@ -16,7 +16,6 @@ $Id$
 
 local disp = require "luci.dispatcher"
 local fs = require "nixio.fs"
-local net = require "luci.model.network".init()
 local sys = require "luci.sys"
 local ifaces = sys.net:devices()
 local ctrl = require "luci.controller.sqm"
@@ -55,12 +54,7 @@ n = s:taboption("tab_basic", ListValue, "interface", translate("Interface name")
 -- sm lifted from luci-app-wol, the original implementation failed to show pppoe-ge00 type interface names
 for _, iface in ipairs(ifaces) do
 	if not (iface == "lo" or iface:match("^ifb.*")) then
-		local nets = net:get_interface(iface)
-		nets = nets and nets:get_networks() or {}
-		for k, v in pairs(nets) do
-			nets[k] = nets[k].sid
-		end
-		nets = table.concat(nets, ",")
+		local nets = sqm.get_nets_from_int(iface)
 		n:value(iface, ((#nets > 0) and "%s (%s)" % {iface, nets} or iface))
 	end
 end
