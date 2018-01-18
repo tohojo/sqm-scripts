@@ -1,8 +1,6 @@
 --[[
 LuCI - Lua Configuration Interface
 
-Copyright 2014 Steven Barth <steven@midlink.org>
-Copyright 2014 Dave Taht <dave.taht@bufferbloat.net>
 Copyright 2017 Tony Ambardar
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,30 +14,9 @@ $Id$
 
 local http = require "luci.http"
 local disp = require "luci.dispatcher"
-local net = require "luci.model.network".init()
 local sys = require "luci.sys"
 local ctrl = require "luci.controller.sqm"
 local sqm = require "luci.tools.sqm"
-
-local function text_cond_tooltip(text,cond,tip)
-	return cond and "<abbr title=\"%s\">%s</abbr>" % {tip, text} or text
-end
-
-local function get_tuple_desc(self, section, qdisc, tuple_opt, tuple_type)
-	local tup = self.map:get(section, tuple_opt) or ""
-	local desc = ""
-
-	if #tup > 0 then
-		local all_qdiscs = sqm.read_caps(self.map, section)
-		local _, tuple_data = sqm.parse_tuple_caps(all_qdiscs, tuple_type)
-		for _, d in ipairs(tuple_data[qdisc] or {}) do
-			if d.val == tup then
-				desc = d.desc
-			end
-		end
-	end
-	return desc
-end
 
 m = Map("sqm")
 m.title	= ctrl.app_title_main()
@@ -52,6 +29,7 @@ s.anonymous = true
 
 -- Enable editing and creation of SQM instances
 s.extedit = disp.build_url("admin", "network", "sqm", "detail", "%s")
+
 function s.create(self, name)
 	local section = AbstractSection.create(self, name)
 	http.redirect(self.extedit:format(section))
@@ -83,13 +61,8 @@ end
 
 function n.set_two(self, section)
 	local int = self.map:get(section, "interface") or ""
-	local nets = net:get_interface(int)
-	nets = nets and nets:get_networks() or {}
-	for k, v in pairs(nets) do
-		nets[k] = nets[k].sid
-	end
-	nets = table.concat(nets, ",")
-	return ((#nets > 0) and "(%s)" % {nets} or iface)
+	local nets = sqm.get_nets_from_int(int)
+	return ((#nets > 0) and "(%s)" % {nets} or "--")
 end
 
 
@@ -122,9 +95,10 @@ qd.template = "sqm/overview_doubleline"
 
 function qd.set_one(self, section)
 	local qd = self.map:get(section, "qdisc") or ""
-	local desc = get_tuple_desc(self, section, qd, "qdisc_preset", "preset")
+	local desc = sqm.get_tuple_desc(self, section,
+		qd, "qdisc_preset", "preset")
 
-	return text_cond_tooltip(qd, #desc > 0, "Preset: " .. desc)
+	return sqm.text_cond_tooltip(qd, #desc > 0, "Preset: " .. desc)
 end
 
 function qd.set_two(self, section)
@@ -160,22 +134,22 @@ pd = s:option(DummyValue, "_prio_dscp",
 pd.template = "sqm/overview_doubleline"
 
 function pd.set_one(self, section)
-	local ignore = self.map:get(section, "ignore_dscp_ingress") or "1"
+	local ign = self.map:get(section, "ignore_dscp_ingress") or "1"
 	local shp =  self.map:get(section, "shaper") or ""
-	local desc = get_tuple_desc(self, section,
+	local desc = sqm.get_tuple_desc(self, section,
 		shp, "diffserv_ingress", "diffserv")
 
-	return text_cond_tooltip(ignore == "1" and "Single-Tier" or "Multi-Tier",
+	return sqm.text_cond_tooltip(ign == "1" and "Single-Tier" or "Multi-Tier",
 		#desc > 0, desc)
 end
 
 function pd.set_two(self, section)
-	local ignore = self.map:get(section, "ignore_dscp_egress") or "1"
+	local ign = self.map:get(section, "ignore_dscp_egress") or "1"
 	local shp =  self.map:get(section, "shaper") or ""
-	local desc = get_tuple_desc(self, section,
+	local desc = sqm.get_tuple_desc(self, section,
 		shp, "diffserv_egress", "diffserv")
 
-	return text_cond_tooltip(ignore == "1" and "Single-Tier" or "Multi-Tier",
+	return sqm.text_cond_tooltip(ign == "1" and "Single-Tier" or "Multi-Tier",
 		#desc > 0, desc)
 end
 
