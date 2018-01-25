@@ -92,6 +92,23 @@ do_modules() {
     done
 }
 
+# Write a state file to the filename given as $1. This version will extract all
+# variable names defined in defaults.sh and since defaults.sh should contain all
+# used variables this should be the complete set.
+write_defaults_vars_to_state_file() { ${STATE_FILE} ${SQM_LIB_DIR}/defaults.sh
+    local filename=$1
+    local defaultsFQN=$2
+    #shift
+    # this assumes that functions.sh lives in the same directory as defaults.sh
+    #local THIS_SCRIPT=$( readlink -f "$0" )
+    #local SQM_LIB_DIR=$( dirname "${THIS_SCRIPT}" )
+    # extract all variables from defaults.sh using the "${VARNAME}=" as matching pattern
+    #local ALL_SQM_DEFAULTS_VARS=$( grep -r -o -e "[[:alnum:][:punct:]]*=" ${SQM_LIB_DIR}/defaults.sh | sed 's/=//' )
+    local ALL_SQM_DEFAULTS_VARS=$( grep -r -o -e "[[:alnum:][:punct:]]*=" ${defaultsFQN} | sed 's/=//' )
+    
+    write_state_file ${filename} ${ALL_SQM_DEFAULTS_VARS}
+}      
+        
 # Write a state file to the filename given as $1. The remaining arguments are
 # variable names that should be written to the state file.
 write_state_file() {
@@ -101,7 +118,7 @@ write_state_file() {
         val=$(eval echo '$'$var)
         echo "$var=\"$val\""
     done > $filename
-}
+}   
 
 
 # find the ifb device associated with a specific interface, return nothing of no
