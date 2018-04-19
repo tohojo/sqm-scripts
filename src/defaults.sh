@@ -1,6 +1,6 @@
 # You need to jiggle these parameters. Note limits are tuned towards a <10Mbit uplink <60Mbup down
 
-[ -z "SCRIPT" ] && SCRIPT=
+[ -z "$SCRIPT" ] && SCRIPT=
 [ -z "$UPLINK" ] && UPLINK=2302
 [ -z "$DOWNLINK" ] && DOWNLINK=14698
 [ -z "$IFACE" ] && IFACE=eth0
