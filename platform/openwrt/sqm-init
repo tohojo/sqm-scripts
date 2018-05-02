@@ -1,19 +1,31 @@
 #!/bin/sh /etc/rc.common
 
 START=50
+USE_PROCD=1
 
-start()
+service_triggers()
 {
-    /usr/lib/sqm/run.sh start "$@"
+	procd_add_reload_trigger "sqm"
 }
 
-stop()
+reload_service()
 {
-    /usr/lib/sqm/run.sh stop "$@"
+	stop "$@"
+	start "$@"
+}
+
+start_service()
+{
+	/usr/lib/sqm/run.sh start "$@"
+}
+
+stop_service()
+{
+	/usr/lib/sqm/run.sh stop "$@"
 }
 
 boot()
 {
-    export SQM_VERBOSITY_MIN=5 # Silence errors
-    /usr/lib/sqm/run.sh start
+	export SQM_VERBOSITY_MIN=5 # Silence errors
+	/usr/lib/sqm/run.sh start
 }
