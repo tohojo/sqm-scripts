@@ -27,5 +27,5 @@ stop_service()
 boot()
 {
 	export SQM_VERBOSITY_MIN=5 # Silence errors
-	/usr/lib/sqm/run.sh start
+	start "$@"
 }
