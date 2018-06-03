@@ -1,3 +1,10 @@
 #!/bin/sh
 
-[ "$ACTION" = ifup ] && /etc/init.d/sqm enabled && /usr/lib/sqm/run.sh start ${DEVICE}
+restart_sqm() {
+    /usr/lib/sqm/run.sh stop ${DEVICE}
+    /usr/lib/sqm/run.sh start ${DEVICE}
+}
+
+[ "$ACTION" = ifup ] && /etc/init.d/sqm enabled && restart_sqm
+
+[ "$ACTION" = ifdown ] && /etc/init.d/sqm enabled && /usr/lib/sqm/run.sh stop ${DEVICE}
