@@ -88,7 +88,7 @@ ip_wrapper() {
 
 do_modules() {
     for m in $ALL_MODULES; do
-        [ -d /sys/modules/${m} ] || ${INSMOD} $m 2>>${OUTPUT_TARGET}
+        [ -d /sys/module/${m} ] || ${INSMOD} $m 2>>${OUTPUT_TARGET}
     done
 }
 
