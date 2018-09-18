@@ -1,5 +1,7 @@
 # The sqm-scripts traffic shaper
 
+[![DOI](https://zenodo.org/badge/36661217.svg)](https://zenodo.org/badge/latestdoi/36661217)
+
 This repository contains the sqm-scripts traffic shaper from the CeroWrt
 project. See:
 http://www.bufferbloat.net/projects/cerowrt/wiki/Smart_Queue_Management
