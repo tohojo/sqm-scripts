@@ -40,6 +40,15 @@
 [ -z "$SHAPER_BURST" ] && SHAPER_BURST="1"
 [ -z "$HTB_QUANTUM_FUNCTION" ] && HTB_QUANTUM_FUNCTION="linear"
 
+# HTB without a sufficiently large burst/cburst value is a bit CPU hungry
+# so allow to specify the permitted burst in the time domain (miiliseconds)
+# so the user has a feeling for the associated worst case latency cost
+[ -z "$HTB_BURST_FUNCTION" ] && HTB_BURST_FUNCTION="by_duration"	# classic or by_duration
+[ -z "$TARGET_BURST_DUR_MS" ] && TARGET_BURST_DUR_MS=2
+[ -z "$ITARGET_BURST_DUR_MS" ] && ITARGET_BURST_DUR_MS=$TARGET_BURST_DUR_MS
+[ -z "$ETARGET_BURST_DUR_MS" ] && ETARGET_BURST_DUR_MS=$TARGET_BURST_DUR_MS
+
+
 # Logging verbosity
 VERBOSITY_SILENT=0
 VERBOSITY_ERROR=1

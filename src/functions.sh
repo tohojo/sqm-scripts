@@ -400,48 +400,94 @@ htb_quantum_step() {
 }
 
 
-get_burst() {
-    MTU=$1
-    BANDWIDTH=$2
-    BURST=
+get_burst_classic() {
+    local MTU=$1
+    local BANDWIDTH=$2
+    local BURST=$(( ${MTU} * 2 )) # needs to be initialised in case BANDWIDTH < BANDWIDTH_L
 
     # 10 MTU burst can itself create delay under CPU load.
     # It will need to all wait for a hardware commit.
     # Note the lean mixture at high bandwidths for upper limit.
-    BANDWIDTH_L=$(( ${MTU} *  2 * 8 ))
-    BANDWIDTH_H=$(( ${MTU} * 18 * 8 ))
+    local BANDWIDTH_L=$(( ${MTU} *  2 * 8 ))
+    local BANDWIDTH_H=$(( ${MTU} * 18 * 8 ))
+
+    sqm_debug "get_burst_classic: MTU: ${MTU}, BANDWIDTH: ${BANDWIDTH}, BANDWIDTH_L: ${BANDWIDTH_L}, BANDWIDTH_H: ${BANDWIDTH_H}"
 
 
     if [ ${BANDWIDTH} -gt ${BANDWIDTH_H} ] ; then
         BURST=$(( ${HTB_MTU} * 10 ))
-
     elif [ ${BANDWIDTH} -gt ${BANDWIDTH_L} ] ; then
-            # Start with 1ms buffer 2x MTU, and lean out the mixture at higher rates
-            BURST=$(( ${BANDWIDTH} - ${BANDWIDTH_L} ))
-            BURST=$(( ${BURST} / 16 ))
-            BURST=$(( ${BURST} / ${MTU} ))
-            BURST=$(( ${BURST} * ${MTU} ))
-            BURST=$(( ${BURST} + ${MTU} * 2 ))
+        # Start with 1ms buffer 2x MTU, and lean out the mixture at higher rates
+        BURST=$(( ${BANDWIDTH} - ${BANDWIDTH_L} ))
+	BURST=$(( ${BURST} / 16 ))
+        BURST=$(( ${BURST} / ${MTU} ))
+	BURST=$(( ${BURST} * ${MTU} ))
+	BURST=$(( ${BURST} + ${MTU} * 2 ))
     fi
 
-    sqm_debug "BURST: ${BURST}, BANDWIDTH: ${BANDWIDTH}"
+    sqm_debug "get_burst_classic: BURST: ${BURST}, BANDWIDTH: ${BANDWIDTH}, MTU: ${MTU}"
 
     echo $BURST
 }
 
+# try to define the burst parameter in the duration required to transmit a burst at the configured bandwidth
+# conceptuallly the matching quantum for this burst should be BURST/number_of_tiers to give each htb tier a 
+# chance to dequeue into each burst, but that most likely will end up with a somewhat too small quantum
+get_burst_by_duration() {
+    local MTU=$1
+    local BANDWIDTH=$2 # note bandwidth is always given in kbps
+    local TARGET_BURST_MS=$3
+
+    local BURST=
+    
+    if [ -z "${TARGET_BURST_MS}" ] ; then
+	local TARGET_BURST_MS=3	# the duration of the burst in milliseconds
+	sqm_debug "Defaulting to ${TARGET_BURST_MS} milliseconds for htb's burst and cburst parameters"
+    fi
+
+
+    local MIN_BURST=$(( ${MTU} * 2  )) # stick to the two MTU minimum?
+    
+    # htb expects burst to be specified in octects/bytes, while bandwidth is in kbps
+    BURST=$(( ((${TARGET_BURST_MS} * ${BANDWIDTH} * 1000) / 8000)  ))
+    
+    if [ ${BURST} -lt ${MIN_BURST} ] ; then
+	BURST=${MIN_BURST}
+    fi
+
+    sqm_debug "get_burst_by_duration: BURST [Byte]: ${BURST}, BANDWIDTH [Kbps]: ${BANDWIDTH}, DURATION [ms]: ${TARGET_BURST_MS}"
+    
+    echo ${BURST}
+}
+
+
 # Create optional burst parameters to leap over CPU interupts when the CPU is
 # severly loaded. We need to be conservative though.
 get_htb_burst() {
-    HTB_MTU=$( get_mtu $1 )
-    BANDWIDTH=$2
+    local HTB_MTU=$( get_mtu $1 )
+    local BANDWIDTH=$2
+    local DURATION_MS=$3
+    
+    sqm_debug "get_htb_burst: 1: ${1}, 2: ${2}, 3: ${3}"
+    
+    #local BURST=
 
     if [ -n "${HTB_MTU}" -a "${SHAPER_BURST}" -eq "1" ] ; then
-        BURST=$( get_burst $HTB_MTU $BANDWIDTH )
-        if [ -n "$BURST" ]; then
-            echo burst $BURST cburst $BURST
-        else
-            sqm_debug "Default Burst, HTB will use MTU plus shipping and handling"
-        fi
+
+	case "$HTB_BURST_FUNCTION" in
+    	    classic)
+        	BURST=$( get_burst_classic ${HTB_MTU} ${BANDWIDTH} ) ;;
+    	    by_duration)
+    		BURST=$( get_burst_by_duration ${HTB_MTU} ${BANDWIDTH} ${DURATION_MS} ) ;;
+    	    *)
+        	sqm_debug "Unknown HTB_BURST_FUNCTION encountered: ${HTB_BURST_FUNCTION}, bailing out...";;
+	esac
+    fi
+    #sqm_debug "get_htb_burst: BURST: ${BURST}"
+    if [ -z "$BURST" ]; then
+	sqm_debug "Default Burst, HTB will use MTU plus shipping and handling"
+    else
+        echo burst $BURST cburst $BURST
     fi
 }
 
