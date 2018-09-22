@@ -400,39 +400,12 @@ htb_quantum_step() {
 }
 
 
-get_burst_classic() {
-    local MTU=$1
-    local BANDWIDTH=$2
-    local BURST=$(( ${MTU} * 2 )) # needs to be initialised in case BANDWIDTH < BANDWIDTH_L
-
-    # 10 MTU burst can itself create delay under CPU load.
-    # It will need to all wait for a hardware commit.
-    # Note the lean mixture at high bandwidths for upper limit.
-    local BANDWIDTH_L=$(( ${MTU} *  2 * 8 ))
-    local BANDWIDTH_H=$(( ${MTU} * 18 * 8 ))
-
-    sqm_debug "get_burst_classic: MTU: ${MTU}, BANDWIDTH: ${BANDWIDTH}, BANDWIDTH_L: ${BANDWIDTH_L}, BANDWIDTH_H: ${BANDWIDTH_H}"
-
-
-    if [ ${BANDWIDTH} -gt ${BANDWIDTH_H} ] ; then
-        BURST=$(( ${HTB_MTU} * 10 ))
-    elif [ ${BANDWIDTH} -gt ${BANDWIDTH_L} ] ; then
-        # Start with 1ms buffer 2x MTU, and lean out the mixture at higher rates
-        BURST=$(( ${BANDWIDTH} - ${BANDWIDTH_L} ))
-	BURST=$(( ${BURST} / 16 ))
-        BURST=$(( ${BURST} / ${MTU} ))
-	BURST=$(( ${BURST} * ${MTU} ))
-	BURST=$(( ${BURST} + ${MTU} * 2 ))
-    fi
-
-    sqm_debug "get_burst_classic: BURST: ${BURST}, BANDWIDTH: ${BANDWIDTH}, MTU: ${MTU}"
-
-    echo $BURST
-}
-
 # try to define the burst parameter in the duration required to transmit a burst at the configured bandwidth
 # conceptuallly the matching quantum for this burst should be BURST/number_of_tiers to give each htb tier a 
 # chance to dequeue into each burst, but that most likely will end up with a somewhat too small quantum
+# note thst to get htb to report the configured burst/cburt one needs to issue the following command (for 
+# ifbpppoe-wan):
+#	tc -d class show dev ifb4pppoe-wan
 get_burst_by_duration() {
     local MTU=$1
     local BANDWIDTH=$2 # note bandwidth is always given in kbps
@@ -448,7 +421,7 @@ get_burst_by_duration() {
 
     local MIN_BURST=$(( ${MTU} * 2  )) # stick to the two MTU minimum?
     
-    # htb expects burst to be specified in octects/bytes, while bandwidth is in kbps
+    # htb expects burst to be specified in octets/bytes, while bandwidth is in kbps
     BURST=$(( ((${TARGET_BURST_MS} * ${BANDWIDTH} * 1000) / 8000)  ))
     
     if [ ${BURST} -lt ${MIN_BURST} ] ; then
@@ -469,21 +442,11 @@ get_htb_burst() {
     local DURATION_MS=$3
     
     sqm_debug "get_htb_burst: 1: ${1}, 2: ${2}, 3: ${3}"
-    
-    #local BURST=
 
-    if [ -n "${HTB_MTU}" -a "${SHAPER_BURST}" -eq "1" ] ; then
-
-	case "$HTB_BURST_FUNCTION" in
-    	    classic)
-        	BURST=$( get_burst_classic ${HTB_MTU} ${BANDWIDTH} ) ;;
-    	    by_duration)
-    		BURST=$( get_burst_by_duration ${HTB_MTU} ${BANDWIDTH} ${DURATION_MS} ) ;;
-    	    *)
-        	sqm_debug "Unknown HTB_BURST_FUNCTION encountered: ${HTB_BURST_FUNCTION}, bailing out...";;
-	esac
+    if [ -n "${HTB_MTU}" -a "${DURATION_MS}" -gt "0" ] ; then
+    	BURST=$( get_burst_by_duration ${HTB_MTU} ${BANDWIDTH} ${DURATION_MS} )
     fi
-    #sqm_debug "get_htb_burst: BURST: ${BURST}"
+    
     if [ -z "$BURST" ]; then
 	sqm_debug "Default Burst, HTB will use MTU plus shipping and handling"
     else
