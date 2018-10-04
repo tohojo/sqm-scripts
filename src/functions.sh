@@ -406,7 +406,7 @@ htb_quantum_step() {
 # note thst to get htb to report the configured burst/cburt one needs to issue the following command (for 
 # ifbpppoe-wan):
 #	tc -d class show dev ifb4pppoe-wan
-get_burst_by_duration() {
+get_burst() {
     local MTU=$1
     local BANDWIDTH=$2 # note bandwidth is always given in kbps
     local TARGET_BURST_MS=$3
@@ -415,7 +415,7 @@ get_burst_by_duration() {
     
     if [ -z "${TARGET_BURST_MS}" ] ; then
 	local TARGET_BURST_MS=3	# the duration of the burst in milliseconds
-	sqm_debug "Defaulting to ${TARGET_BURST_MS} milliseconds for htb's burst and cburst parameters"
+	sqm_debug "Defaulting to ${TARGET_BURST_MS} milliseconds bursts."
     fi
 
 
@@ -428,7 +428,7 @@ get_burst_by_duration() {
 	BURST=${MIN_BURST}
     fi
 
-    sqm_debug "get_burst_by_duration: BURST [Byte]: ${BURST}, BANDWIDTH [Kbps]: ${BANDWIDTH}, DURATION [ms]: ${TARGET_BURST_MS}"
+    sqm_debug "get_burst (by duration): BURST [Byte]: ${BURST}, BANDWIDTH [Kbps]: ${BANDWIDTH}, DURATION [ms]: ${TARGET_BURST_MS}"
     
     echo ${BURST}
 }
@@ -444,7 +444,7 @@ get_htb_burst() {
     sqm_debug "get_htb_burst: 1: ${1}, 2: ${2}, 3: ${3}"
 
     if [ -n "${HTB_MTU}" -a "${DURATION_MS}" -gt "0" ] ; then
-    	BURST=$( get_burst_by_duration ${HTB_MTU} ${BANDWIDTH} ${DURATION_MS} )
+    	BURST=$( get_burst ${HTB_MTU} ${BANDWIDTH} ${DURATION_MS} )
     fi
     
     if [ -z "$BURST" ]; then
