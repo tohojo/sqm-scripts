@@ -415,13 +415,17 @@ get_burst() {
     
     if [ -z "${TARGET_BURST_MS}" ] ; then
 	local TARGET_BURST_MS=3	# the duration of the burst in milliseconds
-	sqm_debug "Defaulting to ${TARGET_BURST_MS} milliseconds bursts."
+	sqm_debug "get_burst (by duration): Defaulting to ${TARGET_BURST_MS} milliseconds bursts."
     fi
 
-
-    local MIN_BURST=$(( ${MTU} * 2  )) # stick to the two MTU minimum?
+    # let's assume ATM/AAL5 to be the worst case encapsulation
+    #	and 48 Bytes a reasonable worst case per packet overhead
+    local MIN_BURST=$(( ${MTU} + 48 ))	# add 48 bytes to MTU for the  ovehead
+    MIN_BURST=$(( ${MIN_BURST} + 47 ))	# now do ceil(Min_BURST / 48) * 53 in shell integer arithmic
+    MIN_BURST=$(( ${MIN_BURST} / 48 ))
+    MIN_BURST=$(( ${MIN_BURST} * 53 ))	# for MTU 1489 to 1536 this will result in MIN_BURST = 1749 Bytes
     
-    # htb expects burst to be specified in octets/bytes, while bandwidth is in kbps
+    # htb/tbf expect burst to be specified in bytes, while bandwidth is in kbps
     BURST=$(( ((${TARGET_BURST_MS} * ${BANDWIDTH} * 1000) / 8000)  ))
     
     if [ ${BURST} -lt ${MIN_BURST} ] ; then
@@ -448,7 +452,7 @@ get_htb_burst() {
     fi
     
     if [ -z "$BURST" ]; then
-	sqm_debug "Default Burst, HTB will use MTU plus shipping and handling"
+	sqm_debug "get_htb_burst: Default Burst, HTB will use MTU plus shipping and handling"
     else
         echo burst $BURST cburst $BURST
     fi
