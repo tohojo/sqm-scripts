@@ -228,6 +228,7 @@ verify_qdisc() {
         #cannot instantiate tbf without args
         tbf) 
     	    IFB_MTU=$( get_mtu $ifb )
+	    IFB_MTU=$(( ${IFB_MTU} + 14 )) # TBF's warning is confused, it says MTU but it checks MTU + 14
 	    args="limit 1 burst ${IFB_MTU} rate 1kbps" 
 	    ;;
     esac
