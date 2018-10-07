@@ -210,6 +210,7 @@ verify_qdisc() {
     local ifb=TMP_IFB_4_SQM
     local root_string="root" # this works for most qdiscs
     local args=""
+    local IFB_MTU=1514
 
     if [ -n "$supported" ]; then
         local found=0
@@ -219,11 +220,16 @@ verify_qdisc() {
         [ "$found" -eq "1" ] || return 1
     fi
     create_ifb $ifb || return 1
+    
+    
     case $qdisc in
         #ingress is special
         ingress) root_string="" ;;
         #cannot instantiate tbf without args
-        tbf) args="limit 1 burst 1 rate 1kbps" ;;
+        tbf) 
+    	    IFB_MTU=$( get_mtu $ifb )
+	    args="limit 1 burst ${IFB_MTU} rate 1kbps" 
+	    ;;
     esac
 
     $TC qdisc replace dev $ifb $root_string $qdisc $args
