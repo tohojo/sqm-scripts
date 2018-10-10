@@ -105,8 +105,8 @@ egress() {
     BK_RATE=`expr $CEIL / 6`   # Min for background
     BE_CEIL=`expr $CEIL - 16`  # A little slop at the top
 
-    LQ="quantum `get_htb_quantum $IFACE $CEIL`"
-    BURST="`get_htb_burst $IFACE $CEIL ${ETARGET_BURST_DUR_MS}`"
+    LQ="quantum `get_htb_quantum $IFACE $CEIL ${ESHAPER_QUANTUM_DUR_US}`"
+    BURST="`get_htb_burst $IFACE $CEIL ${ESHAPER_BURST_DUR_US}`"
 
     $TC qdisc del dev $IFACE root 2> /dev/null
 
@@ -182,8 +182,8 @@ ingress() {
     BK_RATE=`expr $CEIL / 6`   # Min for background
     BE_CEIL=`expr $CEIL - 16`  # A little slop at the top
 
-    LQ="quantum `get_htb_quantum $IFACE $CEIL`"
-    BURST="`get_htb_burst $IFACE $CEIL ${ITARGET_BURST_DUR_MS}`"
+    LQ="quantum `get_htb_quantum $IFACE $CEIL ${ISHAPER_QUANTUM_DUR_US}`"
+    BURST="`get_htb_burst $IFACE $CEIL ${ISHAPER_BURST_DUR_US}`"
 
     $TC qdisc del dev $IFACE handle ffff: ingress 2> /dev/null
     $TC qdisc add dev $IFACE handle ffff: ingress
