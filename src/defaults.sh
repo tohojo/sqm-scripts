@@ -43,6 +43,7 @@
 # so allow to specify the permitted burst in the time domain (miiliseconds)
 # so the user has a feeling for the associated worst case latency cost
 # set to zero to use htb default butst of one MTU
+# Note this allows values down to 0.001 or microseconds
 [ -z "$TARGET_BURST_DUR_MS" ] && TARGET_BURST_DUR_MS=3
 [ -z "$ITARGET_BURST_DUR_MS" ] && ITARGET_BURST_DUR_MS=$TARGET_BURST_DUR_MS
 [ -z "$ETARGET_BURST_DUR_MS" ] && ETARGET_BURST_DUR_MS=$TARGET_BURST_DUR_MS
