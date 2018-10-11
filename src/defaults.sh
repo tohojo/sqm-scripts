@@ -40,12 +40,12 @@
 [ -z "$HTB_QUANTUM_FUNCTION" ] && HTB_QUANTUM_FUNCTION="linear"
 
 # HTB without a sufficiently large burst/cburst value is a bit CPU hungry
-# so allow to specify the permitted burst in the time domain (miiliseconds)
+# so allow to specify the permitted burst in the time domain (microseconds)
 # so the user has a feeling for the associated worst case latency cost
 # set to zero to use htb default butst of one MTU
-[ -z "$TARGET_BURST_DUR_MS" ] && TARGET_BURST_DUR_MS=3
-[ -z "$ITARGET_BURST_DUR_MS" ] && ITARGET_BURST_DUR_MS=$TARGET_BURST_DUR_MS
-[ -z "$ETARGET_BURST_DUR_MS" ] && ETARGET_BURST_DUR_MS=$TARGET_BURST_DUR_MS
+[ -z "$SHAPER_BURST_DUR_US" ] && SHAPER_BURST_DUR_US=3000
+[ -z "$ISHAPER_BURST_DUR_US" ] && ISHAPER_BURST_DUR_US=$SHAPER_BURST_DUR_US
+[ -z "$ESHAPER_BURST_DUR_US" ] && ESHAPER_BURST_DUR_US=$SHAPER_BURST_DUR_US
 
 
 # Logging verbosity

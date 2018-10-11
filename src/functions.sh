@@ -416,13 +416,13 @@ htb_quantum_step() {
 get_burst() {
     local MTU=$1
     local BANDWIDTH=$2 # note bandwidth is always given in kbps
-    local TARGET_BURST_MS=$3
+    local SHAPER_BURST_US=$3
 
     local BURST=
     
-    if [ -z "${TARGET_BURST_MS}" ] ; then
-	local TARGET_BURST_MS=3	# the duration of the burst in milliseconds
-	sqm_debug "get_burst (by duration): Defaulting to ${TARGET_BURST_MS} milliseconds bursts."
+    if [ -z "${SHAPER_BURST_US}" ] ; then
+	local SHAPER_BURST_US=3000	# the duration of the burst in milliseconds
+	sqm_debug "get_burst (by duration): Defaulting to ${SHAPER_BURST_US} microseconds bursts."
     fi
 
     # let's assume ATM/AAL5 to be the worst case encapsulation
@@ -433,7 +433,7 @@ get_burst() {
     MIN_BURST=$(( ${MIN_BURST} * 53 ))	# for MTU 1489 to 1536 this will result in MIN_BURST = 1749 Bytes
     
     # htb/tbf expect burst to be specified in bytes, while bandwidth is in kbps
-    BURST=$(( ((${TARGET_BURST_MS} * ${BANDWIDTH} * 1000) / 8000)  ))
+    BURST=$(( ((${SHAPER_BURST_US} * ${BANDWIDTH}) / 8000) ))
     
     if [ ${BURST} -lt ${MIN_BURST} ] ; then
 	BURST=${MIN_BURST}
@@ -450,12 +450,12 @@ get_burst() {
 get_htb_burst() {
     local HTB_MTU=$( get_mtu $1 )
     local BANDWIDTH=$2
-    local DURATION_MS=$3
+    local DURATION_US=$3
     
     sqm_debug "get_htb_burst: 1: ${1}, 2: ${2}, 3: ${3}"
 
-    if [ -n "${HTB_MTU}" -a "${DURATION_MS}" -gt "0" ] ; then
-    	BURST=$( get_burst ${HTB_MTU} ${BANDWIDTH} ${DURATION_MS} )
+    if [ -n "${HTB_MTU}" -a "${DURATION_US}" -gt "0" ] ; then
+    	BURST=$( get_burst ${HTB_MTU} ${BANDWIDTH} ${DURATION_US} )
     fi
     
     if [ -z "$BURST" ]; then

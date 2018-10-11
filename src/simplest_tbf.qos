@@ -33,7 +33,7 @@
 egress() {
 
     MTU=$(get_mtu $IFACE)
-    BURST="$(get_burst ${MTU:-1514} ${UPLINK} ${ETARGET_BURST_DUR_MS})"
+    BURST="$(get_burst ${MTU:-1514} ${UPLINK} ${ESHAPER_BURST_DUR_US})"
     BURST=${BURST:-1514}
 
     $TC qdisc del dev $IFACE root 2>/dev/null
@@ -52,7 +52,7 @@ ingress() {
     $TC qdisc add dev $IFACE handle ffff: ingress
 
     MTU=$(get_mtu $IFACE)
-    BURST="$(get_burst ${MTU:-1514} ${DOWNLINK} ${ITARGET_BURST_DUR_MS})"
+    BURST="$(get_burst ${MTU:-1514} ${DOWNLINK} ${ISHAPER_BURST_DUR_US})"
     BURST=${BURST:-1514}
 
     $TC qdisc del dev $DEV root 2>/dev/null

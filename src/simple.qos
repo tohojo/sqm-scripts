@@ -106,7 +106,7 @@ egress() {
     BE_CEIL=`expr $CEIL - 16`  # A little slop at the top
 
     LQ="quantum `get_htb_quantum $IFACE $CEIL`"
-    BURST="`get_htb_burst $IFACE $CEIL ${ETARGET_BURST_DUR_MS}`"
+    BURST="`get_htb_burst $IFACE $CEIL ${ESHAPER_BURST_DUR_US}`"
 
     $TC qdisc del dev $IFACE root 2> /dev/null
 
@@ -183,7 +183,7 @@ ingress() {
     BE_CEIL=`expr $CEIL - 16`  # A little slop at the top
 
     LQ="quantum `get_htb_quantum $IFACE $CEIL`"
-    BURST="`get_htb_burst $IFACE $CEIL ${ITARGET_BURST_DUR_MS}`"
+    BURST="`get_htb_burst $IFACE $CEIL ${ISHAPER_BURST_DUR_US}`"
 
     $TC qdisc del dev $IFACE handle ffff: ingress 2> /dev/null
     $TC qdisc add dev $IFACE handle ffff: ingress

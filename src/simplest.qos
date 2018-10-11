@@ -35,7 +35,7 @@ cake_egress()
 egress() {
 
     LQ="quantum `get_htb_quantum $IFACE ${UPLINK}`"
-    BURST="`get_htb_burst $IFACE ${UPLINK} ${ETARGET_BURST_DUR_MS}`"
+    BURST="`get_htb_burst $IFACE ${UPLINK} ${ESHAPER_BURST_DUR_US}`"
 
     $TC qdisc del dev $IFACE root 2>/dev/null
 
@@ -68,7 +68,7 @@ ingress() {
     $TC qdisc add dev $IFACE handle ffff: ingress
 
     LQ="quantum `get_htb_quantum $IFACE ${DOWNLINK}`"
-    BURST="`get_htb_burst $IFACE ${DOWNLINK} ${ITARGET_BURST_DUR_MS}`"
+    BURST="`get_htb_burst $IFACE ${DOWNLINK} ${ISHAPER_BURST_DUR_US}`"
 
     $TC qdisc del dev $DEV root 2>/dev/null
 
