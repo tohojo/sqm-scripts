@@ -341,9 +341,14 @@ get_htb_quantum() {
     local HTB_MTU=$( get_mtu $1 )
     local BANDWIDTH=$2
     local DURATION_US=$3
-    
+
     sqm_debug "get_htb_quantum: 1: ${1}, 2: ${2}, 3: ${3}"
 
+    if [ -z "${DURATION_US}" ] ; then
+	DURATION_US=${SHAPER_QUANTUM_DUR_US}	# the duration of the burst in microseconds
+	sqm_warn "get_htb_quantum (by duration): Defaulting to ${DURATION_US} microseconds."
+    fi
+    
     if [ -n "${HTB_MTU}" -a "${DURATION_US}" -gt "0" ] ; then
     	QUANTUM=$( get_burst ${HTB_MTU} ${BANDWIDTH} ${DURATION_US} )
     fi
@@ -353,7 +358,7 @@ get_htb_quantum() {
 	MIN_QUANTUM=$(( ${MIN_QUANTUM} + 47 ))	# now do ceil(Min_BURST / 48) * 53 in shell integer arithmic
 	MIN_QUANTUM=$(( ${MIN_QUANTUM} / 48 ))
 	MIN_QUANTUM=$(( ${MIN_QUANTUM} * 53 ))	# for MTU 1489 to 1536 this will result in MIN_BURST = 1749 Bytes
-	sqm_warning "get_htb_quantum: 0 bytes quantum will not work, defaulting to one ATM/AAL5 expanded MTU packet with overhead: ${MIN_QUANTUM}"
+	sqm_warn "get_htb_quantum: 0 bytes quantum will not work, defaulting to one ATM/AAL5 expanded MTU packet with overhead: ${MIN_QUANTUM}"
 	echo ${MIN_QUANTUM}
     else
         echo ${QUANTUM}
@@ -378,7 +383,7 @@ get_burst() {
     
     if [ -z "${SHAPER_BURST_US}" ] ; then
 	local SHAPER_BURST_US=3000	# the duration of the burst in microseconds
-	sqm_warning "get_burst (by duration): Defaulting to ${SHAPER_BURST_US} microseconds bursts."
+	sqm_warn "get_burst (by duration): Defaulting to ${SHAPER_BURST_US} microseconds bursts."
     fi
 
     # let's assume ATM/AAL5 to be the worst case encapsulation
@@ -392,6 +397,7 @@ get_burst() {
     BURST=$(( ((${SHAPER_BURST_US} * ${BANDWIDTH}) / 8000) ))
     
     if [ ${BURST} -lt ${MIN_BURST} ] ; then
+	sqm_log "get_burst (by duration): the calculated burst/quantum size of ${BURST} bytes was below the minimum of ${MIN_BURST} bytes."
 	BURST=${MIN_BURST}
     fi
 
@@ -407,6 +413,11 @@ get_htb_burst() {
     local HTB_MTU=$( get_mtu $1 )
     local BANDWIDTH=$2
     local DURATION_US=$3
+
+    if [ -z "${DURATION_US}" ] ; then
+	local DURATION_US=${SHAPER_BURST_DUR_US}	# the duration of the burst in microseconds
+	sqm_warn "get_htb_burst (by duration): Defaulting to ${SHAPER_BURST_DUR_US} microseconds."
+    fi
     
     sqm_debug "get_htb_burst: 1: ${1}, 2: ${2}, 3: ${3}"
 
