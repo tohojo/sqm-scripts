@@ -433,7 +433,12 @@ get_burst() {
     MIN_BURST=$(( ${MIN_BURST} * 53 ))	# for MTU 1489 to 1536 this will result in MIN_BURST = 1749 Bytes
     
     # htb/tbf expect burst to be specified in bytes, while bandwidth is in kbps
-    BURST=$(( ((${TARGET_BURST_MS} * ${BANDWIDTH} * 1000) / 8000)  ))
+    #BURST=$(( ((${TARGET_BURST_MS} * ${BANDWIDTH} * 1000) / 8000) ))
+    
+    # to allow for TARGET_BURST_MS as fraction >= 0.001 or microseconds
+    local TMP_BURST_US=$( printf %.0f\\n "${TARGET_BURST_MS}e3" ) # this effectively does floor($TARGET_BURST_MS * 1000)
+    BURST=$(( ((${TMP_BURST_US} * ${BANDWIDTH}) / 8000) ))
+    
     
     if [ ${BURST} -lt ${MIN_BURST} ] ; then
 	BURST=${MIN_BURST}
@@ -454,7 +459,10 @@ get_htb_burst() {
     
     sqm_debug "get_htb_burst: 1: ${1}, 2: ${2}, 3: ${3}"
 
-    if [ -n "${HTB_MTU}" -a "${DURATION_MS}" -gt "0" ] ; then
+    # to allow fractional DURATION_MS down to 0.001
+    local DURATION_US=$( printf %.0f\\n "${DURATION_MS}e3" ) # this effectively does floor($DURATION_MS * 1000)
+
+    if [ -n "${HTB_MTU}" -a "${DURATION_US}" -gt "0" ] ; then
     	BURST=$( get_burst ${HTB_MTU} ${BANDWIDTH} ${DURATION_MS} )
     fi
     
