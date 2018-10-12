@@ -379,6 +379,8 @@ get_burst() {
     local BANDWIDTH=$2 # note bandwidth is always given in kbps
     local SHAPER_BURST_US=$3
 
+    sqm_debug "get_burst: 1: ${1}, 2: ${2}, 3: ${3}"
+
     local BURST=
     
     if [ -z "${SHAPER_BURST_US}" ] ; then
@@ -414,12 +416,12 @@ get_htb_burst() {
     local BANDWIDTH=$2
     local DURATION_US=$3
 
+    sqm_debug "get_htb_burst: 1: ${1}, 2: ${2}, 3: ${3}"
+
     if [ -z "${DURATION_US}" ] ; then
 	local DURATION_US=${SHAPER_BURST_DUR_US}	# the duration of the burst in microseconds
 	sqm_warn "get_htb_burst (by duration): Defaulting to ${SHAPER_BURST_DUR_US} microseconds."
-    fi
-    
-    sqm_debug "get_htb_burst: 1: ${1}, 2: ${2}, 3: ${3}"
+    fi    
 
     if [ -n "${HTB_MTU}" -a "${DURATION_US}" -gt "0" ] ; then
     	BURST=$( get_burst ${HTB_MTU} ${BANDWIDTH} ${DURATION_US} )
