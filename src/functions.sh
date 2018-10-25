@@ -72,17 +72,40 @@ ipt() {
 }
 
 # wrapper to call tc to allow debug logging
-tc_wrapper() {
-    tc_args=$*
-    sqm_trace "${TC_BINARY} $*"
-    ${TC_BINARY} $* >> ${OUTPUT_TARGET} 2>&1
+tc_wrapper(){
+    cmd_wrapper tc ${TC_BINARY} "$@"
 }
 
-# wrapper to call tc to allow debug logging
-ip_wrapper() {
-    ip_args=$*
-    sqm_trace "${IP_BINARY} $*"
-    ${IP_BINARY} $* >> ${OUTPUT_TARGET} 2>&1
+# wrapper to call ip to allow debug logging
+ip_wrapper(){
+    cmd_wrapper ip ${IP_BINARY} "$@"
+}
+
+# the actual command execution wrapper
+cmd_wrapper(){
+    # $1: the symbolic name of the command for informative output
+    # $2: the name of the binary to call (potentially including the full path)
+    # $3-$end: the actual arguments for $2
+    local CALLERID
+    local CMD_BINARY
+    local LAST_ERROR
+    local RET
+
+    CALLERID=$1 ; shift 1   # extract and remove the id string
+    CMD_BINARY=$1 ; shift 1 # extract and remove the binary
+
+    sqm_trace "${CMD_BINARY} $@"
+    LAST_ERROR=$( ${CMD_BINARY} "$@" 2>&1 )
+    RET=$?
+    sqm_trace "${LAST_ERROR}"
+
+    if [ "$RET" -eq "0" ] ; then
+        sqm_debug "cmd_wrapper: ${CALLERID}: SUCCESS: ${CMD_BINARY} $@"
+    else
+        # this went south, try to capture & report more detail
+        sqm_error "cmd_wrapper: ${CALLERID}: FAILURE: ${CMD_BINARY} $@"
+        sqm_error "cmd_wrapper: ${CALLERID}: LAST ERROR: ${LAST_ERROR}"
+    fi
 }
 
 
