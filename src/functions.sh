@@ -71,36 +71,33 @@ ipt() {
     ip6tables $* >> ${OUTPUT_TARGET} 2>&1
 }
 
+
 # wrapper to call tc to allow debug logging
 tc_wrapper() {
-    #tc_args=$*
     sqm_trace "${TC_BINARY} $*"
-    ${TC_BINARY} $* >> ${OUTPUT_TARGET} 2>&1
-
-    local res=$?
-    if [ "$res" = "0" ] ; then
+    local LAST_ERROR=$( ${TC_BINARY} $* 2>&1 )
+    #sqm_error "LAST_ERROR:: ${LAST_ERROR}"
+    echo ${LAST_ERROR} >> ${OUTPUT_TARGET} 2>&1
+    if [ -z "$LAST_ERROR" ] ; then
         sqm_debug "tc_wraper: SUCCESS: ${TC_BINARY} $*"
     else
         # this went south, try to capture & report more detail
-        LAST_ERROR=$( ${TC_BINARY} $* 2>&1 )
         sqm_error "tc_wrapper: FAILURE: ${TC_BINARY} $*"
         sqm_error "tc_wrapper: LAST ERROR: ${LAST_ERROR}"
     fi
 }
-    
-    
+
+
 # wrapper to call ip to allow debug logging
 ip_wrapper() {
-    #ip_args=$*
     sqm_trace "${IP_BINARY} $*"
-    ${IP_BINARY} $* >> ${OUTPUT_TARGET} 2>&1
-    
-    local res=$?
-    if [ "$res" = "0" ] ; then
-        sqm_debug "ip_wrapper: SUCCESS: ${IP_BINARY} $*"
+    local LAST_ERROR=$( ${IP_BINARY} $* 2>&1 )
+    #sqm_error "LAST_ERROR:: ${LAST_ERROR}"
+    echo ${LAST_ERROR} >> ${OUTPUT_TARGET} 2>&1
+    if [ -z "$LAST_ERROR" ] ; then
+        sqm_debug "ip_wraper: SUCCESS: ${IP_BINARY} $*"
     else
         # this went south, try to capture & report more detail
-        LAST_ERROR=$( ${IP_BINARY} $* 2>&1 )
         sqm_error "ip_wrapper: FAILURE: ${IP_BINARY} $*"
         sqm_error "ip_wrapper: LAST ERROR: ${LAST_ERROR}"
     fi
