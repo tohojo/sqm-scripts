@@ -79,7 +79,7 @@ tc_wrapper() {
     #sqm_error "LAST_ERROR:: ${LAST_ERROR}"
     echo ${LAST_ERROR} >> ${OUTPUT_TARGET} 2>&1
     if [ -z "$LAST_ERROR" ] ; then
-        sqm_debug "tc_wraper: SUCCESS: ${TC_BINARY} $*"
+        sqm_debug "tc_wrapper: SUCCESS: ${TC_BINARY} $*"
     else
         # this went south, try to capture & report more detail
         sqm_error "tc_wrapper: FAILURE: ${TC_BINARY} $*"
@@ -95,7 +95,7 @@ ip_wrapper() {
     #sqm_error "LAST_ERROR:: ${LAST_ERROR}"
     echo ${LAST_ERROR} >> ${OUTPUT_TARGET} 2>&1
     if [ -z "$LAST_ERROR" ] ; then
-        sqm_debug "ip_wraper: SUCCESS: ${IP_BINARY} $*"
+        sqm_debug "ip_wrapper: SUCCESS: ${IP_BINARY} $*"
     else
         # this went south, try to capture & report more detail
         sqm_error "ip_wrapper: FAILURE: ${IP_BINARY} $*"
