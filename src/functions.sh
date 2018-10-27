@@ -72,13 +72,16 @@ ipt() {
 }
 
 
-# wrapper to call tc to allow debug logging
 tc_wrapper() {
+    local LAST_ERROR
+    local RET
+
     sqm_trace "${TC_BINARY} $*"
-    local LAST_ERROR=$( ${TC_BINARY} $* 2>&1 )
-    #sqm_error "LAST_ERROR:: ${LAST_ERROR}"
-    echo ${LAST_ERROR} >> ${OUTPUT_TARGET} 2>&1
-    if [ -z "$LAST_ERROR" ] ; then
+    LAST_ERROR=$( ${TC_BINARY} $* 2>&1 )
+    RET=$?
+    sqm_trace "${LAST_ERROR}"
+
+    if [ "$RET" -eq "0" ] ; then
         sqm_debug "tc_wrapper: SUCCESS: ${TC_BINARY} $*"
     else
         # this went south, try to capture & report more detail
@@ -90,11 +93,15 @@ tc_wrapper() {
 
 # wrapper to call ip to allow debug logging
 ip_wrapper() {
+    local LAST_ERROR
+    local RET
+
     sqm_trace "${IP_BINARY} $*"
-    local LAST_ERROR=$( ${IP_BINARY} $* 2>&1 )
-    #sqm_error "LAST_ERROR:: ${LAST_ERROR}"
-    echo ${LAST_ERROR} >> ${OUTPUT_TARGET} 2>&1
-    if [ -z "$LAST_ERROR" ] ; then
+    LAST_ERROR=$( ${IP_BINARY} $* 2>&1 )
+    RET=$?
+    sqm_trace "${LAST_ERROR}"
+
+    if [ "$RET" -eq "0" ] ; then
         sqm_debug "ip_wrapper: SUCCESS: ${IP_BINARY} $*"
     else
         # this went south, try to capture & report more detail
