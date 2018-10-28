@@ -341,6 +341,8 @@ get_htb_quantum() {
     local HTB_MTU=$( get_mtu $1 )
     local BANDWIDTH=$2
     local DURATION_US=$3
+    local MIN_QUANTUM
+    local QUANTUM
 
     sqm_debug "get_htb_quantum: 1: ${1}, 2: ${2}, 3: ${3}"
 
@@ -354,7 +356,7 @@ get_htb_quantum() {
     fi
     
     if [ -z "$QUANTUM" ]; then
-	local MIN_QUANTUM=$(( ${MTU} + 48 ))	# add 48 bytes to MTU for the  ovehead
+	MIN_QUANTUM=$(( ${MTU} + 48 ))	# add 48 bytes to MTU for the  ovehead
 	MIN_QUANTUM=$(( ${MIN_QUANTUM} + 47 ))	# now do ceil(Min_BURST / 48) * 53 in shell integer arithmic
 	MIN_QUANTUM=$(( ${MIN_QUANTUM} / 48 ))
 	MIN_QUANTUM=$(( ${MIN_QUANTUM} * 53 ))	# for MTU 1489 to 1536 this will result in MIN_BURST = 1749 Bytes
@@ -378,11 +380,11 @@ get_burst() {
     local MTU=$1
     local BANDWIDTH=$2 # note bandwidth is always given in kbps
     local SHAPER_BURST_US=$3
+    local MIN_BURST
+    local BURST
 
     sqm_debug "get_burst: 1: ${1}, 2: ${2}, 3: ${3}"
 
-    local BURST=
-    
     if [ -z "${SHAPER_BURST_US}" ] ; then
 	local SHAPER_BURST_US=1000	# the duration of the burst in microseconds
 	sqm_warn "get_burst (by duration): Defaulting to ${SHAPER_BURST_US} microseconds bursts."
@@ -390,7 +392,7 @@ get_burst() {
 
     # let's assume ATM/AAL5 to be the worst case encapsulation
     #	and 48 Bytes a reasonable worst case per packet overhead
-    local MIN_BURST=$(( ${MTU} + 48 ))	# add 48 bytes to MTU for the  ovehead
+    MIN_BURST=$(( ${MTU} + 48 ))	# add 48 bytes to MTU for the  ovehead
     MIN_BURST=$(( ${MIN_BURST} + 47 ))	# now do ceil(Min_BURST / 48) * 53 in shell integer arithmic
     MIN_BURST=$(( ${MIN_BURST} / 48 ))
     MIN_BURST=$(( ${MIN_BURST} * 53 ))	# for MTU 1489 to 1536 this will result in MIN_BURST = 1749 Bytes
@@ -415,18 +417,19 @@ get_htb_burst() {
     local HTB_MTU=$( get_mtu $1 )
     local BANDWIDTH=$2
     local DURATION_US=$3
+    local BURST
 
     sqm_debug "get_htb_burst: 1: ${1}, 2: ${2}, 3: ${3}"
 
     if [ -z "${DURATION_US}" ] ; then
-	local DURATION_US=${SHAPER_BURST_DUR_US}	# the duration of the burst in microseconds
+	DURATION_US=${SHAPER_BURST_DUR_US}	# the duration of the burst in microseconds
 	sqm_warn "get_htb_burst (by duration): Defaulting to ${SHAPER_BURST_DUR_US} microseconds."
-    fi    
+    fi
 
     if [ -n "${HTB_MTU}" -a "${DURATION_US}" -gt "0" ] ; then
     	BURST=$( get_burst ${HTB_MTU} ${BANDWIDTH} ${DURATION_US} )
     fi
-    
+
     if [ -z "$BURST" ]; then
 	sqm_debug "get_htb_burst: Default Burst, HTB will use MTU plus shipping and handling"
     else
