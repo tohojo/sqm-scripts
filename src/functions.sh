@@ -106,6 +106,8 @@ cmd_wrapper(){
         sqm_error "cmd_wrapper: ${CALLERID}: FAILURE: ${CMD_BINARY} $@"
         sqm_error "cmd_wrapper: ${CALLERID}: LAST ERROR: ${LAST_ERROR}"
     fi
+
+    return $RET
 }
 
 
@@ -188,8 +190,9 @@ ifb_name() {
 create_new_ifb_for_if() {
     local NEW_IFB=$(ifb_name $1)
     create_ifb ${NEW_IFB}
+    RET=$?
     echo $NEW_IFB
-    return $?
+    return $RET
 }
 
 
@@ -197,15 +200,12 @@ create_new_ifb_for_if() {
 create_ifb() {
     local CUR_IFB=${1}
     $IP link add name ${CUR_IFB} type ifb
-    ret=$?
-    return $?
 }
 
 delete_ifb() {
     local CUR_IFB=${1}
     $IP link set dev ${CUR_IFB} down
     $IP link delete ${CUR_IFB} type ifb
-    return $?
 }
 
 
