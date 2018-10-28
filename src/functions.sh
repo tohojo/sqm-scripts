@@ -103,7 +103,7 @@ cmd_wrapper(){
         sqm_debug "cmd_wrapper: ${CALLERID}: SUCCESS: ${CMD_BINARY} $@"
     else
         # this went south, try to capture & report more detail
-        sqm_error "cmd_wrapper: ${CALLERID}: FAILURE: ${CMD_BINARY} $@"
+        sqm_error "cmd_wrapper: ${CALLERID}: FAILURE (${RET}): ${CMD_BINARY} $@"
         sqm_error "cmd_wrapper: ${CALLERID}: LAST ERROR: ${LAST_ERROR}"
     fi
 
