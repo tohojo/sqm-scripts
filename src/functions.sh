@@ -15,7 +15,7 @@
 # it under the terms of the GNU General Public License version 2 as
 # published by the Free Software Foundation.
 #
-#   Copyright (C) 2012-6
+#   Copyright (C) 2012-2018
 #       Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller
 #       Eric Luehrsen
 #
