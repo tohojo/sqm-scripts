@@ -386,7 +386,7 @@ get_burst() {
     sqm_debug "get_burst: 1: ${1}, 2: ${2}, 3: ${3}"
 
     if [ -z "${SHAPER_BURST_US}" ] ; then
-	local SHAPER_BURST_US=1000	# the duration of the burst in microseconds
+	SHAPER_BURST_US=1000	# the duration of the burst in microseconds
 	sqm_warn "get_burst (by duration): Defaulting to ${SHAPER_BURST_US} microseconds bursts."
     fi
 
