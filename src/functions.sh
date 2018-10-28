@@ -22,7 +22,7 @@
 ################################################################################
 #
 # Hint to test functions from this file from the shell use:
-#	. /etc/sqm/sqm.conf ; . ${SQM_LIB_DIR}/defaults.sh ; . ${SQM_LIB_DIR}/functions.sh ; ${FUNCTIONNAME} ${ARGUMENTS}
+# . /etc/sqm/sqm.conf ; . ${SQM_LIB_DIR}/defaults.sh ; . ${SQM_LIB_DIR}/functions.sh ; ${FUNCTIONNAME} ${ARGUMENTS}
 #
 ################################################################################
 
@@ -82,12 +82,12 @@ ipt() {
 
 # wrapper to call tc to allow debug logging
 tc_wrapper(){
-    cmd_wrapper tc ${TC_BINARY} $@
+    cmd_wrapper tc ${TC_BINARY} "$@"
 }
 
 # wrapper to call ip to allow debug logging
 ip_wrapper(){
-    cmd_wrapper ip ${IP_BINARY} $@
+    cmd_wrapper ip ${IP_BINARY} "$@"
 }
 
 # the actual command execution wrapper
@@ -104,7 +104,7 @@ cmd_wrapper(){
     CMD_BINARY=$1 ; shift 1 # extract and remove the binary
 
     sqm_trace "${CMD_BINARY} $@"
-    LAST_ERROR=$( ${CMD_BINARY} $@ 2>&1 )
+    LAST_ERROR=$( ${CMD_BINARY} "$@" 2>&1 )
     RET=$?
     sqm_trace "${LAST_ERROR}"
 
