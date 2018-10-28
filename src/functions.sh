@@ -15,11 +15,20 @@
 # it under the terms of the GNU General Public License version 2 as
 # published by the Free Software Foundation.
 #
-#   Copyright (C) 2012-6
+#   Copyright (C) 2012-8
 #       Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller
 #       Eric Luehrsen
 #
 ################################################################################
+#
+# Hint to test functions from this file from the shell use:
+#	. /etc/sqm/sqm.conf ; . ${SQM_LIB_DIR}/defaults.sh ; . ${SQM_LIB_DIR}/functions.sh ; ${FUNCTIONNAME} ${ARGUMENTS}
+#
+################################################################################
+
+
+
+
 
 sqm_logger() {
     case $1 in
@@ -95,7 +104,7 @@ cmd_wrapper(){
     CMD_BINARY=$1 ; shift 1 # extract and remove the binary
 
     sqm_trace "${CMD_BINARY} $@"
-    LAST_ERROR=$( ${CMD_BINARY} $* 2>&1 )
+    LAST_ERROR=$( ${CMD_BINARY} $@ 2>&1 )
     RET=$?
     sqm_trace "${LAST_ERROR}"
 
