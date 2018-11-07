@@ -53,8 +53,6 @@ start_sqm_section() {
     export IQDISC_OPTS=$(config_get "$section" iqdisc_opts)
     export EQDISC_OPTS=$(config_get "$section" eqdisc_opts)
     export TARGET=$(config_get "$section" target)
-    export SHAPER_BURST=$(config_get "$section" shaper_burst)
-    export HTB_QUANTUM_FUNCTION=$(config_get "$section" htb_quantum_function)
     export QDISC=$(config_get "$section" qdisc)
     export SCRIPT=$(config_get "$section" script)
 

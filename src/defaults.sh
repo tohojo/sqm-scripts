@@ -37,8 +37,22 @@
 #sm: *_CAKE_OPTS should contain the diffserv keyword for cake
 [ -z "$INGRESS_CAKE_OPTS" ] && INGRESS_CAKE_OPTS="diffserv3"
 [ -z "$EGRESS_CAKE_OPTS" ] && EGRESS_CAKE_OPTS="diffserv3"
-[ -z "$SHAPER_BURST" ] && SHAPER_BURST="1"
-[ -z "$HTB_QUANTUM_FUNCTION" ] && HTB_QUANTUM_FUNCTION="linear"
+
+# HTB without a sufficiently large burst/cburst value is a bit CPU hungry
+# so allow to specify the permitted burst in the time domain (microseconds)
+# so the user has a feeling for the associated worst case latency cost
+# set to zero to use htb default butst of one MTU
+[ -z "$SHAPER_BURST_DUR_US" ] && SHAPER_BURST_DUR_US=1000
+[ -z "$ISHAPER_BURST_DUR_US" ] && ISHAPER_BURST_DUR_US=$SHAPER_BURST_DUR_US
+[ -z "$ESHAPER_BURST_DUR_US" ] && ESHAPER_BURST_DUR_US=$SHAPER_BURST_DUR_US
+
+# use the same logic for the calculation of htb's quantum
+# quantum controlls how many bytes htb tries to deque from the current tier
+# before switching tiers.
+[ -z "$SHAPER_QUANTUM_DUR_US" ] && SHAPER_QUANTUM_DUR_US=$SHAPER_BURST_DUR_US
+[ -z "$ISHAPER_QUANTUM_DUR_US" ] && ISHAPER_QUANTUM_DUR_US=$SHAPER_QUANTUM_DUR_US
+[ -z "$ESHAPER_QUANTUM_DUR_US" ] && ESHAPER_QUANTUM_DUR_US=$SHAPER_QUANTUM_DUR_US
+
 
 # Logging verbosity
 VERBOSITY_SILENT=0

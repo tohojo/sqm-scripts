@@ -233,6 +233,7 @@ verify_qdisc() {
     local ifb=TMP_IFB_4_SQM
     local root_string="root" # this works for most qdiscs
     local args=""
+    local IFB_MTU=1514
 
     if [ -n "$supported" ]; then
         local found=0
@@ -242,11 +243,17 @@ verify_qdisc() {
         [ "$found" -eq "1" ] || return 1
     fi
     create_ifb $ifb || return 1
+    
+    
     case $qdisc in
         #ingress is special
         ingress) root_string="" ;;
         #cannot instantiate tbf without args
-        tbf) args="limit 1 burst 1 rate 1kbps" ;;
+        tbf) 
+    	    IFB_MTU=$( get_mtu $ifb )
+	    IFB_MTU=$(( ${IFB_MTU} + 14 )) # TBF's warning is confused, it says MTU but it checks MTU + 14
+	    args="limit 1 burst ${IFB_MTU} rate 1kbps" 
+	    ;;
     esac
 
     $TC qdisc replace dev $ifb $root_string $qdisc $args
@@ -342,124 +349,109 @@ fc() {
     prio=$(($prio + 1))
 }
 
-# Scale quantum with bandwidth to lower computation cost.
+
+# allow better control over HTB's quantum variable
+# this controlls how many bytes htb ties to deque from the current tier before 
+# switching to the next, if this is large mixing between pririty tiers will
+# be lumpy, but at a lower CPU cost. In first approximation quantum should not be 
+# larger than burst.
 get_htb_quantum() {
-    case "$HTB_QUANTUM_FUNCTION" in
-        linear|step)
-            eval "htb_quantum_${HTB_QUANTUM_FUNCTION} $1 $2" ;;
-        *)
-            sqm_warn "unknown HTB quantum function: '$HTB_QUANTUM_FUNCTION'."
-            echo 1500 ;; # fallback
-    esac
-}
+    local HTB_MTU=$( get_mtu $1 )
+    local BANDWIDTH=$2
+    local DURATION_US=$3
+    local MIN_QUANTUM
+    local QUANTUM
 
-# Linear scaling within bounds
-htb_quantum_linear() {
-    HTB_MTU=$( get_mtu $1 )
-    BANDWIDTH=$2
+    sqm_debug "get_htb_quantum: 1: ${1}, 2: ${2}, 3: ${3}"
 
-    if [ -z "${HTB_MTU}" ] ; then
-        HTB_MTU=1500
+    if [ -z "${DURATION_US}" ] ; then
+	DURATION_US=${SHAPER_QUANTUM_DUR_US}	# the duration of the burst in microseconds
+	sqm_warn "get_htb_quantum (by duration): Defaulting to ${DURATION_US} microseconds."
     fi
-
-    # Because $BANDWIDTH is in kbps, bytes/1ms is simply factor-8
-    # Stop at some huge quantum, and don't start until 2 MTU
-    BANDWIDTH_L=$(( ${HTB_MTU} *  2 * 8 ))
-    BANDWIDTH_H=$(( ${HTB_MTU} * 64 * 8 ))
-
-    if [ ${BANDWIDTH} -gt ${BANDWIDTH_H} ] ; then
-        HTB_QUANTUM=$(( ${HTB_MTU} * 64 ))
-
-    elif [ ${BANDWIDTH} -gt ${BANDWIDTH_L} ] ; then
-        # Take no chances with order o' exec rounding
-        HTB_QUANTUM=$(( ${BANDWIDTH}   / 8 ))
-        HTB_QUANTUM=$(( ${HTB_QUANTUM} / ${HTB_MTU} ))
-        HTB_QUANTUM=$(( ${HTB_QUANTUM} * ${HTB_MTU} ))
-
+    
+    if [ -n "${HTB_MTU}" -a "${DURATION_US}" -gt "0" ] ; then
+    	QUANTUM=$( get_burst ${HTB_MTU} ${BANDWIDTH} ${DURATION_US} )
+    fi
+    
+    if [ -z "$QUANTUM" ]; then
+	MIN_QUANTUM=$(( ${MTU} + 48 ))	# add 48 bytes to MTU for the  ovehead
+	MIN_QUANTUM=$(( ${MIN_QUANTUM} + 47 ))	# now do ceil(Min_BURST / 48) * 53 in shell integer arithmic
+	MIN_QUANTUM=$(( ${MIN_QUANTUM} / 48 ))
+	MIN_QUANTUM=$(( ${MIN_QUANTUM} * 53 ))	# for MTU 1489 to 1536 this will result in MIN_BURST = 1749 Bytes
+	sqm_warn "get_htb_quantum: 0 bytes quantum will not work, defaulting to one ATM/AAL5 expanded MTU packet with overhead: ${MIN_QUANTUM}"
+	echo ${MIN_QUANTUM}
     else
-        HTB_QUANTUM=${HTB_MTU}
+        echo ${QUANTUM}
     fi
-
-    sqm_debug "HTB_QUANTUM (linear): ${HTB_QUANTUM}, BANDWIDTH: ${BANDWIDTH}"
-
-    echo $HTB_QUANTUM
-}
-
-# Fixed step scaling
-htb_quantum_step() {
-    HTB_QUANTUM=$( get_mtu $1 )
-    BANDWIDTH=$2
-
-    if [ -z "${HTB_QUANTUM}" ]; then
-        HTB_QUANTUM=1500
-    fi
-    if [ ${BANDWIDTH} -gt 20000 ]; then
-        HTB_QUANTUM=$((${HTB_QUANTUM} * 2))
-    fi
-    if [ ${BANDWIDTH} -gt 30000 ]; then
-        HTB_QUANTUM=$((${HTB_QUANTUM} * 2))
-    fi
-    if [ ${BANDWIDTH} -gt 40000 ]; then
-        HTB_QUANTUM=$((${HTB_QUANTUM} * 2))
-    fi
-    if [ ${BANDWIDTH} -gt 50000 ]; then
-        HTB_QUANTUM=$((${HTB_QUANTUM} * 2))
-    fi
-    if [ ${BANDWIDTH} -gt 60000 ]; then
-        HTB_QUANTUM=$((${HTB_QUANTUM} * 2))
-    fi
-    if [ ${BANDWIDTH} -gt 80000 ]; then
-        HTB_QUANTUM=$((${HTB_QUANTUM} * 2))
-    fi
-
-    sqm_debug "HTB_QUANTUM (step): ${HTB_QUANTUM}, BANDWIDTH: ${BANDWIDTH}"
-
-    echo $HTB_QUANTUM
 }
 
 
+
+
+# try to define the burst parameter in the duration required to transmit a burst at the configured bandwidth
+# conceptuallly the matching quantum for this burst should be BURST/number_of_tiers to give each htb tier a 
+# chance to dequeue into each burst, but that most likely will end up with a somewhat too small quantum
+# note: to get htb to report the configured burst/cburt one needs to issue the following command (for 
+# ifbpppoe-wan):
+#	tc -d class show dev ifb4pppoe-wan
 get_burst() {
-    MTU=$1
-    BANDWIDTH=$2
-    BURST=
+    local MTU=$1
+    local BANDWIDTH=$2 # note bandwidth is always given in kbps
+    local SHAPER_BURST_US=$3
+    local MIN_BURST
+    local BURST
 
-    # 10 MTU burst can itself create delay under CPU load.
-    # It will need to all wait for a hardware commit.
-    # Note the lean mixture at high bandwidths for upper limit.
-    BANDWIDTH_L=$(( ${MTU} *  2 * 8 ))
-    BANDWIDTH_H=$(( ${MTU} * 18 * 8 ))
+    sqm_debug "get_burst: 1: ${1}, 2: ${2}, 3: ${3}"
 
-
-    if [ ${BANDWIDTH} -gt ${BANDWIDTH_H} ] ; then
-        BURST=$(( ${HTB_MTU} * 10 ))
-
-    elif [ ${BANDWIDTH} -gt ${BANDWIDTH_L} ] ; then
-            # Start with 1ms buffer 2x MTU, and lean out the mixture at higher rates
-            BURST=$(( ${BANDWIDTH} - ${BANDWIDTH_L} ))
-            BURST=$(( ${BURST} / 16 ))
-            BURST=$(( ${BURST} / ${MTU} ))
-            BURST=$(( ${BURST} * ${MTU} ))
-            BURST=$(( ${BURST} + ${MTU} * 2 ))
+    if [ -z "${SHAPER_BURST_US}" ] ; then
+	SHAPER_BURST_US=1000	# the duration of the burst in microseconds
+	sqm_warn "get_burst (by duration): Defaulting to ${SHAPER_BURST_US} microseconds bursts."
     fi
 
-    sqm_debug "BURST: ${BURST}, BANDWIDTH: ${BANDWIDTH}"
+    # let's assume ATM/AAL5 to be the worst case encapsulation
+    #	and 48 Bytes a reasonable worst case per packet overhead
+    MIN_BURST=$(( ${MTU} + 48 ))	# add 48 bytes to MTU for the  ovehead
+    MIN_BURST=$(( ${MIN_BURST} + 47 ))	# now do ceil(Min_BURST / 48) * 53 in shell integer arithmic
+    MIN_BURST=$(( ${MIN_BURST} / 48 ))
+    MIN_BURST=$(( ${MIN_BURST} * 53 ))	# for MTU 1489 to 1536 this will result in MIN_BURST = 1749 Bytes
+    
+    # htb/tbf expect burst to be specified in bytes, while bandwidth is in kbps
+    BURST=$(( ((${SHAPER_BURST_US} * ${BANDWIDTH}) / 8000) ))
+    
+    if [ ${BURST} -lt ${MIN_BURST} ] ; then
+	sqm_log "get_burst (by duration): the calculated burst/quantum size of ${BURST} bytes was below the minimum of ${MIN_BURST} bytes."
+	BURST=${MIN_BURST}
+    fi
 
-    echo $BURST
+    sqm_debug "get_burst (by duration): BURST [Byte]: ${BURST}, BANDWIDTH [Kbps]: ${BANDWIDTH}, DURATION [us]: ${SHAPER_BURST_US}"
+    
+    echo ${BURST}
 }
+
 
 # Create optional burst parameters to leap over CPU interupts when the CPU is
 # severly loaded. We need to be conservative though.
 get_htb_burst() {
-    HTB_MTU=$( get_mtu $1 )
-    BANDWIDTH=$2
+    local HTB_MTU=$( get_mtu $1 )
+    local BANDWIDTH=$2
+    local DURATION_US=$3
+    local BURST
 
-    if [ -n "${HTB_MTU}" -a "${SHAPER_BURST}" -eq "1" ] ; then
-        BURST=$( get_burst $HTB_MTU $BANDWIDTH )
-        if [ -n "$BURST" ]; then
-            echo burst $BURST cburst $BURST
-        else
-            sqm_debug "Default Burst, HTB will use MTU plus shipping and handling"
-        fi
+    sqm_debug "get_htb_burst: 1: ${1}, 2: ${2}, 3: ${3}"
+
+    if [ -z "${DURATION_US}" ] ; then
+	DURATION_US=${SHAPER_BURST_DUR_US}	# the duration of the burst in microseconds
+	sqm_warn "get_htb_burst (by duration): Defaulting to ${SHAPER_BURST_DUR_US} microseconds."
+    fi
+
+    if [ -n "${HTB_MTU}" -a "${DURATION_US}" -gt "0" ] ; then
+    	BURST=$( get_burst ${HTB_MTU} ${BANDWIDTH} ${DURATION_US} )
+    fi
+
+    if [ -z "$BURST" ]; then
+	sqm_debug "get_htb_burst: Default Burst, HTB will use MTU plus shipping and handling"
+    else
+        echo burst $BURST cburst $BURST
     fi
 }
 
