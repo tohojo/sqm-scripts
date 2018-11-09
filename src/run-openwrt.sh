@@ -14,6 +14,7 @@
 
 ACTION="${1:-start}"
 RUN_IFACE="$2"
+LOCKDIR="${SQM_STATE_DIR}/sqm-run.lock"
 
 check_state_dir
 [ -d "${SQM_QDISC_STATE_DIR}" ] || ${SQM_LIB_DIR}/update-available-qdiscs
@@ -75,6 +76,33 @@ start_sqm_section() {
 
     "${SQM_LIB_DIR}/start-sqm"
 }
+
+release_lock() {
+    PID=$(cat "$LOCKDIR/pid")
+    if [ "$PID" -neq "$$" ]; then
+        sqm_error "Trying to release lock with wrong PID $PID != $$"
+        return 1
+    fi
+
+    rm -rf "$LOCKDIR"
+    return 0
+}
+
+take_lock() {
+
+    if mkdir "$LOCKDIR" 2>/dev/null; then
+        sqm_trace "Acquired run lock"
+        echo $$ > "$LOCKDIR/pid"
+
+        trap release_lock 0
+        return 0
+    fi
+    PID=$(cat "$LOCKDIR/pid")
+    sqm_error "Unable to get run lock - already held by $PID"
+    return 1
+}
+
+take_lock || exit 1
 
 if [ "$ACTION" = "stop" ]; then
     if [ -z "$RUN_IFACE" ]; then
