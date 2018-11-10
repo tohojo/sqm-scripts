@@ -109,6 +109,7 @@ while ! take_lock; do
     tries=$((tries - 1))
     if [ "$tries" -eq 0 ]; then
         sqm_error "Giving up on getting lock after $MAX_TRIES attempts"
+        sqm_error "This is a bug; please report it at https://github.com/tohojo/sqm-scripts/issues"
         exit 1
     fi
 done
