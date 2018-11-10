@@ -98,11 +98,20 @@ take_lock() {
         return 0
     fi
     PID=$(cat "$LOCKDIR/pid")
-    sqm_error "Unable to get run lock - already held by $PID"
+    sqm_debug "Unable to get run lock - already held by $PID"
     return 1
 }
 
-take_lock || exit 1
+MAX_TRIES=10
+tries=$MAX_TRIES
+while ! take_lock; do
+    sleep 1
+    tries=$((tries - 1))
+    if [ "$tries" -eq 0 ]; then
+        sqm_error "Giving up on getting lock after $MAX_TRIES attempts"
+        exit 1
+    fi
+done
 
 if [ "$ACTION" = "stop" ]; then
     if [ -z "$RUN_IFACE" ]; then
