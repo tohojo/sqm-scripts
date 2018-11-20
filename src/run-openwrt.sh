@@ -79,7 +79,7 @@ start_sqm_section() {
 
 release_lock() {
     PID=$(cat "$LOCKDIR/pid")
-    if [ "$PID" -neq "$$" ]; then
+    if [ "$PID" -ne "$$" ]; then
         sqm_error "Trying to release lock with wrong PID $PID != $$"
         return 1
     fi
