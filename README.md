@@ -10,7 +10,7 @@ http://www.bufferbloat.net/projects/cerowrt/wiki/Smart_Queue_Management
 `sudo make install` should install things on a regular Linux box. For
 OpenWrt, there are packages available in the ceropackages repository:
 https://github.com/dtaht/ceropackages-3.10 and in openwrt nightly
-builds.
+builds as well as in the main packages repository (https://github.com/openwrt/packages/tree/master/net/sqm-scripts).
 
 ## "Installing" the current development version from git
 
