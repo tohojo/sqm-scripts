@@ -94,6 +94,10 @@ cmd_wrapper(){
     CALLERID=$1 ; shift 1   # extract and remove the id string
     CMD_BINARY=$1 ; shift 1 # extract and remove the binary
 
+    # Handle silencing of errors from callers
+    ERRLOG="sqm_error"
+    [ "$SILENT" -eq "1" ] && ERRLOG="sqm_debug"
+
     sqm_trace "${CMD_BINARY} $@"
     LAST_ERROR=$( ${CMD_BINARY} "$@" 2>&1 )
     RET=$?
@@ -103,8 +107,8 @@ cmd_wrapper(){
         sqm_debug "cmd_wrapper: ${CALLERID}: SUCCESS: ${CMD_BINARY} $@"
     else
         # this went south, try to capture & report more detail
-        sqm_error "cmd_wrapper: ${CALLERID}: FAILURE (${RET}): ${CMD_BINARY} $@"
-        sqm_error "cmd_wrapper: ${CALLERID}: LAST ERROR: ${LAST_ERROR}"
+        $ERRLOG "cmd_wrapper: ${CALLERID}: FAILURE (${RET}): ${CMD_BINARY} $@"
+        $ERRLOG "cmd_wrapper: ${CALLERID}: LAST ERROR: ${LAST_ERROR}"
     fi
 
     return $RET

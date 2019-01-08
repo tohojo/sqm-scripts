@@ -21,7 +21,7 @@ EGRESS_CAKE_OPTS="besteffort"
 
 egress() {
     sqm_debug "egress"
-    $TC qdisc del dev $IFACE root 2>/dev/null
+    SILENT=1 $TC qdisc del dev $IFACE root
     $TC qdisc add dev $IFACE root $( get_stab_string ) cake \
         bandwidth ${UPLINK}kbit $( get_cake_lla_string ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
 }
@@ -30,9 +30,9 @@ egress() {
 ingress() {
     sqm_debug "ingress"
 
-    $TC qdisc del dev $IFACE handle ffff: ingress 2>/dev/null
+    SILENT=1 $TC qdisc del dev $IFACE handle ffff: ingress
     $TC qdisc add dev $IFACE handle ffff: ingress
-    $TC qdisc del dev $DEV root 2>/dev/null
+    SILENT=1 $TC qdisc del dev $DEV root
 
     [ "$ZERO_DSCP_INGRESS" -eq "1" ] && INGRESS_CAKE_OPTS="$INGRESS_CAKE_OPTS wash"
 
@@ -61,7 +61,7 @@ sqm_start() {
         sqm_debug "egress shaping activated"
     else
         sqm_debug "egress shaping deactivated"
-        $TC qdisc del dev ${IFACE} root 2> /dev/null
+        SILENT=1 $TC qdisc del dev ${IFACE} root
     fi
     if [ "${DOWNLINK}" -ne 0 ];
     then
@@ -70,8 +70,8 @@ sqm_start() {
         sqm_debug "ingress shaping activated"
     else
         sqm_debug "ingress shaping deactivated"
-        $TC qdisc del dev ${DEV} root 2> /dev/null
-        $TC qdisc del dev ${IFACE} ingress 2> /dev/null
+        SILENT=1 $TC qdisc del dev ${DEV} root
+        SILENT=1 $TC qdisc del dev ${IFACE} ingress
     fi
     return 0
 }

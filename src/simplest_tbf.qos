@@ -36,7 +36,7 @@ egress() {
     BURST="$(get_burst ${MTU:-1514} ${UPLINK} ${ESHAPER_BURST_DUR_US})"
     BURST=${BURST:-1514}
 
-    $TC qdisc del dev $IFACE root 2>/dev/null
+    SILENT=1 $TC qdisc del dev $IFACE root
 
     $TC qdisc add dev $IFACE root handle 1: $(get_stab_string) tbf \
         rate ${UPLINK}kbit burst $BURST latency 300ms $(get_htb_adsll_string)
@@ -48,14 +48,14 @@ egress() {
 
 ingress() {
     sqm_debug "ingress"
-    $TC qdisc del dev $IFACE handle ffff: ingress 2>/dev/null
+    SILENT=1 $TC qdisc del dev $IFACE handle ffff: ingress
     $TC qdisc add dev $IFACE handle ffff: ingress
 
     MTU=$(get_mtu $IFACE)
     BURST="$(get_burst ${MTU:-1514} ${DOWNLINK} ${ISHAPER_BURST_DUR_US})"
     BURST=${BURST:-1514}
 
-    $TC qdisc del dev $DEV root 2>/dev/null
+    SILENT=1 $TC qdisc del dev $DEV root
 
     $TC qdisc add dev $DEV root handle 1: $(get_stab_string) tbf \
         rate ${DOWNLINK}kbit burst $BURST latency 300ms $(get_htb_adsll_string)
@@ -94,7 +94,7 @@ sqm_start() {
         sqm_debug "egress shaping activated"
     else
         sqm_debug "egress shaping deactivated"
-        $TC qdisc del dev $IFACE root 2> /dev/null
+        SILENT=1 $TC qdisc del dev $IFACE root
     fi
     if [ "$DOWNLINK" -ne 0 ]; then
         verify_qdisc ingress "ingress" || return 1
@@ -102,8 +102,8 @@ sqm_start() {
         sqm_debug "ingress shaping activated"
     else
         sqm_debug "ingress shaping deactivated"
-        $TC qdisc del dev $DEV root 2> /dev/null
-        $TC qdisc del dev $IFACE ingress 2> /dev/null
+        SILENT=1 $TC qdisc del dev $DEV root
+        SILENT=1 $TC qdisc del dev $IFACE ingress
     fi
 
     return 0
