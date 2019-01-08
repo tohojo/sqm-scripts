@@ -243,16 +243,16 @@ verify_qdisc() {
         [ "$found" -eq "1" ] || return 1
     fi
     create_ifb $ifb || return 1
-    
-    
+
+
     case $qdisc in
         #ingress is special
         ingress) root_string="" ;;
         #cannot instantiate tbf without args
-        tbf) 
+        tbf)
     	    IFB_MTU=$( get_mtu $ifb )
 	    IFB_MTU=$(( ${IFB_MTU} + 14 )) # TBF's warning is confused, it says MTU but it checks MTU + 14
-	    args="limit 1 burst ${IFB_MTU} rate 1kbps" 
+	    args="limit 1 burst ${IFB_MTU} rate 1kbps"
 	    ;;
     esac
 
@@ -351,9 +351,9 @@ fc() {
 
 
 # allow better control over HTB's quantum variable
-# this controlls how many bytes htb ties to deque from the current tier before 
-# switching to the next, if this is large mixing between pririty tiers will
-# be lumpy, but at a lower CPU cost. In first approximation quantum should not be 
+# this controlls how many bytes htb ties to deque from the current tier before
+# switching to the next, if this is large mixing between pririty tiers will be
+# lumpy, but at a lower CPU cost. In first approximation quantum should not be
 # larger than burst.
 get_htb_quantum() {
     local HTB_MTU=$( get_mtu $1 )
@@ -368,11 +368,11 @@ get_htb_quantum() {
 	DURATION_US=${SHAPER_QUANTUM_DUR_US}	# the duration of the burst in microseconds
 	sqm_warn "get_htb_quantum (by duration): Defaulting to ${DURATION_US} microseconds."
     fi
-    
+
     if [ -n "${HTB_MTU}" -a "${DURATION_US}" -gt "0" ] ; then
     	QUANTUM=$( get_burst ${HTB_MTU} ${BANDWIDTH} ${DURATION_US} )
     fi
-    
+
     if [ -z "$QUANTUM" ]; then
 	MIN_QUANTUM=$(( ${MTU} + 48 ))	# add 48 bytes to MTU for the  ovehead
 	MIN_QUANTUM=$(( ${MIN_QUANTUM} + 47 ))	# now do ceil(Min_BURST / 48) * 53 in shell integer arithmic
@@ -388,11 +388,12 @@ get_htb_quantum() {
 
 
 
-# try to define the burst parameter in the duration required to transmit a burst at the configured bandwidth
-# conceptuallly the matching quantum for this burst should be BURST/number_of_tiers to give each htb tier a 
-# chance to dequeue into each burst, but that most likely will end up with a somewhat too small quantum
-# note: to get htb to report the configured burst/cburt one needs to issue the following command (for 
-# ifbpppoe-wan):
+# try to define the burst parameter in the duration required to transmit a burst
+# at the configured bandwidth conceptuallly the matching quantum for this burst
+# should be BURST/number_of_tiers to give each htb tier a chance to dequeue into
+# each burst, but that most likely will end up with a somewhat too small quantum
+# note: to get htb to report the configured burst/cburt one needs to issue the
+# following command (for ifbpppoe-wan):
 #	tc -d class show dev ifb4pppoe-wan
 get_burst() {
     local MTU=$1
@@ -414,17 +415,17 @@ get_burst() {
     MIN_BURST=$(( ${MIN_BURST} + 47 ))	# now do ceil(Min_BURST / 48) * 53 in shell integer arithmic
     MIN_BURST=$(( ${MIN_BURST} / 48 ))
     MIN_BURST=$(( ${MIN_BURST} * 53 ))	# for MTU 1489 to 1536 this will result in MIN_BURST = 1749 Bytes
-    
+
     # htb/tbf expect burst to be specified in bytes, while bandwidth is in kbps
     BURST=$(( ((${SHAPER_BURST_US} * ${BANDWIDTH}) / 8000) ))
-    
+
     if [ ${BURST} -lt ${MIN_BURST} ] ; then
 	sqm_log "get_burst (by duration): the calculated burst/quantum size of ${BURST} bytes was below the minimum of ${MIN_BURST} bytes."
 	BURST=${MIN_BURST}
     fi
 
     sqm_debug "get_burst (by duration): BURST [Byte]: ${BURST}, BANDWIDTH [Kbps]: ${BANDWIDTH}, DURATION [us]: ${SHAPER_BURST_US}"
-    
+
     echo ${BURST}
 }
 
