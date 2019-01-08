@@ -98,6 +98,8 @@ cmd_wrapper(){
     ERRLOG="sqm_error"
     [ "$SILENT" -eq "1" ] && ERRLOG="sqm_debug"
 
+    [ "$SILENT" -eq "1" ] && SILENT=0
+
     sqm_trace "${CMD_BINARY} $@"
     LAST_ERROR=$( ${CMD_BINARY} "$@" 2>&1 )
     RET=$?
