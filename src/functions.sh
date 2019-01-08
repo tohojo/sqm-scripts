@@ -90,15 +90,20 @@ cmd_wrapper(){
     local CMD_BINARY
     local LAST_ERROR
     local RET
+    local ERRLOG
 
     CALLERID=$1 ; shift 1   # extract and remove the id string
     CMD_BINARY=$1 ; shift 1 # extract and remove the binary
 
     # Handle silencing of errors from callers
     ERRLOG="sqm_error"
-    [ "$SILENT" -eq "1" ] && ERRLOG="sqm_debug"
-
-    [ "$SILENT" -eq "1" ] && SILENT=0
+    if [ "$SILENT" -eq "1" ]; then
+        ERRLOG="sqm_debug"
+        # The busybox shell doesn't understand the concept of an inline variable
+        # only applying to a single command, so we need to reset SILENT
+        # afterwards. Ugly, but it works...
+        SILENT=0
+    fi
 
     sqm_trace "${CMD_BINARY} $@"
     LAST_ERROR=$( ${CMD_BINARY} "$@" 2>&1 )
