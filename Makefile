@@ -22,7 +22,7 @@ install-openwrt: install-lib
 install-linux: install-lib
 	install -m 0755 -d $(DESTDIR)$(PREFIX)/lib/systemd/system \
 		$(DESTDIR)$(PREFIX)/lib/tmpfiles.d $(DESTDIR)$(PREFIX)/bin
-	install -m 0644  platform/linux/eth0.iface.conf.example $(DESTDIR)/etc/sqm
+	install -m 0644  platform/linux/default.conf $(DESTDIR)/etc/sqm
 	install -m 0644  platform/linux/sqm@.service \
 		$(DESTDIR)$(PREFIX)/lib/systemd/system
 	install -m 0644  platform/linux/sqm-tmpfiles.conf \

@@ -5,7 +5,9 @@
 . /etc/sqm/sqm.conf
 
 if [ -f /etc/sqm/${IFACE}.iface.conf ]; then
+    [ -f /etc/sqm/default.conf ] && . /etc/sqm/default.conf
     . /etc/sqm/${IFACE}.iface.conf
+
     [ -f ${SQM_STATE_DIR}/$IFACE.state ] && ( . ${SQM_LIB_DIR}/stop-sqm )
     ( . ${SQM_LIB_DIR}/start-sqm )
 fi

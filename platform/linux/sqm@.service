@@ -7,7 +7,8 @@ After=sys-subsystem-net-devices-%i.device
 
 [Service]
 Type=oneshot
-EnvironmentFile=/etc/sqm/%i.iface.conf
+EnvironmentFile=/etc/sqm/default.conf
+EnvironmentFile=-/etc/sqm/%i.iface.conf
 Environment=IFACE=%i ENABLED=1
 ExecStart=/usr/lib/sqm/start-sqm
 ExecStop=/usr/lib/sqm/stop-sqm
