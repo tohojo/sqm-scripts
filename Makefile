@@ -2,6 +2,7 @@ PREFIX:=/usr
 DESTDIR:=
 PLATFORM:=linux
 LUCI_DIR:=$(DESTDIR)$(PREFIX)/lib/lua/luci
+UNIT_DIR:=$(DESTDIR)$(PREFIX)/lib/systemd/system
 
 all:
 	@echo "Run 'make install' to install."
@@ -20,11 +21,10 @@ install-openwrt: install-lib
 	install -m 0744 src/run-openwrt.sh $(DESTDIR)$(PREFIX)/lib/sqm/run.sh
 
 install-linux: install-lib
-	install -m 0755 -d $(DESTDIR)$(PREFIX)/lib/systemd/system \
-		$(DESTDIR)$(PREFIX)/lib/tmpfiles.d $(DESTDIR)$(PREFIX)/bin
+	install -m 0755 -d $(UNIT_DIR) $(DESTDIR)$(PREFIX)/lib/tmpfiles.d \
+		$(DESTDIR)$(PREFIX)/bin
 	install -m 0644  platform/linux/default.conf $(DESTDIR)/etc/sqm
-	install -m 0644  platform/linux/sqm@.service \
-		$(DESTDIR)$(PREFIX)/lib/systemd/system
+	install -m 0644  platform/linux/sqm@.service $(UNIT_DIR)
 	install -m 0644  platform/linux/sqm-tmpfiles.conf \
 		$(DESTDIR)$(PREFIX)/lib/tmpfiles.d/sqm.conf
 	install -m 0755 platform/linux/sqm-bin $(DESTDIR)$(PREFIX)/bin/sqm
