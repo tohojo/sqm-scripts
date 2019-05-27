@@ -186,14 +186,8 @@ ifb_name() {
     local CUR_IF=$1
     local MAX_IF_NAME_LENGTH=15
     local IFB_PREFIX="ifb4"
-    local NEW_IFB="${IFB_PREFIX}${CUR_IF}"
-    local IFB_NAME_LENGTH=${#NEW_IFB}
-    # IFB names can only be 15 chararcters, so we chop of excessive characters
-    # at the start of the interface name
-    if [ ${IFB_NAME_LENGTH} -gt ${MAX_IF_NAME_LENGTH} ]; then
-        local OVERLIMIT=$(( ${#NEW_IFB} - ${MAX_IF_NAME_LENGTH} ))
-        NEW_IFB=${IFB_PREFIX}${CUR_IF:${OVERLIMIT}:$(( ${MAX_IF_NAME_LENGTH} - ${#IFB_PREFIX} ))}
-    fi
+    local NEW_IFB=$( echo -n "${IFB_PREFIX}${CUR_IF}" | head -c $MAX_IF_NAME_LENGTH )
+
     echo ${NEW_IFB}
 }
 
