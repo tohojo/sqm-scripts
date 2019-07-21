@@ -38,6 +38,9 @@
 [ -z "$INGRESS_CAKE_OPTS" ] && INGRESS_CAKE_OPTS="diffserv3"
 [ -z "$EGRESS_CAKE_OPTS" ] && EGRESS_CAKE_OPTS="diffserv3"
 
+[ -z "$CUR_DIRECTION" ] && CUR_DIRECTION="NONE"
+
+
 # HTB without a sufficiently large burst/cburst value is a bit CPU hungry
 # so allow to specify the permitted burst in the time domain (microseconds)
 # so the user has a feeling for the associated worst case latency cost
