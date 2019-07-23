@@ -228,10 +228,8 @@ ingress() {
 
 }
 
-sqm_start() {
+sqm_prepare_script() {
     do_modules
     verify_qdisc "htb" || return 1
-    verify_qdisc $QDISC || return 1
     ipt_setup
-    sqm_start_default
 }

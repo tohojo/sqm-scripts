@@ -334,8 +334,15 @@ get_cake_lla_string() {
 sqm_start_default() {
     #sqm_error "sqm_start_default"
     [ -n "$IFACE" ] || return 1
-    #do_modules
-    #verify_qdisc $QDISC "cake" || return 1
+    
+    fn_exists sqm_prepare_script
+    if [ "$?" -eq "0" ]; then
+        sqm_prepare_script
+    fi
+    
+    
+    do_modules
+    verify_qdisc $QDISC || return 1
     sqm_debug "Starting ${SCRIPT}"
 
     [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
