@@ -338,34 +338,36 @@ sqm_start_default() {
     fn_exists sqm_prepare_script
     if [ "$?" -eq "0" ]; then
         sqm_prepare_script
+    else
+	sqm_debug "sqm_start_default: no sqm_prepare_script function found, proceeding without."
     fi
     
     
     do_modules
     verify_qdisc $QDISC || return 1
-    sqm_debug "Starting ${SCRIPT}"
+    sqm_debug "sqm_start_default: Starting ${SCRIPT}"
 
     [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
 
     if [ "${UPLINK}" -ne 0 ];
     then
 	CUR_DIRECTION="egress"
-	fn_exists egress && egress || sqm_warn "${SCRIPT} lacks an egress() function"
+	fn_exists egress && egress || sqm_warn "sqm_start_default: ${SCRIPT} lacks an egress() function"
         #egress
-        sqm_debug "egress shaping activated"
+        sqm_debug "sqm_start_default: egress shaping activated"
     else
-        sqm_debug "egress shaping deactivated"
+        sqm_debug "sqm_start_default: egress shaping deactivated"
         SILENT=1 $TC qdisc del dev ${IFACE} root
     fi
     if [ "${DOWNLINK}" -ne 0 ];
     then
 	CUR_DIRECTION="ingress"
 	verify_qdisc ingress "ingress" || return 1
-	fn_exists ingress && ingress || sqm_warn "${SCRIPT} lacks an ingress() function"
+	fn_exists ingress && ingress || sqm_warn "sqm_start_default: ${SCRIPT} lacks an ingress() function"
         #ingress
-        sqm_debug "ingress shaping activated"
+        sqm_debug "sqm_start_default: ingress shaping activated"
     else
-        sqm_debug "ingress shaping deactivated"
+        sqm_debug "sqm_start_default: ingress shaping deactivated"
         SILENT=1 $TC qdisc del dev ${DEV} root
         SILENT=1 $TC qdisc del dev ${IFACE} ingress
     fi
