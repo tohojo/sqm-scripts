@@ -47,31 +47,7 @@ ingress() {
 	match u32 0 0 flowid 1:1 action mirred egress redirect dev $DEV
 }
 
-sqm_start() {
-    [ -n "$IFACE" ] || return 1
+sqm_prepare_script() {
     do_modules
     verify_qdisc $QDISC "cake" || return 1
-    sqm_debug "Starting ${SCRIPT}"
-
-    [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
-
-    if [ "${UPLINK}" -ne 0 ];
-    then
-        egress
-        sqm_debug "egress shaping activated"
-    else
-        sqm_debug "egress shaping deactivated"
-        SILENT=1 $TC qdisc del dev ${IFACE} root
-    fi
-    if [ "${DOWNLINK}" -ne 0 ];
-    then
-	verify_qdisc ingress "ingress" || return 1
-        ingress
-        sqm_debug "ingress shaping activated"
-    else
-        sqm_debug "ingress shaping deactivated"
-        SILENT=1 $TC qdisc del dev ${DEV} root
-        SILENT=1 $TC qdisc del dev ${IFACE} ingress
-    fi
-    return 0
 }

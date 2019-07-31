@@ -72,8 +72,7 @@ ingress() {
 
 }
 
-sqm_start() {
-    [ -n "$IFACE" ] || return 1
+sqm_prepare_script() {
     do_modules
     verify_qdisc "tbf" || return 1
 
@@ -82,31 +81,6 @@ sqm_start() {
             sqm_warn "Cake is not supported with this script; falling back to FQ-CoDel"
             QDISC=fq_codel ;;
     esac
-
-    verify_qdisc $QDISC || return 1
-    sqm_debug "Starting ${SCRIPT}"
-
-    [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
-
-
-    if [ "$UPLINK" -ne 0 ]; then
-        egress
-        sqm_debug "egress shaping activated"
-    else
-        sqm_debug "egress shaping deactivated"
-        SILENT=1 $TC qdisc del dev $IFACE root
-    fi
-    if [ "$DOWNLINK" -ne 0 ]; then
-        verify_qdisc ingress "ingress" || return 1
-        ingress
-        sqm_debug "ingress shaping activated"
-    else
-        sqm_debug "ingress shaping deactivated"
-        SILENT=1 $TC qdisc del dev $DEV root
-        SILENT=1 $TC qdisc del dev $IFACE ingress
-    fi
-
-    return 0
 }
 
 ################################################################################
