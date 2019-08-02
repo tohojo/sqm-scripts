@@ -71,6 +71,11 @@ fn_exists() {
 
     LC_ALL=C type $1 | grep -q 'is a function'
     RET=$?
+    
+    if [ "${RET}" -eq "1" ]; then
+	LC_ALL=C type $1 | grep -q 'is a shell function'
+	RET=$?
+    fi
 
     sqm_debug "fn_exists: return value: ${RET}"
 
