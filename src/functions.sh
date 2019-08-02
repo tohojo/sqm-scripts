@@ -50,7 +50,34 @@ sqm_trace() { sqm_logger $VERBOSITY_TRACE "$@"; }
 
 
 # from https://stackoverflow.com/questions/85880/determine-if-a-function-exists-in-bash
-fn_exists() { LC_ALL=C type $1 | grep -q 'is a function'; }
+#fn_exists() { LC_ALL=C type $1 | grep -q 'is a function'; }
+
+fn_exists() { 
+    local FN_CANDIDATE=$1
+    local CUR_LC_ALL
+    local RET
+    # check that a candidate nme was given    
+    if [ -z "${FN_CANDIDATE}" ]; then
+	sqm_error "fn_exists: no function name specified as firtst argument."
+	return 1
+    fi
+    sqm_debug "fn_exists: name to type: ${FN_CANDIDATE}"
+    
+    # back-up any existing LC_ALL value
+    CUR_LC_ALL=${LC_ALL}
+
+    TMPVAR=$( LC_ALL=C type $1 )
+    sqm_debug "fn_exists: type output: $TMPVAR"
+
+    LC_ALL=C type $1 | grep -q 'is a function'
+    RET=$?
+
+    sqm_debug "fn_exists: return value: ${RET}"
+
+    # revert to the previous LC_ALL definition
+    LC_ALL=${CUR_LC_ALL}
+    return ${RET}
+}
 
 
 # ipt needs a toggle to show the outputs for debugging (as do all users of >
