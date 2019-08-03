@@ -49,38 +49,31 @@ sqm_debug() { sqm_logger $VERBOSITY_DEBUG "$@"; }
 sqm_trace() { sqm_logger $VERBOSITY_TRACE "$@"; }
 
 
-# from https://stackoverflow.com/questions/85880/determine-if-a-function-exists-in-bash
+# Inspired from https://stackoverflow.com/questions/85880/determine-if-a-function-exists-in-bash
 #fn_exists() { LC_ALL=C type $1 | grep -q 'is a function'; }
-
 fn_exists() { 
     local FN_CANDIDATE=$1
     local CUR_LC_ALL
+    local TYPE_OUTPUT
     local RET
     # check that a candidate nme was given    
     if [ -z "${FN_CANDIDATE}" ]; then
-	sqm_error "fn_exists: no function name specified as firtst argument."
+	sqm_error "fn_exists: no function name specified as first argument."
 	return 1
     fi
-    sqm_debug "fn_exists: name to type: ${FN_CANDIDATE}"
-    
-    # back-up any existing LC_ALL value
-    CUR_LC_ALL=${LC_ALL}
+    sqm_debug "fn_exists: function candidate name: ${FN_CANDIDATE}"
 
-    TMPVAR=$( LC_ALL=C type $1 )
-    sqm_debug "fn_exists: type output: $TMPVAR"
+    # extract the textual type description
+    TYPE_OUTPUT=$( LC_ALL=C type $1 )
+    sqm_debug "fn_exists: TYPE_OUTPUT: $TYPE_OUTPUT"
 
-    LC_ALL=C type $1 | grep -q 'is a function'
+    # OpenWrt (2019) returns 'is a function'
+    # Dwbian Buster/raspbian returns 'is a shell function'
+    # let's just hope no Linux system reurn 'is a shell builtin function'
+    echo ${TYPE_OUTPUT} | grep -q 'function'
     RET=$?
-    
-    if [ "${RET}" -eq "1" ]; then
-	LC_ALL=C type $1 | grep -q 'is a shell function'
-	RET=$?
-    fi
 
     sqm_debug "fn_exists: return value: ${RET}"
-
-    # revert to the previous LC_ALL definition
-    LC_ALL=${CUR_LC_ALL}
     return ${RET}
 }
 
