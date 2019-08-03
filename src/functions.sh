@@ -15,7 +15,7 @@
 # it under the terms of the GNU General Public License version 2 as
 # published by the Free Software Foundation.
 #
-#   Copyright (C) 2012-2018
+#   Copyright (C) 2012-2019
 #       Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller
 #       Eric Luehrsen
 #
@@ -68,7 +68,7 @@ fn_exists() {
     sqm_debug "fn_exists: TYPE_OUTPUT: $TYPE_OUTPUT"
 
     # OpenWrt (2019) returns 'is a function'
-    # Dwbian Buster/raspbian returns 'is a shell function'
+    # Debian Buster/raspbian returns 'is a shell function'
     # let's just hope no Linux system reurn 'is a shell builtin function'
     echo ${TYPE_OUTPUT} | grep -q 'function'
     RET=$?
