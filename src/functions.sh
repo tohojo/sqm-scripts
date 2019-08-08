@@ -360,8 +360,8 @@ sqm_start_default() {
     #sqm_error "sqm_start_default"
     [ -n "$IFACE" ] || return 1
     
-    fn_exists sqm_prepare_script
-    if [ "$?" -eq "0" ]; then
+    if fn_exists sqm_prepare_script ; then
+	sqm_debug "sqm_start_default: starting sqm_prepare_script"
         sqm_prepare_script
     else
 	sqm_debug "sqm_start_default: no sqm_prepare_script function found, proceeding without."
