@@ -89,7 +89,7 @@ fn_exists() {
 
 # ipt needs a toggle to show the outputs for debugging (as do all users of >
 # /dev/null 2>&1 and friends)
-ipt() {
+ipt_old() {
     d=$(echo $* | sed s/-A/-D/g)
     [ "$d" != "$*" ] && {
         sqm_trace "iptables ${d}"
@@ -110,18 +110,19 @@ ipt() {
     ip6tables $* >> ${OUTPUT_TARGET} 2>&1
 }
 
-ipt_new() {
+ipt() {
     d=$(echo $* | sed s/-A/-D/g)
     [ "$d" != "$*" ] && {
         ${IPTABLES} $d
-        sqm_trace "ip6tables ${d}"
         ${IP6TABLES} $d
     }
+
     d=$(echo $* | sed s/-I/-D/g)
     [ "$d" != "$*" ] && {
         ${IPTABLES} $d
         ${IP6TABLES} $d
     }
+
     ${IPTABLES} $*
     ${IP6TABLES} $*
 }
