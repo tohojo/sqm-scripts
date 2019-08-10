@@ -14,6 +14,14 @@
 . ${SQM_LIB_DIR}/functions.sh
 . ${SQM_LIB_DIR}/defaults.sh
 
+
+OUTPUT_TARGET=${SQM_STOP_LOG}
+if [ -n "${SQM_DEBUG}" -o "${SQM_DEBUG}" -eq "0" ]; then
+    # create a new log file
+    echo "$(date): stop-sqm logging started" > ${SQM_STOP_LOG}
+fi
+
+
 if [ ! -f "${SQM_STATE_DIR}/${IFACE}.state" ] ; then
     sqm_error "State file does not exists; SQM was not running on interface ${IFACE}"
     exit 1

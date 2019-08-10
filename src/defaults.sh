@@ -29,6 +29,12 @@
 [ -z "$TC_BINARY" ] && TC_BINARY=$(which tc)
 [ -z "$IP" ] && IP=ip_wrapper
 [ -z "$IP_BINARY" ] && IP_BINARY=$(which ip)
+
+[ -z "$IPTABLES" ] && IPTABLES=iptables_wrapper
+[ -z "$IPTABLES_BINARY" ] && IPTABLES_BINARY=$(which iptables)
+[ -z "$IP6TABLES" ] && IP6TABLES=ip6tables_wrapper
+[ -z "$IP6TABLES_BINARY" ] && IP6TABLES_BINARY=$(which ip6tables)
+
 # Try modprobe first, fall back to insmod
 [ -z "$INSMOD" ] && INSMOD=$(which modprobe) || INSMOD=$(which insmod)
 [ -z "$TARGET" ] && TARGET="5ms"
@@ -69,11 +75,17 @@ VERBOSITY_TRACE=10
 [ -z "$SQM_VERBOSITY_MIN" ] && SQM_VERBOSITY_MIN=$VERBOSITY_SILENT
 
 [ -z "$SQM_DEBUG" ] && SQM_DEBUG=0
+# common logging from run.sh
+SQM_DEBUG_LOG=${SQM_STATE_DIR}/${IFACE}.debug.log
+# logging for the start-sqm script
+SQM_START_LOG=${SQM_STATE_DIR}/${IFACE}.start-sqm.log
+# logging for the stop-sqm script
+SQM_STOP_LOG=${SQM_STATE_DIR}/${IFACE}.stop-sqm.log
 if [ "$SQM_DEBUG" -eq "1" ]
 then
-    SQM_DEBUG_LOG=${SQM_STATE_DIR}/${IFACE}.debug.log
-    OUTPUT_TARGET=${SQM_DEBUG_LOG}
+    [ -z "${OUTPUT_TARGET}" ] && OUTPUT_TARGET=${SQM_DEBUG_LOG}
 else
+    [ -z "${OUTPUT_TARGET}" ] && 
     OUTPUT_TARGET="/dev/null"
 fi
 

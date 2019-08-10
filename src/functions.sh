@@ -40,6 +40,15 @@ sqm_logger() {
             echo "$@" >> ${SQM_DEBUG_LOG}
         fi
     fi
+    #echo "OUTPUT_TARGET: ${OUTPUT_TARGET}"
+    # this will be overwritten for each interface every time start-sqm or stop-sqm runs, so no danger here
+    if [ "${OUTPUT_TARGET}" = "${SQM_START_LOG}" ]; then
+        echo "$@" >> ${SQM_START_LOG}
+    fi
+    
+    if [ "${OUTPUT_TARGET}" = "${SQM_STOP_LOG}" ]; then
+        echo "$@" >> ${SQM_STOP_LOG}
+    fi
 }
 
 sqm_error() { sqm_logger $VERBOSITY_ERROR ERROR: "$@"; }
@@ -99,6 +108,33 @@ ipt() {
     iptables $* >> ${OUTPUT_TARGET} 2>&1
     sqm_trace "ip6tables $*"
     ip6tables $* >> ${OUTPUT_TARGET} 2>&1
+}
+
+ipt_new() {
+    d=$(echo $* | sed s/-A/-D/g)
+    [ "$d" != "$*" ] && {
+        ${IPTABLES} $d
+        sqm_trace "ip6tables ${d}"
+        ${IP6TABLES} $d
+    }
+    d=$(echo $* | sed s/-I/-D/g)
+    [ "$d" != "$*" ] && {
+        ${IPTABLES} $d
+        ${IP6TABLES} $d
+    }
+    ${IPTABLES} $*
+    ${IP6TABLES} $*
+}
+
+
+# wrapper to call iptables to allow debug logging
+iptables_wrapper(){
+    cmd_wrapper iptables ${IPTABLES_BINARY} "$@"
+}
+
+# wrapper to call ip6tables to allow debug logging
+ip6tables_wrapper(){
+    cmd_wrapper ip6tables ${IP6TABLES_BINARY} "$@"
 }
 
 # wrapper to call tc to allow debug logging

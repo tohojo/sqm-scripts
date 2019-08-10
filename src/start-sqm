@@ -14,6 +14,14 @@
 . ${SQM_LIB_DIR}/defaults.sh
 STATE_FILE="${SQM_STATE_DIR}/${IFACE}.state"
 
+OUTPUT_TARGET=${SQM_START_LOG}
+if [ -z "${SQM_DEBUG}" -o "${SQM_DEBUG}" -eq "0" ]; then
+    # create a new log file
+    echo "$(date): start-sqm logging started" > ${SQM_START_LOG}
+fi
+
+
+
 if [ -z "${SCRIPT}" ] ; then
     sqm_error "SCRIPT value is not defined in /etc/sqm/${IFACE}.iface.conf"
     sqm_error "Please check your configuration and try again."
