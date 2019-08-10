@@ -113,14 +113,14 @@ ipt_old() {
 ipt() {
     d=$(echo $* | sed s/-A/-D/g)
     [ "$d" != "$*" ] && {
-        ${IPTABLES} $d
-        ${IP6TABLES} $d
+        SILENT=1 ${IPTABLES} $d
+        SILENT=1 ${IP6TABLES} $d
     }
 
     d=$(echo $* | sed s/-I/-D/g)
     [ "$d" != "$*" ] && {
-        ${IPTABLES} $d
-        ${IP6TABLES} $d
+        SILENT=1 ${IPTABLES} $d
+        SILENT=1 ${IP6TABLES} $d
     }
 
     ${IPTABLES} $*
