@@ -25,10 +25,18 @@
 
 [ -z "$IQDISC_OPTS" ] && IQDISC_OPTS=""
 [ -z "$EQDISC_OPTS" ] && EQDISC_OPTS=""
+
+# handling of specific important binaries
 [ -z "$TC" ] && TC=tc_wrapper
 [ -z "$TC_BINARY" ] && TC_BINARY=$(which tc)
 [ -z "$IP" ] && IP=ip_wrapper
 [ -z "$IP_BINARY" ] && IP_BINARY=$(which ip)
+[ -z "$IPTABLES" ] && IPTABLES=iptables_wrapper
+[ -z "$IPTABLES_BINARY" ] && IPTABLES_BINARY=$(which iptables)
+[ -z "$IP6TABLES" ] && IP6TABLES=ip6tables_wrapper
+[ -z "$IP6TABLES_BINARY" ] && IP6TABLES_BINARY=$(which ip6tables)
+
+
 # Try modprobe first, fall back to insmod
 [ -z "$INSMOD" ] && INSMOD=$(which modprobe) || INSMOD=$(which insmod)
 [ -z "$TARGET" ] && TARGET="5ms"

@@ -78,27 +78,33 @@ fn_exists() {
 }
 
 
-# ipt needs a toggle to show the outputs for debugging (as do all users of >
-# /dev/null 2>&1 and friends)
+# to avoid unexpected side-effects first delete rules before adding them (again)
 ipt() {
     d=$(echo $* | sed s/-A/-D/g)
     [ "$d" != "$*" ] && {
-        sqm_trace "iptables ${d}"
-        iptables $d >> ${OUTPUT_TARGET} 2>&1
-        sqm_trace "ip6tables ${d}"
-        ip6tables $d >> ${OUTPUT_TARGET} 2>&1
+        SILENT=1 ${IPTABLES} $d
+        SILENT=1 ${IP6TABLES} $d
     }
+
     d=$(echo $* | sed s/-I/-D/g)
     [ "$d" != "$*" ] && {
-        sqm_trace "iptables ${d}"
-        iptables $d >> ${OUTPUT_TARGET} 2>&1
-        sqm_trace "ip6tables ${d}"
-        ip6tables $d >> ${OUTPUT_TARGET} 2>&1
+        SILENT=1 ${IPTABLES} $d
+        SILENT=1 ${IP6TABLES} $d
     }
-    sqm_trace "iptables $*"
-    iptables $* >> ${OUTPUT_TARGET} 2>&1
-    sqm_trace "ip6tables $*"
-    ip6tables $* >> ${OUTPUT_TARGET} 2>&1
+
+    SILENT=1 ${IPTABLES} $*
+    SILENT=1 ${IP6TABLES} $*
+}
+
+
+# wrapper to call iptables to allow debug logging
+iptables_wrapper(){
+    cmd_wrapper iptables ${IPTABLES_BINARY} "$@"
+}
+
+# wrapper to call ip6tables to allow debug logging
+ip6tables_wrapper(){
+    cmd_wrapper ip6tables ${IP6TABLES_BINARY} "$@"
 }
 
 # wrapper to call tc to allow debug logging
