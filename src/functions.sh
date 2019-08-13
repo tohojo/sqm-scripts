@@ -80,20 +80,20 @@ fn_exists() {
 
 # to avoid unexpected side-effects first delete rules before adding them (again)
 ipt() {
-    d=$(echo $* | sed s/-A/-D/g)
+    d=$(echo "$*" | sed s/-A/-D/g)
     [ "$d" != "$*" ] && {
         SILENT=1 ${IPTABLES} $d
         SILENT=1 ${IP6TABLES} $d
     }
 
-    d=$(echo $* | sed s/-I/-D/g)
+    d=$(echo "$*" | sed s/-I/-D/g)
     [ "$d" != "$*" ] && {
         SILENT=1 ${IPTABLES} $d
         SILENT=1 ${IP6TABLES} $d
     }
 
-    SILENT=1 ${IPTABLES} $*
-    SILENT=1 ${IP6TABLES} $*
+    SILENT=1 ${IPTABLES} "$@"
+    SILENT=1 ${IP6TABLES} "$@"
 }
 
 
