@@ -14,6 +14,7 @@
 ACTION="${1:-start}"
 RUN_IFACE="$2"
 
+check_state_dir
 [ -d "${SQM_QDISC_STATE_DIR}" ] || ${SQM_LIB_DIR}/update-available-qdiscs
 
 stop_statefile() {

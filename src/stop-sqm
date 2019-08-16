@@ -14,8 +14,9 @@
 . ${SQM_LIB_DIR}/functions.sh
 . ${SQM_LIB_DIR}/defaults.sh
 
+check_state_dir
 if [ ! -f "${SQM_STATE_DIR}/${IFACE}.state" ] ; then
-    sqm_error "State file does not exists; SQM was not running on interface ${IFACE}"
+    sqm_error "State file does not exist; SQM was not running on interface ${IFACE}"
     exit 1
 fi
 STATE_FILE="${SQM_STATE_DIR}/${IFACE}.state"
