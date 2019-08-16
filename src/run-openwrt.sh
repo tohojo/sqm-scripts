@@ -10,6 +10,7 @@
 . /lib/functions.sh
 
 . /etc/sqm/sqm.conf
+. ${SQM_LIB_DIR}/functions.sh
 
 ACTION="${1:-start}"
 RUN_IFACE="$2"
