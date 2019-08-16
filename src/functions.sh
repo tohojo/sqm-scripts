@@ -236,13 +236,13 @@ check_state_dir() {
     local OWNER
 
     if [ -z "${SQM_STATE_DIR}" ]; then
-        sqm_error '$SQM_STATE_DIR is unset - check your config!'
+        SQM_DEBUG=0 sqm_error '$SQM_STATE_DIR is unset - check your config!'
         exit 1
     fi
     [ -d "${SQM_STATE_DIR}" ] || ( umask 077; mkdir -p "$SQM_STATE_DIR" ) || exit 1
 
     if [ ! -w "${SQM_STATE_DIR}" ] || [ ! -x "${SQM_STATE_DIR}" ]; then
-        sqm_error "Cannot write to state dir '$SQM_STATE_DIR'"
+        SQM_DEBUG=0 sqm_error "Cannot write to state dir '$SQM_STATE_DIR'"
         exit 1
     fi
 
@@ -252,12 +252,12 @@ check_state_dir() {
 
     PERM="0$(stat -L -c '%a' "${SQM_STATE_DIR}")"
     if [ "$((PERM & 0002))" -ne 0 ]; then
-        sqm_error "State dir '$SQM_STATE_DIR' is world writable; this is unsafe, please fix"
+        SQM_DEBUG=0 sqm_error "State dir '$SQM_STATE_DIR' is world writable; this is unsafe, please fix"
         exit 1
     fi
     OWNER="$(stat -L -c '%u' "${SQM_STATE_DIR}")"
     if [ "$OWNER" -ne "$(id -u)" ]; then
-        sqm_error "State dir '$SQM_STATE_DIR' is owned by a different user; this is unsafe, please fix"
+        SQM_DEBUG=0 sqm_error "State dir '$SQM_STATE_DIR' is owned by a different user; this is unsafe, please fix"
         exit 1
     fi
 }
