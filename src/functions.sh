@@ -51,12 +51,13 @@ sqm_trace() { sqm_logger $VERBOSITY_TRACE "$@"; }
 
 # Inspired from https://stackoverflow.com/questions/85880/determine-if-a-function-exists-in-bash
 #fn_exists() { LC_ALL=C type $1 | grep -q 'is a function'; }
-fn_exists() { 
-    local FN_CANDIDATE=$1
+fn_exists() {
+    local FN_CANDIDATE
     local CUR_LC_ALL
     local TYPE_OUTPUT
     local RET
-    # check that a candidate nme was given    
+    FN_CANDIDATE=$1
+    # check that a candidate nme was given
     if [ -z "${FN_CANDIDATE}" ]; then
 	sqm_error "fn_exists: no function name specified as first argument."
 	return 1
@@ -103,10 +104,11 @@ ipt_log_rewind() {
 
 # to avoid unexpected side-effects first delete rules before adding them (again)
 ipt() {
+    local d
     # Try to wipe pre-existing rules and chains, and prepare the transation
     # log to do the same at shutdown.
     for rep in "s/-A/-D/g" "s/-I/-D/g" "s/-N/-X/g"; do
-        local d=$(echo $* | sed $rep)
+        d=$(echo $* | sed $rep)
         [ "$d" != "$*" ] && {
             SILENT=1 ${IPTABLES} $d
             SILENT=1 ${IP6TABLES} $d
@@ -190,15 +192,12 @@ do_modules() {
 # variable names defined in defaults.sh and since defaults.sh should contain all
 # used variables this should be the complete set.
 write_defaults_vars_to_state_file() {
-    local filename=$1
-    local defaultsFQN=$2
-    #shift
-    # this assumes that functions.sh lives in the same directory as defaults.sh
-    #local THIS_SCRIPT=$( readlink -f "$0" )
-    #local SQM_LIB_DIR=$( dirname "${THIS_SCRIPT}" )
-    # extract all variables from defaults.sh using the "${VARNAME}=" as matching pattern
-    #local ALL_SQM_DEFAULTS_VARS=$( grep -r -o -e "[[:alnum:][:punct:]]*=" ${SQM_LIB_DIR}/defaults.sh | sed 's/=//' )
-    local ALL_SQM_DEFAULTS_VARS=$( grep -r -o -e "[[:alnum:][:punct:]]*=" ${defaultsFQN} | sed 's/=//' )
+    local filename
+    local defaultsFQN
+    local ALL_SQM_DEFAULTS_VARS
+    filename=$1
+    defaultsFQN=$2
+    ALL_SQM_DEFAULTS_VARS=$( grep -r -o -e "[[:alnum:][:punct:]]*=" ${defaultsFQN} | sed 's/=//' )
 
     write_state_file ${filename} ${ALL_SQM_DEFAULTS_VARS}
 }
@@ -206,7 +205,8 @@ write_defaults_vars_to_state_file() {
 # Write a state file to the filename given as $1. The remaining arguments are
 # variable names that should be written to the state file.
 write_state_file() {
-    local filename=$1
+    local filename
+    filename=$1
     shift
     for var in "$@"; do
         val=$(eval echo '$'$var)
@@ -218,14 +218,17 @@ write_state_file() {
 # find the ifb device associated with a specific interface, return nothing of no
 # ifb is associated with IF
 get_ifb_associated_with_if() {
-    local CUR_IF=$1
+    local CUR_IF
+    local CUR_IFB
+    local TMP
+    CUR_IF=$1
     # Stray ' in the comment is a fix for broken editor syntax highlighting
-    local CUR_IFB=$( $TC_BINARY -p filter show parent ffff: dev ${CUR_IF} | grep -o -E ifb'[^)\ ]+' )    # '
+    CUR_IFB=$( $TC_BINARY -p filter show parent ffff: dev ${CUR_IF} | grep -o -E ifb'[^)\ ]+' )    # '
     sqm_debug "ifb associated with interface ${CUR_IF}: ${CUR_IFB}"
 
     # we could not detect an associated IFB for CUR_IF
     if [ -z "${CUR_IFB}" ]; then
-        local TMP=$( $TC_BINARY -p filter show parent ffff: dev ${CUR_IF} )
+        TMP=$( $TC_BINARY -p filter show parent ffff: dev ${CUR_IF} )
         if [ ! -z "${TMP}" ]; then
             # oops, there is output but we failed to properly parse it? Ask for a user report
             sqm_error "#---- CUT HERE ----#"
@@ -241,17 +244,22 @@ get_ifb_associated_with_if() {
 }
 
 ifb_name() {
-    local CUR_IF=$1
-    local MAX_IF_NAME_LENGTH=15
-    local IFB_PREFIX="ifb4"
-    local NEW_IFB=$( echo -n "${IFB_PREFIX}${CUR_IF}" | head -c $MAX_IF_NAME_LENGTH )
+    local CUR_IF
+    local MAX_IF_NAME_LENGTH
+    local IFB_PREFIX
+    local NEW_IFB
+    CUR_IF=$1
+    MAX_IF_NAME_LENGTH=15
+    IFB_PREFIX="ifb4"
+    NEW_IFB=$( echo -n "${IFB_PREFIX}${CUR_IF}" | head -c $MAX_IF_NAME_LENGTH )
 
     echo ${NEW_IFB}
 }
 
 # if required
 create_new_ifb_for_if() {
-    local NEW_IFB=$(ifb_name $1)
+    local NEW_IFB
+    NEW_IFB=$(ifb_name $1)
     create_ifb ${NEW_IFB}
     RET=$?
     echo $NEW_IFB
@@ -261,12 +269,14 @@ create_new_ifb_for_if() {
 
 # TODO: report failures
 create_ifb() {
-    local CUR_IFB=${1}
+    local CUR_IFB
+    CUR_IFB=${1}
     $IP link add name ${CUR_IFB} type ifb
 }
 
 delete_ifb() {
-    local CUR_IFB=${1}
+    local CUR_IFB
+    CUR_IFB=${1}
     $IP link set dev ${CUR_IFB} down
     $IP link delete ${CUR_IFB} type ifb
 }
@@ -275,9 +285,11 @@ delete_ifb() {
 # the best match is either the IFB already associated with the current interface
 # or a new named IFB
 get_ifb_for_if() {
-    local CUR_IF=$1
+    local CUR_IF
+    local CUR_IFB
+    CUR_IF=$1
     # if an ifb is already associated return that
-    local CUR_IFB=$( get_ifb_associated_with_if ${CUR_IF} )
+    CUR_IFB=$( get_ifb_associated_with_if ${CUR_IF} )
     [ -z "$CUR_IFB" ] && CUR_IFB=$( create_new_ifb_for_if ${CUR_IF} )
     [ -z "$CUR_IFB" ] && sqm_warn "Could not find existing IFB for ${CUR_IF}, nor create a new IFB instead..."
     echo ${CUR_IFB}
@@ -291,15 +303,22 @@ get_ifb_for_if() {
 # note the ingress qdisc is different in that it requires tc qdisc replace dev
 # tmp_ifb ingress instead of "root ingress"
 verify_qdisc() {
-    local qdisc=$1
-    local supported="$2"
-    local ifb=TMP_IFB_4_SQM
-    local root_string="root" # this works for most qdiscs
-    local args=""
-    local IFB_MTU=1514
+    local qdisc
+    local supported
+    local ifb
+    local root_string
+    local args
+    local IFB_MTU
+    local found
+    qdisc=$1
+    supported="$2"
+    ifb=TMP_IFB_4_SQM
+    root_string="root" # this works for most qdiscs
+    args=""
+    IFB_MTU=1514
 
     if [ -n "$supported" ]; then
-        local found=0
+        found=0
         for q in $supported; do
             [ "$qdisc" = "$q" ] && found=1
         done
@@ -343,8 +362,10 @@ get_htb_adsll_string() {
 }
 
 get_stab_string() {
+    local STABSTRING
+    local TMP_LLAM
     STABSTRING=""
-    local TMP_LLAM=${LLAM}
+    TMP_LLAM=${LLAM}
     if [ "${LLAM}" = "default" -a "$QDISC" != "cake" ]; then
 	sqm_debug "LLA: default link layer adjustment method for !cake is tc_stab"
 	TMP_LLAM="tc_stab"
@@ -359,8 +380,10 @@ get_stab_string() {
 
 # cake knows how to handle ATM and per packet overhead, so expose and use this...
 get_cake_lla_string() {
+    local STABSTRING
+    local TMP_LLAM
     STABSTRING=""
-    local TMP_LLAM=${LLAM}
+    TMP_LLAM=${LLAM}
     if [ "${LLAM}" = "default" -a "$QDISC" = "cake" ]; then
 	sqm_debug "LLA: default link layer adjustment method for cake is cake"
 	TMP_LLAM="cake"
@@ -461,11 +484,14 @@ fc() {
 # lumpy, but at a lower CPU cost. In first approximation quantum should not be
 # larger than burst.
 get_htb_quantum() {
-    local HTB_MTU=$( get_mtu $1 )
-    local BANDWIDTH=$2
-    local DURATION_US=$3
+    local HTB_MTU
+    local BANDWIDTH
+    local DURATION_US
     local MIN_QUANTUM
     local QUANTUM
+    HTB_MTU=$( get_mtu $1 )
+    BANDWIDTH=$2
+    DURATION_US=$3
 
     sqm_debug "get_htb_quantum: 1: ${1}, 2: ${2}, 3: ${3}"
 
@@ -501,11 +527,14 @@ get_htb_quantum() {
 # following command (for ifbpppoe-wan):
 #	tc -d class show dev ifb4pppoe-wan
 get_burst() {
-    local MTU=$1
-    local BANDWIDTH=$2 # note bandwidth is always given in kbps
-    local SHAPER_BURST_US=$3
+    local MTU
+    local BANDWIDTH
+    local SHAPER_BURST_US
     local MIN_BURST
     local BURST
+    MTU=$1
+    BANDWIDTH=$2 # note bandwidth is always given in kbps
+    SHAPER_BURST_US=$3
 
     sqm_debug "get_burst: 1: ${1}, 2: ${2}, 3: ${3}"
 
@@ -538,10 +567,13 @@ get_burst() {
 # Create optional burst parameters to leap over CPU interupts when the CPU is
 # severly loaded. We need to be conservative though.
 get_htb_burst() {
-    local HTB_MTU=$( get_mtu $1 )
-    local BANDWIDTH=$2
-    local DURATION_US=$3
+    local HTB_MTU
+    local BANDWIDTH
+    local DURATION_US
     local BURST
+    HTB_MTU=$( get_mtu $1 )
+    BANDWIDTH=$2
+    DURATION_US=$3
 
     sqm_debug "get_htb_burst: 1: ${1}, 2: ${2}, 3: ${3}"
 
@@ -606,8 +638,10 @@ get_flows_count() {
 # Note, the link bandwidth in the current direction (ingress or egress)
 # is required to adjust the target for slow links
 get_target() {
-    local CUR_TARGET=${1}
-    local CUR_LINK_KBPS=${2}
+    local CUR_TARGET
+    local CUR_LINK_KBPS
+    CUR_TARGET=${1}
+    CUR_LINK_KBPS=${2}
     [ ! -z "$CUR_TARGET" ] && sqm_debug "cur_target: ${CUR_TARGET} cur_bandwidth: ${CUR_LINK_KBPS}"
     CUR_TARGET_STRING=
     # either e.g. 100ms or auto

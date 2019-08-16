@@ -17,7 +17,8 @@ RUN_IFACE="$2"
 [ -d "${SQM_QDISC_STATE_DIR}" ] || ${SQM_LIB_DIR}/update-available-qdiscs
 
 stop_statefile() {
-    local f="$1"
+    local f
+    f="$1"
     # Source the state file prior to stopping; we need the variables saved in
     # there.
     [ -f "$f" ] && ( . "$f";
@@ -29,7 +30,8 @@ stop_statefile() {
 }
 
 start_sqm_section() {
-    local section="$1"
+    local section
+    section="$1"
     export IFACE=$(config_get "$section" interface)
 
     [ -z "$RUN_IFACE" -o "$RUN_IFACE" = "$IFACE" ] || return
