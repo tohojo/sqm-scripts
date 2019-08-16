@@ -21,13 +21,30 @@
 #
 ################################################################################
 
+# Logging verbosity
+VERBOSITY_SILENT=0
+VERBOSITY_ERROR=1
+VERBOSITY_WARNING=2
+VERBOSITY_INFO=5
+VERBOSITY_DEBUG=8
+VERBOSITY_TRACE=10
+
 sqm_logger() {
+    local level_min
+    local level_max
+    local debug
+
     case $1 in
         ''|*[!0-9]*) LEVEL=$VERBOSITY_INFO ;; # empty or non-numbers
         *) LEVEL=$1; shift ;;
     esac
 
-    if [ "$SQM_VERBOSITY_MAX" -ge "$LEVEL" ] && [ "$SQM_VERBOSITY_MIN" -le "$LEVEL" ] ; then
+    level_min=${SQM_VERBOSITY_MIN:-$VERBOSITY_SILENT}
+    level_max=${SQM_VERBOSITY_MAX:-$VERBOSITY_INFO}
+    debug=${SQM_DEBUG:-0}
+    echo $level_min $level_max $debug
+
+    if [ "$level_max" -ge "$LEVEL" ] && [ "$level_min" -le "$LEVEL" ] ; then
         if [ "$SQM_SYSLOG" -eq "1" ]; then
             logger -t SQM -s "$*"
         else
@@ -35,8 +52,8 @@ sqm_logger() {
         fi
     fi
     # slightly dangerous as this will keep adding to the log file
-    if [ -n "${SQM_DEBUG}" -a "${SQM_DEBUG}" -eq "1" ]; then
-        if [ "$SQM_VERBOSITY_MAX" -ge "$LEVEL" -o "$LEVEL" -eq "$VERBOSITY_TRACE" ]; then
+    if [ "$debug" -eq "1" ]; then
+        if [ "$level_max" -ge "$LEVEL" -o "$LEVEL" -eq "$VERBOSITY_TRACE" ]; then
             echo "$@" >> ${SQM_DEBUG_LOG}
         fi
     fi
