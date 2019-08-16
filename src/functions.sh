@@ -228,6 +228,11 @@ check_state_dir() {
         sqm_error "Cannot write to state dir '$SQM_STATE_DIR'"
         exit 1
     fi
+
+    # OpenWrt doesn't have stat; for now just skip the remaining tests if it's
+    # not available
+    which stat >/dev/null 2>&1 || return 0
+
     PERM="0$(stat -L -c '%a' "${SQM_STATE_DIR}")"
     if [ "$((PERM & 0002))" -ne 0 ]; then
         sqm_error "State dir '$SQM_STATE_DIR' is world writable; this is unsafe, please fix"
