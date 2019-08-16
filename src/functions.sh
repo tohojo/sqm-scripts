@@ -101,6 +101,29 @@ ipt_log_rewind() {
 }
 
 
+# Transaction logging for ipt rules to allow for gracefull final teardown
+ipt_log_restart() {
+    [ -f "$IPT_TRANS_LOG" ] && rm -f "$IPT_TRANS_LOG"
+}
+
+
+ipt_log() {
+    echo "$@" >> "$IPT_TRANS_LOG"
+}
+
+
+# Read the transaction log in reverse and execute using ipt to undo changes.
+# Since we logged only ipt '-D' commands, ipt won't add them again to the
+# transaction log, but will include them in the syslog/debug log.
+ipt_log_rewind() {
+    [ -f "$IPT_TRANS_LOG" ] || return 0
+    sed -n '1!G;h;$p' "$IPT_TRANS_LOG" |
+    while IFS= read d; do
+        ipt $d
+    done
+}
+
+
 # to avoid unexpected side-effects first delete rules before adding them (again)
 ipt() {
     # Try to wipe pre-existing rules and chains, and prepare the transation
@@ -108,12 +131,12 @@ ipt() {
     for rep in "s/-A/-D/g" "s/-I/-D/g" "s/-N/-X/g"; do
         local d=$(echo $* | sed $rep)
         [ "$d" != "$*" ] && {
-    	    SILENT=1 ${IPTABLES} $d
-    	    SILENT=1 ${IP6TABLES} $d
+            SILENT=1 ${IPTABLES} $d
+            SILENT=1 ${IP6TABLES} $d
             ipt_log $d
         }
     done
-    
+
     SILENT=1 ${IPTABLES} "$@"
     SILENT=1 ${IP6TABLES} "$@"
 }
@@ -391,15 +414,18 @@ sqm_start_default() {
 
     # reset the iptables trace log
     ipt_log_restart
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> 49cdbeda9e651c7671199e681cad5507a1e3d086
     if fn_exists sqm_prepare_script ; then
 	sqm_debug "sqm_start_default: starting sqm_prepare_script"
         sqm_prepare_script
     else
 	sqm_debug "sqm_start_default: no sqm_prepare_script function found, proceeding without."
     fi
-    
-    
+
     do_modules
     verify_qdisc $QDISC || return 1
     sqm_debug "sqm_start_default: Starting ${SCRIPT}"
