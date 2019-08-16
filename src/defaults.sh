@@ -87,7 +87,8 @@ fi
 
 
 # Can be overridden by callers that want to silence error output for a
-# particular command
+# particular command, command errors are demoted to sqm_debug level and 
+# will still be logged.
 SILENT=0
 
 # Transaction log for unwinding ipt rules

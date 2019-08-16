@@ -157,6 +157,7 @@ cmd_wrapper(){
     ERRLOG="sqm_error"
     if [ "$SILENT" -eq "1" ]; then
         ERRLOG="sqm_debug"
+        sqm_debug "cmd_wrapper: silenced invocation of cmd_wrapper; failure expected/acceptable."
         # The busybox shell doesn't understand the concept of an inline variable
         # only applying to a single command, so we need to reset SILENT
         # afterwards. Ugly, but it works...
