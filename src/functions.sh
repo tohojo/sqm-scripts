@@ -42,7 +42,6 @@ sqm_logger() {
     level_min=${SQM_VERBOSITY_MIN:-$VERBOSITY_SILENT}
     level_max=${SQM_VERBOSITY_MAX:-$VERBOSITY_INFO}
     debug=${SQM_DEBUG:-0}
-    #echo "Level_min: $level_min level_max: $level_max debug: $debug LEVEL: $LEVEL"
 
     if [ "$level_max" -ge "$LEVEL" ] && [ "$level_min" -le "$LEVEL" ] ; then
         if [ "$SQM_SYSLOG" -eq "1" ]; then
