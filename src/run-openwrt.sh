@@ -98,7 +98,7 @@ take_lock() {
         return 0
     fi
     PID=$(cat "$LOCKDIR/pid")
-    sqm_debug "Unable to get run lock - already held by $PID"
+    sqm_warning "Unable to get run lock - already held by $PID"
     return 1
 }
 
@@ -110,6 +110,7 @@ while ! take_lock; do
     if [ "$tries" -eq 0 ]; then
         sqm_error "Giving up on getting lock after $MAX_TRIES attempts"
         sqm_error "This is a bug; please report it at https://github.com/tohojo/sqm-scripts/issues"
+        sqm_error "Then, to re-enable sqm-scripts, manually remove $LOCKDIR"
         exit 1
     fi
 done
