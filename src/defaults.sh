@@ -76,10 +76,6 @@ VERBOSITY_TRACE=10
 # For silencing only errors
 [ -z "$SQM_VERBOSITY_MIN" ] && SQM_VERBOSITY_MIN=$VERBOSITY_SILENT
 
-
-#[ -z "$SQM_START_LOG" ] && SQM_START_LOG="/dev/null"
-#[ -z "$SQM_STOP_LOG" ] && SQM_START_LOG="/dev/null"
-
 [ -z "$SQM_DEBUG" ] && SQM_DEBUG=0
 if [ "$SQM_DEBUG" -eq "1" ]
 then
