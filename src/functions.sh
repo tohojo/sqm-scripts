@@ -54,7 +54,7 @@ sqm_logger() {
     # this writes into SQM_START_LOG or SQM_STOP_LOG, log files are trucated in 
     # start-sqm/stop-sqm respectively and should only take little space
     if [ "$debug" -eq "1" ]; then
-        echo "$@" >> ${SQM_DEBUG_LOG}
+        echo "$@" >> "${SQM_DEBUG_LOG}"
     fi
 }
 

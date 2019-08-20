@@ -86,7 +86,6 @@ ul.datatype = "and(uinteger,min(0))"
 ul.rmempty = false
 
 dbl = s:taboption("tab_basic", Flag, "debug_logging", translate("Create log file for this SQM instance under /var/run/sqm/${Interface_name}.[start|stop]-sqm.log."))
-dbl.default = "1"
 dbl.rmempty = false
 
 

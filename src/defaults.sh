@@ -79,11 +79,11 @@ VERBOSITY_TRACE=10
 [ -z "$SQM_DEBUG" ] && SQM_DEBUG=0
 if [ "$SQM_DEBUG" -eq "1" ]
 then
-    SQM_DEBUG_STEM=${SQM_STATE_DIR}/${IFACE}
-    SQM_START_LOG=${SQM_DEBUG_STEM}.start-sqm.log
-    SQM_STOP_LOG=${SQM_DEBUG_STEM}.stop-sqm.log
-    [ -z "SQM_DEBUG_LOG" ] &&  SQM_DEBUG_LOG=${SQM_DEBUG_STEM}.debug.log
-    OUTPUT_TARGET=${SQM_DEBUG_LOG}
+    SQM_DEBUG_STEM="${SQM_STATE_DIR}/${IFACE}"
+    SQM_START_LOG="${SQM_DEBUG_STEM}.start-sqm.log"
+    SQM_STOP_LOG="${SQM_DEBUG_STEM}.stop-sqm.log"
+    [ -z "SQM_DEBUG_LOG" ] &&  SQM_DEBUG_LOG="${SQM_DEBUG_STEM}.debug.log"
+    OUTPUT_TARGET="${SQM_DEBUG_LOG}"
 else
     OUTPUT_TARGET="/dev/null"
 fi
