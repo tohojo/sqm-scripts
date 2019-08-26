@@ -16,6 +16,13 @@ STATE_FILE="${SQM_STATE_DIR}/${IFACE}.state"
 
 check_state_dir
 
+# log file for the most recent sqm instance start
+if [ "$SQM_DEBUG" -eq "1" ] ; then
+    SQM_DEBUG_LOG="${SQM_START_LOG}"
+    OUTPUT_TARGET="${SQM_DEBUG_LOG}"
+    echo "start-sqm: Log for interface ${IFACE}: $(date)"  > "${OUTPUT_TARGET}"
+fi
+
 if [ -z "${SCRIPT}" ] ; then
     sqm_error "SCRIPT value is not defined in /etc/sqm/${IFACE}.iface.conf"
     sqm_error "Please check your configuration and try again."

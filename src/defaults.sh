@@ -79,8 +79,11 @@ VERBOSITY_TRACE=10
 [ -z "$SQM_DEBUG" ] && SQM_DEBUG=0
 if [ "$SQM_DEBUG" -eq "1" ]
 then
-    SQM_DEBUG_LOG=${SQM_STATE_DIR}/${IFACE}.debug.log
-    OUTPUT_TARGET=${SQM_DEBUG_LOG}
+    SQM_DEBUG_STEM="${SQM_STATE_DIR}/${IFACE}"
+    SQM_START_LOG="${SQM_DEBUG_STEM}.start-sqm.log"
+    SQM_STOP_LOG="${SQM_DEBUG_STEM}.stop-sqm.log"
+    [ -z "SQM_DEBUG_LOG" ] &&  SQM_DEBUG_LOG="${SQM_DEBUG_STEM}.debug.log"
+    OUTPUT_TARGET="${SQM_DEBUG_LOG}"
 else
     OUTPUT_TARGET="/dev/null"
 fi
@@ -91,7 +94,7 @@ fi
 SILENT=0
 
 # Transaction log for unwinding ipt rules
-IPT_TRANS_LOG=${SQM_STATE_DIR}/${IFACE}.iptables.log
+IPT_TRANS_LOG="${SQM_STATE_DIR}/${IFACE}.iptables.log"
 
 # These are the modules that do_modules() will attempt to load
 ALL_MODULES="act_ipt sch_$QDISC sch_ingress act_mirred cls_fw cls_flow cls_u32 sch_htb sch_hfsc"

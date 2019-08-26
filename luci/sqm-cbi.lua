@@ -85,7 +85,7 @@ ul = s:taboption("tab_basic", Value, "upload", translate("Upload speed (kbit/s) 
 ul.datatype = "and(uinteger,min(0))"
 ul.rmempty = false
 
-dbl = s:taboption("tab_basic", Flag, "debug_logging", translate("Create log file for this SQM instance under /var/run/sqm/${Interface_name}.debug.log. Make sure to delete log files manually."))
+dbl = s:taboption("tab_basic", Flag, "debug_logging", translate("Create log file for this SQM instance under /var/run/sqm/${Interface_name}.[start|stop]-sqm.log."))
 dbl.rmempty = false
 
 

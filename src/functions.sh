@@ -50,11 +50,11 @@ sqm_logger() {
             echo "$@" >&2
         fi
     fi
-    # slightly dangerous as this will keep adding to the log file
+    
+    # this writes into SQM_START_LOG or SQM_STOP_LOG, log files are trucated in 
+    # start-sqm/stop-sqm respectively and should only take little space
     if [ "$debug" -eq "1" ]; then
-        if [ "$level_max" -ge "$LEVEL" -o "$LEVEL" -eq "$VERBOSITY_TRACE" ]; then
-            echo "$@" >> ${SQM_DEBUG_LOG}
-        fi
+        echo "$@" >> "${SQM_DEBUG_LOG}"
     fi
 }
 
@@ -175,17 +175,16 @@ cmd_wrapper(){
     ERRLOG="sqm_error"
     if [ "$SILENT" -eq "1" ]; then
         ERRLOG="sqm_debug"
-        sqm_debug "cmd_wrapper: ${CALLERID}: invocation silenced by request, failure either expected or acceptable."
+        sqm_debug "cmd_wrapper: ${CALLERID}: invocation silenced by request, FAILURE either expected or acceptable."
         # The busybox shell doesn't understand the concept of an inline variable
         # only applying to a single command, so we need to reset SILENT
         # afterwards. Ugly, but it works...
         SILENT=0
     fi
 
-    sqm_trace "${CMD_BINARY} $@"
+    sqm_trace "cmd_wrapper: COMMAND: ${CMD_BINARY} $@"
     LAST_ERROR=$( ${CMD_BINARY} "$@" 2>&1 )
     RET=$?
-    sqm_trace "${LAST_ERROR}"
 
     if [ "$RET" -eq "0" ] ; then
         sqm_debug "cmd_wrapper: ${CALLERID}: SUCCESS: ${CMD_BINARY} $@"
@@ -503,9 +502,9 @@ sqm_start_default() {
 
 
 sqm_stop() {
-    $TC qdisc del dev $IFACE ingress #2>> ${OUTPUT_TARGET}
-    $TC qdisc del dev $IFACE root #2>> ${OUTPUT_TARGET}
-    [ -n "$CUR_IFB" ] && $TC qdisc del dev $CUR_IFB root #2>> ${OUTPUT_TARGET}
+    $TC qdisc del dev $IFACE ingress
+    $TC qdisc del dev $IFACE root
+    [ -n "$CUR_IFB" ] && $TC qdisc del dev $CUR_IFB root
     [ -n "$CUR_IFB" ] && sqm_debug "${0}: ${CUR_IFB} shaper deleted"
 
     # undo accumulated ipt commands during shutdown
@@ -515,9 +514,9 @@ sqm_stop() {
     [ -n "$CUR_IFB" ] && $IP link delete ${CUR_IFB} type ifb
     [ -n "$CUR_IFB" ] && sqm_debug "${0}: ${CUR_IFB} interface deleted"
 }
+
 # Note this has side effects on the prio variable
 # and depends on the interface global too
-
 fc() {
     $TC filter add dev $interface protocol ip parent $1 prio $prio u32 match ip tos $2 0xfc classid $3
     prio=$(($prio + 1))

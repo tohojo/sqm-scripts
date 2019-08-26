@@ -15,6 +15,13 @@
 . ${SQM_LIB_DIR}/defaults.sh
 
 check_state_dir
+# log file for the most recent sqm instance stop
+if [ "$SQM_DEBUG" -eq "1" ] ; then
+    SQM_DEBUG_LOG="${SQM_STOP_LOG}"
+    OUTPUT_TARGET="${SQM_DEBUG_LOG}"
+    echo "stop-sqm: Log for interface ${IFACE}: $(date)"  > "${OUTPUT_TARGET}"
+fi
+
 if [ ! -f "${SQM_STATE_DIR}/${IFACE}.state" ] ; then
     sqm_error "State file does not exist; SQM was not running on interface ${IFACE}"
     exit 1
