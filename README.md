@@ -50,8 +50,7 @@ Note this method relies on the presence of the required qdiscs on the router/des
 ## Run-time debugging
 
 SQM_VERBOSITY_MAX controls the verbosity of sqm's output to the shell and syslog (0: no logging; 8: full debug output).
-SQM_DEBUG controls whether sqm will log all binary invocations, their output and its shell output into a log file in `/var/run/sqm`.
-The log files are named `/var/run/sqm/${interface_name}.debug.log` e.g. `/var/run/sqm/pppoe-ge00.debug.log`.
+SQM_DEBUG controls whether sqm will log the output of the last invocation of start-sqm into  `var/run/sqm/${interface_name}.start-sqm.log` and the ouput of the last invocation of stop-sqm into `var/run/sqm/${interface_name}.stop-sqm.log` e.g. for pppoe-wan `/var/run/sqm/pppoe-wan.start-sqm.log` and `/var/run/sqm/pppoe-wan.stop-sqm.log`.
 
 #### Examples
 
@@ -67,8 +66,4 @@ The log files are named `/var/run/sqm/${interface_name}.debug.log` e.g. `/var/ru
 
     `SQM_DEBUG=1 SQM_VERBOSITY_MAX=8 /etc/init.d/sqm stop ; SQM_DEBUG=1 SQM_VERBOSITY_MAX=8 /etc/init.d/sqm start`
 
-Note: This always appends to the log file(s). If you just run a one-off
-command with debugging enabled from the command line this is fine, but
-if you enable debugging in the web interface, the files can grow too
-large and cause problems. So if you do enable debugging in the web
-interface, remember to turn it back off again.
+Note: Both the start and stop log are re-written on every sqm instance start and stop and are logging all output independent of the value of `SQM_VERBOSITY_MAX`. They will not grow indefintely, but they are written repeatedly. On reliably rewritable media like hard disk, ssd, flash with wear-leveling, or ram-disk, `SQM_DEBUG` can be safely set to 1 in `defaults.sh`, but on media like NOR flash that do only allow few write-cycles, keeping the default at 0 and using the above invocations to run a single instance with `SQM_DEBUG=1` is recommended.
