@@ -509,6 +509,8 @@ sqm_stop() {
 
     # undo accumulated ipt commands during shutdown
     ipt_log_rewind
+    # reset the iptables trace log
+    ipt_log_restart
 
     [ -n "$CUR_IFB" ] && $IP link set dev ${CUR_IFB} down
     [ -n "$CUR_IFB" ] && $IP link delete ${CUR_IFB} type ifb
