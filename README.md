@@ -66,4 +66,4 @@ SQM_DEBUG controls whether sqm will log the output of the last invocation of sta
 
     `SQM_DEBUG=1 SQM_VERBOSITY_MAX=8 /etc/init.d/sqm stop ; SQM_DEBUG=1 SQM_VERBOSITY_MAX=8 /etc/init.d/sqm start`
 
-Note: Both the start and stop log are re-written on every sqm instance start and stop, while they will not grow indefintely, they are written repeatedly, on reliable rewritable storage (hard disk, ssd with waer-leveling, ram-disk) `SQM_DEBUG` can be set to 1, but on low-write-count media like NOR flash rewriting theses logs might cause undesired wear. 
+Note: Both the start and stop log are re-written on every sqm instance start and stop and are logging all output independent of the value of `SQM_VERBOSITY_MAX`. They will not grow indefintely, but they are written repeatedly. On reliably rewritable media like hard disk, ssd, flash with wear-leveling, or ram-disk, `SQM_DEBUG` can be safely set to 1 in `defaults.sh`, but on media like NOR flash that do only allow few write-cycles, keeping the default at 0 and using the above invocations to run a single instance with `SQM_DEBUG=1` is recommended.
