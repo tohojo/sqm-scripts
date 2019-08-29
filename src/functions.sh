@@ -50,8 +50,8 @@ sqm_logger() {
             echo "$@" >&2
         fi
     fi
-    
-    # this writes into SQM_START_LOG or SQM_STOP_LOG, log files are trucated in 
+
+    # this writes into SQM_START_LOG or SQM_STOP_LOG, log files are trucated in
     # start-sqm/stop-sqm respectively and should only take little space
     if [ "$debug" -eq "1" ]; then
         echo "$@" >> "${SQM_DEBUG_LOG}"
@@ -101,10 +101,35 @@ ipt_log_restart() {
 }
 
 
-ipt_log() {
-    echo "$@" >> "$IPT_TRANS_LOG"
+# Function to negate iptables commands. Turns addition and insertion into
+# deletion, and creation of new chains into deletion
+# Its output has quotes around all parameters so we can preserve arguments
+# containing whitespace across log file write & re-read
+ipt_negate()
+{
+    for var in "$@"; do
+        case "$var" in
+            "-A"|"-I") echo -n '"-D" ' ;;
+            "-N") echo -n '"-N" ' ;;
+            *) echo -n "\"$var\" "  ;;
+        esac
+    done
+    echo ""
 }
 
+ipt_log()
+{
+    echo "$@" >> $IPT_TRANS_LOG
+}
+
+# Split a string containing an iptables command line parameter invocation, then
+# run it through ipt(). This is used to turn lines read from the log file, or
+# output from ipt_negate() back into proper parameters contained in $@
+ipt_run_split()
+{
+    eval "set -- $1"
+    ipt "$@"
+}
 
 # Read the transaction log in reverse and execute using ipt to undo changes.
 # Since we logged only ipt '-D' commands, ipt won't add them again to the
@@ -112,24 +137,26 @@ ipt_log() {
 ipt_log_rewind() {
     [ -f "$IPT_TRANS_LOG" ] || return 0
     sed -n '1!G;h;$p' "$IPT_TRANS_LOG" |
-    while IFS= read d; do
-        ipt $d
-    done
+        while read line; do
+            [ -n "$line" ] || continue
+            ipt_run_split "$line"
+        done
 }
 
-
-# to avoid unexpected side-effects first delete rules before adding them (again)
 ipt() {
-    local d
-    # Try to wipe pre-existing rules and chains, and prepare the transation
-    # log to do the same at shutdown.
-    for rep in "s/-A/-D/g" "s/-I/-D/g" "s/-N/-X/g"; do
-        d=$(echo $* | sed $rep)
-        [ "$d" != "$*" ] && {
-            SILENT=1 ${IPTABLES} $d
-            SILENT=1 ${IP6TABLES} $d
-            ipt_log $d
-        }
+    local neg
+
+    for var in "$@"; do
+        case "$var" in
+            "-A"|"-I"|"-N")
+                # If the rule is an addition rule, we first run its negation,
+                # then log that negation to be used by ipt_log_rewind() on
+                # shutdown
+                neg="$(ipt_negate "$@")"
+                ipt_run_split "$neg"
+                ipt_log "$neg"
+                ;;
+        esac
     done
 
     SILENT=1 ${IPTABLES} "$@"
