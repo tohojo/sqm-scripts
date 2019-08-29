@@ -98,7 +98,7 @@ take_lock() {
         return 0
     fi
     PID=$(cat "$LOCKDIR/pid")
-    sqm_warning "Unable to get run lock - already held by $PID"
+    sqm_warn "Unable to get run lock - already held by $PID"
     return 1
 }
 
