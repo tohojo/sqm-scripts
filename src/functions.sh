@@ -110,7 +110,7 @@ ipt_negate()
     for var in "$@"; do
         case "$var" in
             "-A"|"-I") echo -n '"-D" ' ;;
-            "-N") echo -n '"-N" ' ;;
+            "-N") echo -n '"-X" ' ;;
             *) echo -n "\"$var\" "  ;;
         esac
     done
