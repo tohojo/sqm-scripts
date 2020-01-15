@@ -1,4 +1,3 @@
-#!/bin/sh
 # Cero3 Shaper
 # A cake shaper and AQM solution that allows several diffserv marking schemes
 # for ethernet gateways
