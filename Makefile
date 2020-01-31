@@ -1,8 +1,11 @@
 PREFIX:=/usr
 DESTDIR:=
 PLATFORM:=linux
+PKG_CONFIG:=$(shell which pkg-config 2>/dev/null)
 LUCI_DIR:=$(DESTDIR)$(PREFIX)/lib/lua/luci
-UNIT_DIR:=$(DESTDIR)$(PREFIX)/lib/systemd/system
+UNIT_DIR:=$(if $(PKG_CONFIG),\
+	$(DESTDIR)$(shell $(PKG_CONFIG) --variable systemdsystemunitdir systemd),\
+	$(DESTDIR)$(PREFIX)/lib/systemd/system)
 
 all:
 	@echo "Run 'make install' to install."
