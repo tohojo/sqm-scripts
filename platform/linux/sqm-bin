@@ -39,9 +39,8 @@ else
     for f in /etc/sqm/*.iface.conf; do
         if [ -f "$f" ]; then
             IFACE=$(basename $f .iface.conf)
-            . $f
-            [ -f ${SQM_STATE_DIR}/$IFACE.state ] && ( . ${SQM_LIB_DIR}/stop-sqm )
-            [ "$ACTION" = "stop" ] || ( . ${SQM_LIB_DIR}/start-sqm )
+            [ -f ${SQM_STATE_DIR}/$IFACE.state ] && ( . $f; . ${SQM_LIB_DIR}/stop-sqm )
+            [ "$ACTION" = "stop" ] || ( . $f; . ${SQM_LIB_DIR}/start-sqm )
         else
             echo >&2
             echo "Error: No valid interface configuration found." >&2
