@@ -26,7 +26,7 @@ install-openwrt: install-lib
 install-linux: install-lib
 	install -m 0755 -d $(UNIT_DIR) $(DESTDIR)$(PREFIX)/lib/tmpfiles.d \
 		$(DESTDIR)$(PREFIX)/bin
-	install -m 0644 -C -b -S .old  platform/linux/default.conf $(DESTDIR)/etc/sqm
+	install -m 0644 -C -b platform/linux/default.conf $(DESTDIR)/etc/sqm
 	install -m 0644  platform/linux/sqm@.service $(UNIT_DIR)
 	install -m 0644  platform/linux/sqm-tmpfiles.conf \
 		$(DESTDIR)$(PREFIX)/lib/tmpfiles.d/sqm.conf
@@ -38,7 +38,7 @@ install-linux: install-lib
 
 install-lib:
 	install -m 0755 -d $(DESTDIR)/etc/sqm $(DESTDIR)$(PREFIX)/lib/sqm
-	install -m 0644 -C -b -S .old platform/$(PLATFORM)/sqm.conf $(DESTDIR)/etc/sqm/sqm.conf
+	install -m 0644 -C -b platform/$(PLATFORM)/sqm.conf $(DESTDIR)/etc/sqm/sqm.conf
 	install -m 0644  src/functions.sh src/defaults.sh \
 		src/*.qos src/*.help $(DESTDIR)$(PREFIX)/lib/sqm
 	install -m 0744  src/start-sqm src/stop-sqm src/update-available-qdiscs \
