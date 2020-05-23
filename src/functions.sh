@@ -384,9 +384,11 @@ verify_qdisc() {
     local args
     local IFB_MTU
     local found
+    local randnum
     qdisc=$1
     supported="$2"
-    ifb=TMP_IFB_4_SQM
+    randnum=$(tr -cd 0-9a-f < /dev/urandom | head -c 5)
+    ifb=SQM_IFB_$randnum
     root_string="root" # this works for most qdiscs
     args=""
     IFB_MTU=1514
