@@ -387,7 +387,7 @@ verify_qdisc() {
     local randnum
     qdisc=$1
     supported="$2"
-    randnum=$(tr -cd 0-9a-f < /dev/urandom | head -c 5)
+    randnum=$(tr -cd 0-9a-f < /dev/urandom 2>/dev/null | head -c 5)
     ifb=SQM_IFB_$randnum
     root_string="root" # this works for most qdiscs
     args=""
