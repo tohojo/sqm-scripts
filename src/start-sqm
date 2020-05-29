@@ -57,10 +57,10 @@ sqm_log "Starting SQM script: ${SCRIPT} on ${IFACE}, in: ${DOWNLINK} Kbps, out: 
 
 if fn_exists sqm_start ; then
     sqm_debug "Using script specific sqm_start function overriding the generic sqm_start_default."
-    sqm_start && write_defaults_vars_to_state_file ${STATE_FILE} ${SQM_LIB_DIR}/defaults.sh && sqm_log "${SCRIPT} was started on ${IFACE} successfully"
+    sqm_start && write_state_file ${STATE_FILE} && sqm_log "${SCRIPT} was started on ${IFACE} successfully"
 else
     sqm_debug "Using generic sqm_start_default function."
-    sqm_start_default && write_defaults_vars_to_state_file ${STATE_FILE} ${SQM_LIB_DIR}/defaults.sh && sqm_log "${SCRIPT} was started on ${IFACE} successfully"
+    sqm_start_default && write_state_file ${STATE_FILE} && sqm_log "${SCRIPT} was started on ${IFACE} successfully"
 fi
 
 exit 0

@@ -234,24 +234,13 @@ do_modules() {
 # Write a state file to the filename given as $1. This version will extract all
 # variable names defined in defaults.sh and since defaults.sh should contain all
 # used variables this should be the complete set.
-write_defaults_vars_to_state_file() {
-    local filename
-    local defaultsFQN
-    local ALL_SQM_DEFAULTS_VARS
-    filename=$1
-    defaultsFQN=$2
-    ALL_SQM_DEFAULTS_VARS=$( grep -r -o -e "[[:alnum:][:punct:]]*=" ${defaultsFQN} | sed 's/=//' )
-
-    write_state_file ${filename} ${ALL_SQM_DEFAULTS_VARS}
-}
-
-# Write a state file to the filename given as $1. The remaining arguments are
-# variable names that should be written to the state file.
 write_state_file() {
     local filename
+    local awkscript
+    awkscript='match($0, /[A-Z0-9_]+=/) {print substr($0, RSTART, RLENGTH-1)}'
     filename=$1
     shift
-    for var in "$@"; do
+    awk "$awkscript" ${SQM_LIB_DIR}/defaults.sh | sort -u | while read var; do
         val=$(eval echo '$'$var)
         echo "$var=\"$val\""
     done > $filename
