@@ -6,7 +6,7 @@
 
 [ -d "${SQM_QDISC_STATE_DIR}" ] || mkdir -p "${SQM_QDISC_STATE_DIR}"
 
-SQM_VERBOSITY_MIN=5 # Silence errors while checkimg
+SQM_VERBOSITY_MIN=5 # Silence errors while checking
 
 for qdisc in $SQM_CHECK_QDISCS; do
     [ -f ${SQM_QDISC_STATE_DIR}/$qdisc ] && continue
