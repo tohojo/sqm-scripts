@@ -1,5 +1,3 @@
-#!/bin/sh
-
 [ -n "$DEVICE" ] || exit 0
 
 restart_sqm() {
