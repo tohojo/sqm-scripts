@@ -21,7 +21,24 @@ https://github.com/dtaht/sch_cake.
 OpenWrt, there are packages available in the distribution, so just install the
 sqm-scripts package, and optionally luci-app-sqm for GUI support.
 
-## "Installing" the current development version from git
+## Running on regular Linux distributions
+After installing using `make install`, do the following to enable sqm-scripts:
+
+1. Copy `/etc/sqm/default.conf` to `/etc/sqm/<dev>.iface.conf` where `<dev>` is
+   the name of the interface you wish to run sqm-scripts on. Then adjust the
+   values in the file to your environment, setting at least UPLINK, DOWNLINK,
+   and possibly SCRIPT.
+
+2. If you're on a Debian-derived distribution that uses old-style network config
+   in `/etc/network/`, the Makefile should detect this and drop in appropriate
+   hotplug scripts, so sqm-script should automatically run on the next 'ifup'.
+
+3. If you're on a systemd-enabled distro, just enable the `sqm@<dev>` service
+   corresponding to your interface name. E.g., for `eth0`, issue `systemctl
+   enable sqm@eth0` (and run `systemctl start sqm@eth0` to start sqm-scripts
+   immediately).
+
+## "Installing" the current development version from git on OpenWrt
 
 Run the steps below on your own computer (not on the router) to retrieve the newest script version from this repository, create the scripts, then copy those new scripts to your router.
 
