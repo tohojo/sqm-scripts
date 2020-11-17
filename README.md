@@ -6,11 +6,20 @@ This repository contains the sqm-scripts traffic shaper from the CeroWrt
 project. See:
 http://www.bufferbloat.net/projects/cerowrt/wiki/Smart_Queue_Management
 
+## Requirements
+
+To run sqm-scripts you just need a Linux machine with a kernel from the last
+decade or so (any of the longterm releases on kernel.org should work - please
+don't run a kernel that is not a currently released version, longterm or
+current). The only exception is that if you want to use the `cake` qdisc, you
+either need kernel 4.19 or newer (with matching `iproute2` version), or you need
+to build CAKE yourself from the out-of-tree repository at
+https://github.com/dtaht/sch_cake.
+
 ## Installing
 `sudo make install` should install things on a regular Linux box. For
-OpenWrt, there are packages available in the ceropackages repository:
-https://github.com/dtaht/ceropackages-3.10 and in openwrt nightly
-builds as well as in the main packages repository (https://github.com/openwrt/packages/tree/master/net/sqm-scripts).
+OpenWrt, there are packages available in the distribution, so just install the
+sqm-scripts package, and optionally luci-app-sqm for GUI support.
 
 ## "Installing" the current development version from git
 
