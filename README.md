@@ -6,6 +6,24 @@ This repository contains the sqm-scripts traffic shaper from the CeroWrt
 project. See:
 http://www.bufferbloat.net/projects/cerowrt/wiki/Smart_Queue_Management
 
+## How does sqm-scripts set up traffic shaping?
+
+sqm-scripts uses the Linux qdisc mechanism to configure traffic shaping and
+scheduling. Either by a combination of the HTB qdisc (for shaping) and fq_codel
+(for packet scheduling), or using the CAKE integrated scheduler to do both at
+once.
+
+Because qdiscs only see traffic as it is *leaving* an interface, for ingress
+shaping sqm-scripts sets up an IFB device. Incoming packets are redirected to
+this device where a regular qdisc can handle them. The IFB device is named for
+the egress interface it is paired with, so the IFB for 'eth0' will be called
+'ifb4eth0'.
+
+This is all illustrated on the following diagram:
+
+![qdisc diagram](qdisc-diagram.png)
+Diagram contributed by Matt Taggart (@taggart). Source in [qdisc-diagram.dia](qdisc-diagram.dia).
+
 ## Requirements
 
 To run sqm-scripts you just need a Linux machine with a kernel from the last
