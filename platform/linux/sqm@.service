@@ -13,6 +13,8 @@ Environment=IFACE=%i ENABLED=1
 ExecStart=/usr/lib/sqm/start-sqm
 ExecStop=/usr/lib/sqm/stop-sqm
 RemainAfterExit=1
+Restart=on-failure
+RestartSec=180
 
 [Install]
 WantedBy=multi-user.target
