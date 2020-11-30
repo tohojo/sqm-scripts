@@ -42,3 +42,24 @@ install-lib:
 	install -m 0744  src/start-sqm src/stop-sqm src/update-available-qdiscs \
 		$(DESTDIR)$(PREFIX)/lib/sqm
 
+.PHONY: uninstall
+uninstall: uninstall-$(PLATFORM)
+
+.PHONY: uninstall-openwrt
+uninstall-openwrt: uninstall-lib
+	@for f in $(DESTDIR)/etc/hotplug.d/iface/11-sqm $(DESTDIR)/etc/init.d/sqm; do \
+		if [ -f "$$f" ]; then rm -vf "$$f"; fi; done
+	@echo "Not removing config in $(DESTDIR)/etc/sqm and  $(DESTDIR)/etc/config/sqm - remove manually if needed"
+
+.PHONY: uninstall-linux
+uninstall-linux: uninstall-lib
+	@for f in $(UNIT_DIR)/sqm@.service $(DESTDIR)$(PREFIX)/lib/tmpfiles.d/sqm.conf \
+		$(DESTDIR)$(PREFIX)/bin/sqm $(DESTDIR)/etc/network/if-up.d/sqm; do \
+		if [ -f "$$f" ]; then rm -vf "$$f"; fi; done
+	@echo "Not removing config in $(DESTDIR)/etc/sqm - remove manually if needed"
+
+.PHONY: uninstall-lib
+uninstall-lib:
+	@for f in $(DESTDIR)$(PREFIX)/lib/sqm/*; do \
+		if [ -f "$$f" ]; then rm -vf "$$f"; fi; done
+	@rmdir -v $(DESTDIR)$(PREFIX)/lib/sqm
