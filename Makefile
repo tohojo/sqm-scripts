@@ -9,11 +9,10 @@ UNIT_DIR:=$(if $(PKG_CONFIG),\
 all:
 	@echo "Run 'make install' to install."
 
+.PHONY: install
 install: install-$(PLATFORM)
 
-
 .PHONY: install-openwrt
-
 install-openwrt: install-lib
 	install -m 0755 -d $(DESTDIR)/etc/hotplug.d/iface $(DESTDIR)/etc/config \
 		$(DESTDIR)/etc/init.d
@@ -22,6 +21,7 @@ install-openwrt: install-lib
 	install -m 0644 platform/openwrt/sqm-uci $(DESTDIR)/etc/config/sqm
 	install -m 0744 src/run-openwrt.sh $(DESTDIR)$(PREFIX)/lib/sqm/run.sh
 
+.PHONY: install-linux
 install-linux: install-lib
 	install -m 0755 -d $(UNIT_DIR) $(DESTDIR)$(PREFIX)/lib/tmpfiles.d \
 		$(DESTDIR)$(PREFIX)/bin
@@ -34,7 +34,6 @@ install-linux: install-lib
 		$(DESTDIR)/etc/network/if-up.d/sqm || exit 0
 
 .PHONY: install-lib
-
 install-lib:
 	install -m 0755 -d $(DESTDIR)/etc/sqm $(DESTDIR)$(PREFIX)/lib/sqm
 	install -m 0644 -C -b platform/$(PLATFORM)/sqm.conf $(DESTDIR)/etc/sqm/sqm.conf
