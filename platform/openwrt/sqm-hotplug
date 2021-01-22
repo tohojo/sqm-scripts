@@ -1,10 +1,18 @@
 [ -n "$DEVICE" ] || exit 0
 
+ALL_DEVICES=$(echo $DEVICE $(uci -q get network.$INTERFACE.ifname) | tr ' ' '\n' | sort -u)
+
 restart_sqm() {
-    /usr/lib/sqm/run.sh stop ${DEVICE}
-    /usr/lib/sqm/run.sh start ${DEVICE}
+    for dev in $ALL_DEVICES; do
+        /usr/lib/sqm/run.sh stop $dev
+        /usr/lib/sqm/run.sh start $dev
+    done
 }
 
 [ "$ACTION" = ifup ] && /etc/init.d/sqm enabled && restart_sqm
 
-[ "$ACTION" = ifdown ] && /usr/lib/sqm/run.sh stop ${DEVICE}
+if [ "$ACTION" = ifdown ]; then
+    for dev in $ALL_DEVICES; do
+        /usr/lib/sqm/run.sh stop $dev
+    done
+fi
