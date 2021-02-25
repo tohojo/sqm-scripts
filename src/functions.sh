@@ -159,8 +159,8 @@ ipt() {
         esac
     done
 
-    SILENT=1 ${IPTABLES} "$@"
-    SILENT=1 ${IP6TABLES} "$@"
+    SILENT=1 ${IPTABLES} $IPTABLES_ARGS "$@"
+    SILENT=1 ${IP6TABLES} $IPTABLES_ARGS "$@"
 }
 
 

@@ -35,6 +35,7 @@
 [ -z "$IPTABLES_BINARY" ] && IPTABLES_BINARY=$(which iptables)
 [ -z "$IP6TABLES" ] && IP6TABLES=ip6tables_wrapper
 [ -z "$IP6TABLES_BINARY" ] && IP6TABLES_BINARY=$(which ip6tables)
+[ -z "$IPTABLES_ARGS" ] && IPTABLES_ARGS="-w 1"
 
 
 # Try modprobe first, fall back to insmod
