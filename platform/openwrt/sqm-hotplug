@@ -1,6 +1,6 @@
 [ -n "$DEVICE" ] || exit 0
 
-ALL_DEVICES=$(echo $DEVICE $(uci -q get network.$INTERFACE.ifname) | tr ' ' '\n' | sort -u)
+ALL_DEVICES=$(echo $INTERFACE $DEVICE $(uci -q get network.$INTERFACE.ifname) | tr ' ' '\n' | sort -u)
 
 restart_sqm() {
     for dev in $ALL_DEVICES; do
