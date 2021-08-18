@@ -28,18 +28,18 @@
 
 # handling of specific important binaries
 [ -z "$TC" ] && TC=tc_wrapper
-[ -z "$TC_BINARY" ] && TC_BINARY=$(which tc)
+[ -z "$TC_BINARY" ] && TC_BINARY=$(command -v tc)
 [ -z "$IP" ] && IP=ip_wrapper
-[ -z "$IP_BINARY" ] && IP_BINARY=$(which ip)
+[ -z "$IP_BINARY" ] && IP_BINARY=$(command -v ip)
 [ -z "$IPTABLES" ] && IPTABLES=iptables_wrapper
-[ -z "$IPTABLES_BINARY" ] && IPTABLES_BINARY=$(which iptables)
+[ -z "$IPTABLES_BINARY" ] && IPTABLES_BINARY=$(command -v iptables)
 [ -z "$IP6TABLES" ] && IP6TABLES=ip6tables_wrapper
-[ -z "$IP6TABLES_BINARY" ] && IP6TABLES_BINARY=$(which ip6tables)
+[ -z "$IP6TABLES_BINARY" ] && IP6TABLES_BINARY=$(command -v ip6tables)
 [ -z "$IPTABLES_ARGS" ] && IPTABLES_ARGS="-w 1"
 
 
 # Try modprobe first, fall back to insmod
-[ -z "$INSMOD" ] && { INSMOD=$(which modprobe) || INSMOD=$(which insmod); }
+[ -z "$INSMOD" ] && { INSMOD=$(command -v modprobe) || INSMOD=$(command -v insmod); }
 [ -z "$TARGET" ] && TARGET="5ms"
 [ -z "$IPT_MASK" ] && IPT_MASK="0xff" # to disable: set mask to 0xffffffff
 #sm: we need the functions above before trying to set the ingress IFB device
