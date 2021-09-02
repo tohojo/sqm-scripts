@@ -39,7 +39,15 @@
 
 
 # Try modprobe first, fall back to insmod
-[ -z "$INSMOD" ] && { INSMOD=$(command -v modprobe) || INSMOD=$(command -v insmod); }
+if [ -z "$INSMOD" ]; then
+	INSMOD=$(command -v modprobe)
+	if [ -n "$INSMOD" ]; then
+		INSMOD="${INSMOD} -q"
+	else
+		INSMOD=$(command -v insmod)
+	fi
+fi
+
 [ -z "$TARGET" ] && TARGET="5ms"
 [ -z "$IPT_MASK" ] && IPT_MASK="0xff" # to disable: set mask to 0xffffffff
 #sm: we need the functions above before trying to set the ingress IFB device
