@@ -15,4 +15,4 @@ ExecStop=/usr/lib/sqm/stop-sqm
 RemainAfterExit=1
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=sys-devices-virtual-net-%i.device
