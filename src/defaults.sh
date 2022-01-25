@@ -33,8 +33,10 @@
 [ -z "$IP_BINARY" ] && IP_BINARY=$(command -v ip)
 [ -z "$IPTABLES" ] && IPTABLES=iptables_wrapper
 [ -z "$IPTABLES_BINARY" ] && IPTABLES_BINARY=$(command -v iptables)
+[ -z "$IPTABLES_BINARY" ] && IPTABLES_BINARY=$(command -v iptables-nft)
 [ -z "$IP6TABLES" ] && IP6TABLES=ip6tables_wrapper
 [ -z "$IP6TABLES_BINARY" ] && IP6TABLES_BINARY=$(command -v ip6tables)
+[ -z "$IP6TABLES_BINARY" ] && IP6TABLES_BINARY=$(command -v ip6tables-nft)
 [ -z "$IPTABLES_ARGS" ] && IPTABLES_ARGS="-w 1"
 
 
