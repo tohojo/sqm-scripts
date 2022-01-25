@@ -174,6 +174,22 @@ ip6tables_wrapper(){
     cmd_wrapper ip6tables ${IP6TABLES_BINARY} "$@"
 }
 
+verify_iptables()
+{
+    local ret
+    ret=0
+
+    if [ -z "$IPTABLES_BINARY" ]; then
+        sqm_error "No iptables binary found, please install 'iptables' or 'iptables-nft' to use this script"
+        ret=1
+    fi
+    if [ -z "$IP6TABLES_BINARY" ]; then
+        sqm_error "No ip6tables binary found, please install 'ip6tables' or 'ip6tables-nft' to use this script"
+        ret=1
+    fi
+    return $ret
+}
+
 # wrapper to call tc to allow debug logging
 tc_wrapper(){
     cmd_wrapper tc ${TC_BINARY} "$@"

@@ -230,5 +230,6 @@ ingress() {
 sqm_prepare_script() {
     do_modules
     verify_qdisc "htb" || return 1
+    verify_iptables || return 1
     ipt_setup
 }
