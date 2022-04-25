@@ -106,4 +106,4 @@ SILENT=0
 IPT_TRANS_LOG="${SQM_STATE_DIR}/${IFACE}.iptables.log"
 
 # These are the modules that do_modules() will attempt to load
-ALL_MODULES="act_ipt sch_$QDISC sch_ingress act_mirred cls_fw cls_flow cls_u32 sch_htb sch_hfsc"
+ALL_MODULES="sch_$QDISC sch_ingress act_mirred cls_fw cls_flow cls_u32 sch_htb"
