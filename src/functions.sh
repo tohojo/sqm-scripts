@@ -277,9 +277,10 @@ check_state_dir() {
         exit 1
     fi
 
-    # OpenWrt doesn't have stat; for now just skip the remaining tests if it's
-    # not available
-    command -v stat >/dev/null 2>&1 || return 0
+    # OpenWrt doesn't have stat by default, and if it does have it, stat is
+    # usually built without support for the -c parameter. Check for these and
+    # skip the remaining tests if we don't have a usable 'stat' binary.
+    (command -v stat && stat -c '%a' /) >/dev/null 2>&1 || return 0
 
     PERM="0$(stat -L -c '%a' "${SQM_STATE_DIR}")"
     if [ "$((PERM & 0002))" -ne 0 ]; then
