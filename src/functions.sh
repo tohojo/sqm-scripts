@@ -539,16 +539,26 @@ sqm_start_default() {
 }
 
 
-sqm_stop() {
-    [ "${DOWNLINK}" -ne 0 ] && $TC qdisc del dev $IFACE ingress
-    $TC qdisc del dev $IFACE root
+sqm_cleanup()
+{
+    local silent
+    silent=${1:-0}
 
     # undo accumulated ipt commands during shutdown
     ipt_log_rewind
 
-    [ -n "$CUR_IFB" ] && $IP link set dev ${CUR_IFB} down
-    [ -n "$CUR_IFB" ] && $IP link delete ${CUR_IFB} type ifb
-    [ -n "$CUR_IFB" ] && sqm_debug "${0}: ${CUR_IFB} interface deleted"
+    [ -n "$CUR_IFB" ] || return 0
+
+    SILENT=$silent $IP link delete dev ${CUR_IFB} type ifb
+    sqm_debug "${0}: ${CUR_IFB} interface deleted"
+}
+
+
+sqm_stop() {
+    [ "${DOWNLINK}" -ne 0 ] && $TC qdisc del dev $IFACE ingress
+    $TC qdisc del dev $IFACE root
+
+    sqm_cleanup
 }
 
 # Note this has side effects on the prio variable
