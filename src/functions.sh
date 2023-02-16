@@ -540,10 +540,8 @@ sqm_start_default() {
 
 
 sqm_stop() {
-    if [ "${DOWNLINK}" -ne 0 ]; then
-       $TC qdisc del dev $IFACE ingress
-       $TC qdisc del dev $IFACE root
-    fi
+    [ "${DOWNLINK}" -ne 0 ] && $TC qdisc del dev $IFACE ingress
+    $TC qdisc del dev $IFACE root
 
     # undo accumulated ipt commands during shutdown
     ipt_log_rewind
