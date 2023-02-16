@@ -16,6 +16,12 @@ ACTION="${1:-start}"
 RUN_IFACE="$2"
 LOCKDIR="${SQM_STATE_DIR}/sqm-run.lock"
 
+CLEANUP=0
+if [ "$ACTION" = "cleanup" ]; then
+    CLEANUP=1
+    ACTION=stop
+fi
+
 check_state_dir
 [ -d "${SQM_QDISC_STATE_DIR}" ] || ${SQM_LIB_DIR}/update-available-qdiscs
 
@@ -26,7 +32,7 @@ stop_statefile() {
     # there.
     [ -f "$f" ] && ( . "$f";
                      IFACE=$IFACE SCRIPT=$SCRIPT SQM_DEBUG=$SQM_DEBUG \
-                          SQM_DEBUG_LOG=$SQM_DEBUG_LOG \
+                          SQM_DEBUG_LOG=$SQM_DEBUG_LOG CLEANUP=$CLEANUP \
                           SQM_VERBOSITY_MAX=$SQM_VERBOSITY_MAX \
                           SQM_VERBOSITY_MIN=$SQM_VERBOSITY_MIN \
                           OUTPUT_TARGET=$OUTPUT_TARGET ${SQM_LIB_DIR}/stop-sqm )

@@ -35,7 +35,6 @@ if [ -z "${SCRIPT}" ] ; then
 fi
 
 sqm_trace; sqm_trace "$(date): Stopping." # Add some space and a date stamp to verbose log output and log files to separate runs
-sqm_log "Stopping SQM on ${IFACE}"
 
 # make sure to only delete the ifb associated with the current interface
 CUR_IFB=$( get_ifb_associated_with_if ${IFACE} )
@@ -48,7 +47,13 @@ fi
 
 . "${SQM_LIB_DIR}/$SCRIPT"
 
-sqm_stop
+if [ "$CLEANUP" -eq "1" ]; then
+    sqm_log "Cleaning up SQM state on ${IFACE}"
+    sqm_cleanup 1
+else
+    sqm_log "Stopping SQM on ${IFACE}"
+    sqm_stop
+fi
 rm -f "${STATE_FILE}"
 
 exit 0

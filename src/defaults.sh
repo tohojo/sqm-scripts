@@ -104,6 +104,10 @@ fi
 # particular command
 SILENT=0
 
+# If set to 1, stop-sqm will run the (silent) cleanup function instead of a full
+# stop operation
+[ -z "$CLEANUP" ] && CLEANUP=0
+
 # Transaction log for unwinding ipt rules
 IPT_TRANS_LOG="${SQM_STATE_DIR}/${IFACE}.iptables.log"
 
