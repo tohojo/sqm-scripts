@@ -543,8 +543,6 @@ sqm_stop() {
     if [ "${DOWNLINK}" -ne 0 ]; then
        $TC qdisc del dev $IFACE ingress
        $TC qdisc del dev $IFACE root
-       [ -n "$CUR_IFB" ] && $TC qdisc del dev $CUR_IFB root
-       [ -n "$CUR_IFB" ] && sqm_debug "${0}: ${CUR_IFB} shaper deleted"
     fi
 
     # undo accumulated ipt commands during shutdown
