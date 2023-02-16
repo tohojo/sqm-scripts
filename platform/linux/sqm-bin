@@ -3,6 +3,12 @@
 . /etc/sqm/sqm.conf
 ACTION="$1"
 RUN_IFACE="$2"
+CLEANUP=0
+
+if [ "$ACTION" = "cleanup" ]; then
+    CLEANUP=1
+    ACTION=stop
+fi
 
 if [ "$(id -u)" -ne "0" ]; then
     echo "This script must be run as root." >&2
@@ -10,7 +16,7 @@ if [ "$(id -u)" -ne "0" ]; then
 fi
 
 if [ "$ACTION" != "start" -a "$ACTION" != "stop" -a "$ACTION" != "reload" ]; then
-    echo "Usage: $0 <start|stop|reload> [iface]." >&2
+    echo "Usage: $0 <start|stop|reload|cleanup> [iface]." >&2
     exit 1
 fi
 
@@ -20,7 +26,7 @@ if [ "$ACTION" = "stop" -a -z "$RUN_IFACE" ]; then
     for f in ${SQM_STATE_DIR}/*.state; do
         # Source the state file prior to stopping; we need the $IFACE and
         # $SCRIPT variables saved in there.
-        [ -f "$f" ] && ( . $f; IFACE=$IFACE SCRIPT=$SCRIPT SQM_DEBUG=$SQM_DEBUG SQM_DEBUG_LOG=$SQM_DEBUG_LOG OUTPUT_TARGET=$OUTPUT_TARGET ${SQM_LIB_DIR}/stop-sqm )
+        [ -f "$f" ] && ( . $f; IFACE=$IFACE SCRIPT=$SCRIPT CLEANUP=$CLEANUP SQM_DEBUG=$SQM_DEBUG SQM_DEBUG_LOG=$SQM_DEBUG_LOG OUTPUT_TARGET=$OUTPUT_TARGET ${SQM_LIB_DIR}/stop-sqm )
     done
     exit 0
 fi
