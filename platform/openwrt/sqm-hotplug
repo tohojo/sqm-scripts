@@ -1,6 +1,29 @@
+#!/bin.sh
+
+. /lib/functions.sh
+
 [ -n "$DEVICE" ] || exit 0
 
-ALL_DEVICES=$(echo $DEVICE $(uci -q get network.$INTERFACE.ifname) | tr ' ' '\n' | sort -u)
+list_ports() {
+    local section
+    local find_name
+    local devname
+    section="$1"
+    find_name="$2"
+    devname=$(config_get "$section" "name")
+    [ "$devname" = "$find_name" ] || return
+    config_get "$section" "ports"
+}
+
+ports_for_device() {
+    local devname
+    devname=$1
+    [ -z "$devname" ] && return
+    config_load network
+    config_foreach list_ports device "$devname"
+}
+
+ALL_DEVICES=$(echo $DEVICE $(uci -q get network.$INTERFACE.ifname) $(ports_for_device $(uci -q get network.$INTERFACE.device)) | tr ' ' '\n' | sort -u)
 
 restart_sqm() {
     for dev in $ALL_DEVICES; do
