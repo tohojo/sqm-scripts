@@ -1,2 +1,2 @@
 Simplest possible configuration (TBF): TBF rate limiter with your qdisc attached.
-TBF may give better performance than HTB on some architectures.
+TBF may give better performance than HTB on some architectures. This script forces fq_codel usage if cake is selected as qdisc.
