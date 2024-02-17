@@ -54,8 +54,8 @@ fi
 [ -z "$IPT_MASK" ] && IPT_MASK="0xff" # to disable: set mask to 0xffffffff
 #sm: we need the functions above before trying to set the ingress IFB device
 #sm: *_CAKE_OPTS should contain the diffserv keyword for cake
-[ -z "$INGRESS_CAKE_OPTS" ] && INGRESS_CAKE_OPTS="diffserv3"
-[ -z "$EGRESS_CAKE_OPTS" ] && EGRESS_CAKE_OPTS="diffserv3"
+[ -z "$INGRESS_CAKE_OPTS" ] && INGRESS_CAKE_OPTS="diffserv3 nat"
+[ -z "$EGRESS_CAKE_OPTS" ] && EGRESS_CAKE_OPTS="diffserv3 nat"
 
 [ -z "$CUR_DIRECTION" ] && CUR_DIRECTION="NONE"
 
