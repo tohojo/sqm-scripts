@@ -13,9 +13,11 @@
 QDISC=cake
 
 
-# to keep this as simple as possible we ignore the *_CAKE_OPTS from defaults.sh
-INGRESS_CAKE_OPTS="besteffort"
-EGRESS_CAKE_OPTS="besteffort"
+# for competing instances of the same parameter cake will always keep the last instance
+# so we can keep the values from  *_CAKE_OPTS from defaults.sh and just make sure we also 
+# add besteffort at the very end...
+INGRESS_CAKE_OPTS=(${INGRESS_CAKE_OPTS} "besteffort")
+EGRESS_CAKE_OPTS=(${EGRESS_CAKE_OPTS} "besteffort")
 
 
 egress() {
