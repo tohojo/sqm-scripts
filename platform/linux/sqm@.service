@@ -1,7 +1,7 @@
 [Unit]
 Description=SQM scripts for iface %i
-Wants=network.target
-Before=network.target
+Wants=network-online.target
+After=network-online.target
 BindsTo=sys-subsystem-net-devices-%i.device
 After=sys-subsystem-net-devices-%i.device
 
