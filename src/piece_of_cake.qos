@@ -17,7 +17,7 @@ QDISC=cake
 # since cake will always just keep the last instance of competing keywords this
 # will effectively override defaults.sh's diffservX
 INGRESS_CAKE_OPTS="${INGRESS_CAKE_OPTS} besteffort"
-EGRESS_CAKE_OPTS="${EGRESSS_CAKE_OPTS} besteffort"
+EGRESS_CAKE_OPTS="${EGRESS_CAKE_OPTS} besteffort"
 
 
 egress() {
