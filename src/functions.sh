@@ -598,7 +598,7 @@ get_htb_quantum() {
     fi
 
     if [ -z "$QUANTUM" ]; then
-	MIN_QUANTUM=$(( ${MTU} + 48 ))	# add 48 bytes to MTU for the  ovehead
+	MIN_QUANTUM=$(( ${HTB_MTU} + 48 ))	# add 48 bytes to MTU for the  ovehead
 	MIN_QUANTUM=$(( ${MIN_QUANTUM} + 47 ))	# now do ceil(Min_BURST / 48) * 53 in shell integer arithmic
 	MIN_QUANTUM=$(( ${MIN_QUANTUM} / 48 ))
 	MIN_QUANTUM=$(( ${MIN_QUANTUM} * 53 ))	# for MTU 1489 to 1536 this will result in MIN_BURST = 1749 Bytes
