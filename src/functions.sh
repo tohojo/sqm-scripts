@@ -333,8 +333,7 @@ ifb_name() {
     local NEW_IFB
     CUR_IF=$1
     MAX_IF_NAME_LENGTH=15
-    IFB_PREFIX="ifb4"
-    NEW_IFB=$( echo -n "${IFB_PREFIX}${CUR_IF}" | head -c $MAX_IF_NAME_LENGTH )
+    NEW_IFB=$( printf "${IFB_PATTERN}" "${CUR_IF}" | head -c $MAX_IF_NAME_LENGTH )
 
     echo ${NEW_IFB}
 }

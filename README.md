@@ -16,8 +16,8 @@ once.
 Because qdiscs only see traffic as it is *leaving* an interface, for ingress
 shaping sqm-scripts sets up an IFB device. Incoming packets are redirected to
 this device where a regular qdisc can handle them. The IFB device is named for
-the egress interface it is paired with, so the IFB for 'eth0' will be called
-'ifb4eth0'.
+the egress interface it is paired with, so the IFB for `eth0` will be called
+`ifb4eth0` (use `$IFB_PATTERN` in the configuration file to change the naming).
 
 This is all illustrated on the following diagram:
 
