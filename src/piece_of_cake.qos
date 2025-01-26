@@ -22,9 +22,15 @@ EGRESS_CAKE_OPTS="${EGRESS_CAKE_OPTS} besteffort"
 
 egress() {
     sqm_debug "egress"
+    if [ "$UPLINK" = "unlimited" ]; then
+        EGRESS_BW="unlimited"
+    else
+        EGRESS_BW="bandwidth ${UPLINK}kbit"
+    fi
+
     SILENT=1 $TC qdisc del dev $IFACE root
     $TC qdisc add dev $IFACE root $( get_stab_string ) cake \
-        bandwidth ${UPLINK}kbit $( get_cake_lla_string ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
+        ${EGRESS_BW} $( get_cake_lla_string ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
 }
 
 
@@ -37,8 +43,14 @@ ingress() {
 
     [ "$ZERO_DSCP_INGRESS" -eq "1" ] && INGRESS_CAKE_OPTS="$INGRESS_CAKE_OPTS wash"
 
+    if [ "$DOWNLINK" = "unlimited" ]; then
+        INGRSS_BW="unlimited"
+    else
+        INGRESS_BW="bandwidth ${DOWNLINK}kbit"
+    fi
+
     $TC qdisc add dev $DEV root $( get_stab_string ) cake \
-        bandwidth ${DOWNLINK}kbit $( get_cake_lla_string ) ${INGRESS_CAKE_OPTS} ${IQDISC_OPTS}
+        ${INGRESS_BW} $( get_cake_lla_string ) ${INGRESS_CAKE_OPTS} ${IQDISC_OPTS}
 
     $IP link set dev $DEV up
 

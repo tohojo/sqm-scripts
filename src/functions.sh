@@ -512,7 +512,7 @@ sqm_start_default() {
 
     [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
 
-    if [ "${UPLINK}" -ne 0 ];
+    if [ "${UPLINK}" = "unlimited" ] || [ "${UPLINK}" -ne 0 ];
     then
 	CUR_DIRECTION="egress"
 	fn_exists egress && egress || sqm_warn "sqm_start_default: ${SCRIPT} lacks an egress() function"
@@ -522,7 +522,7 @@ sqm_start_default() {
         sqm_debug "sqm_start_default: egress shaping deactivated"
         SILENT=1 $TC qdisc del dev ${IFACE} root
     fi
-    if [ "${DOWNLINK}" -ne 0 ];
+    if [ "${DOWNLINK}" = "unlimited" ] || [ "${DOWNLINK}" -ne 0 ];
     then
 	CUR_DIRECTION="ingress"
 	verify_qdisc ingress "ingress" || return 1
