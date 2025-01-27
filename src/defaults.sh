@@ -26,6 +26,8 @@
 [ -z "$IQDISC_OPTS" ] && IQDISC_OPTS=""
 [ -z "$EQDISC_OPTS" ] && EQDISC_OPTS=""
 
+[ -z "$IFB_PATTERN" ] && IFB_PATTERN="ifb4%s"
+
 # handling of specific important binaries
 [ -z "$TC" ] && TC=tc_wrapper
 [ -z "$TC_BINARY" ] && TC_BINARY=$(command -v tc)
