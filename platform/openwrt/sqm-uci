@@ -13,4 +13,5 @@ config queue 'eth1'
         option itarget 'auto'
         option etarget 'auto'
         option linklayer 'none'
+        option use_mq '1'
 

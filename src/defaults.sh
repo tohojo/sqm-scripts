@@ -19,6 +19,7 @@
 [ -z "$ETARGET" ] && ETARGET=
 [ -z "$IECN" ] && IECN="ECN"
 [ -z "$EECN" ] && EECN="ECN"
+[ -z "$USE_MQ" ] && USE_MQ=1
 # These two used to be called something else; preserve backwards compatibility
 [ -z "$ZERO_DSCP_INGRESS" ] && ZERO_DSCP_INGRESS="${ZERO_DSCP:-${SQUASH_DSCP:-1}}"
 [ -z "$IGNORE_DSCP_INGRESS" ] && IGNORE_DSCP_INGRESS="${IGNORE_DSCP:-${SQUASH_INGRESS:-1}}"
@@ -99,6 +100,8 @@ else
     OUTPUT_TARGET="/dev/null"
 fi
 
+# .qos script must declare support, or this will be disabled
+[ -z "$SUPPORT_MQ" ] && USE_MQ=0
 
 # Can be overridden by callers that want to silence error output for a
 # particular command
