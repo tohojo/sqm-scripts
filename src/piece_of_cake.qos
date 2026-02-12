@@ -9,6 +9,7 @@
 #       Copyright (C) 2012-5 Michael D. Taht, Toke Høiland-Jørgensen, Sebastian Moeller
 
 
+SUPPORT_MQ=1
 . ${SQM_LIB_DIR}/defaults.sh
 QDISC=cake
 
@@ -21,15 +22,19 @@ EGRESS_CAKE_OPTS="${EGRESS_CAKE_OPTS} besteffort"
 
 
 egress() {
+    local qdisc
     sqm_debug "egress"
+    qdisc=$(select_cake $IFACE)
     SILENT=1 $TC qdisc del dev $IFACE root
-    $TC qdisc add dev $IFACE root $( get_stab_string ) cake \
+    $TC qdisc add dev $IFACE root $( get_stab_string ) $qdisc \
         bandwidth ${UPLINK}kbit $( get_cake_lla_string ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
 }
 
 
 ingress() {
+    local qdisc
     sqm_debug "ingress"
+    qdisc=$(select_cake $DEV)
 
     SILENT=1 $TC qdisc del dev $IFACE handle ffff: ingress
     $TC qdisc add dev $IFACE handle ffff: ingress
@@ -37,7 +42,7 @@ ingress() {
 
     [ "$ZERO_DSCP_INGRESS" -eq "1" ] && INGRESS_CAKE_OPTS="$INGRESS_CAKE_OPTS wash"
 
-    $TC qdisc add dev $DEV root $( get_stab_string ) cake \
+    $TC qdisc add dev $DEV root $( get_stab_string ) $qdisc \
         bandwidth ${DOWNLINK}kbit $( get_cake_lla_string ) ${INGRESS_CAKE_OPTS} ${IQDISC_OPTS}
 
     $IP link set dev $DEV up

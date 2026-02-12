@@ -954,3 +954,21 @@ eth_setup() {
        done
     fi
 }
+
+select_cake() {
+    local interface
+    local num_queues
+    local qdisc
+    interface=$1
+    num_queues=$(ls -d /sys/class/net/$interface/queues/tx-* | wc -l)
+    qdisc=cake
+
+    # cake_mq only works on multiqueue devices
+    if [ "$USE_MQ" -eq "1" ] && [ "$num_queues" -gt "1" ] && verify_qdisc cake_mq; then
+        qdisc=cake_mq
+    fi
+
+    sqm_debug "Using $qdisc for interface $interface with $num_queues TXQs"
+    echo $qdisc
+    return 0
+}
