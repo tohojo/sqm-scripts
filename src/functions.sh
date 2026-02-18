@@ -352,9 +352,18 @@ create_new_ifb_for_if() {
 
 # TODO: report failures
 create_ifb() {
-    local CUR_IFB
-    CUR_IFB=${1}
-    $IP link add name ${CUR_IFB} type ifb
+    local name
+    local args
+    local num_procs
+    name=$1
+    args=
+
+    num_procs=$(grep -c processor /proc/cpuinfo)
+
+    if [ "$USE_MQ" -eq "1" ] && [ "$num_procs" -gt 1 ]; then
+        args="numtxqueues $num_procs"
+    fi
+    $IP link add name $name $args type ifb
 }
 
 delete_ifb() {
@@ -401,7 +410,6 @@ verify_qdisc() {
     root_string="root" # this works for most qdiscs
     args=""
     IFB_MTU=1514
-    dev=$ifb
 
     if [ -n "$supported" ]; then
         found=0
@@ -422,23 +430,14 @@ verify_qdisc() {
 	    IFB_MTU=$(( ${IFB_MTU} + 14 )) # TBF's warning is confused, it says MTU but it checks MTU + 14
 	    args="limit 1 burst ${IFB_MTU} rate 1kbps"
 	    ;;
-        #cake_mq needs to be tested on a multi-queue device
-        #ip command in busybox does not support creating a multi tx queue ifb device
-        #thus test cake_mq on the real interface.
-        cake_mq) dev=$IFACE ;; 
     esac
 
-    $TC qdisc replace dev $dev $root_string $qdisc $args
+    $TC qdisc replace dev $ifb $root_string $qdisc $args
     res=$?
     if [ "$res" = "0" ] ; then
         sqm_debug "QDISC $qdisc is useable."
     else
         sqm_error "QDISC $qdisc is NOT useable."
-    fi
-
-    #clean up in case IFACE was used to test qdisc
-    if [ "$dev" = "$IFACE" ];then
-        $TC qdisc del dev $dev $root_string
     fi
     delete_ifb $ifb
     return $res
