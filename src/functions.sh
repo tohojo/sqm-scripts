@@ -955,6 +955,10 @@ eth_setup() {
     fi
 }
 
+mq_enabled() {
+    [ "$USE_MQ" -eq "1" ] && [ "$SUPPORT_MQ" -eq 1 ]
+}
+
 select_cake() {
     local interface
     local num_queues
@@ -964,7 +968,7 @@ select_cake() {
     qdisc=cake
 
     # cake_mq only works on multiqueue devices
-    if [ "$USE_MQ" -eq "1" ] && [ "$num_queues" -gt "1" ] && verify_qdisc cake_mq; then
+    if mq_enabled && [ "$num_queues" -gt "1" ] && verify_qdisc cake_mq; then
         qdisc=cake_mq
     fi
 
