@@ -956,10 +956,6 @@ eth_setup() {
     fi
 }
 
-mq_enabled() {
-    [ "$USE_MQ" -eq "1" ] && [ "$SUPPORT_MQ" -eq 1 ]
-}
-
 select_cake() {
     local interface
     local num_queues
@@ -969,11 +965,29 @@ select_cake() {
     qdisc=cake
 
     # cake_mq only works on multiqueue devices
-    if mq_enabled && [ "$num_queues" -gt "1" ] && verify_qdisc cake_mq; then
+    if [ "$USE_MQ" -eq "1" ] && [ "$SUPPORT_MQ" -eq 1 ] && [ "$num_queues" -gt "1" ]; then
         qdisc=cake_mq
     fi
 
     sqm_debug "Using $qdisc for interface $interface with $num_queues TXQs"
     echo $qdisc
     return 0
+}
+
+install_cake() {
+    local iface
+    local qdisc
+    local res
+    iface=$1
+    shift
+
+    qdisc=$(select_cake $iface)
+    $TC qdisc replace dev $iface root $qdisc "$@"
+    res=$?
+    if [ "$res" -ne "0" ] && [ "$qdisc" = "cake_mq" ]; then
+        $TC qdisc replace dev $iface root cake "$@"
+        res=$?
+        sqm_debug "Failed to install cake_mq. Falling back to cake."
+    fi
+    return $res
 }

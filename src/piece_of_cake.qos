@@ -26,7 +26,7 @@ egress() {
     sqm_debug "egress"
     qdisc=$(select_cake $IFACE)
     SILENT=1 $TC qdisc del dev $IFACE root
-    $TC qdisc add dev $IFACE root $( get_stab_string ) $qdisc \
+    install_cake $IFACE root $( get_stab_string ) $qdisc \
         bandwidth ${UPLINK}kbit $( get_cake_lla_string ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
 }
 
