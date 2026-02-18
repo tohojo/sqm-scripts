@@ -20,9 +20,9 @@ QDISC=cake
 
 egress() {
     local qdisc
-    qdisc=$(select_cake $IFACE)
     SILENT=1 $TC qdisc del dev $IFACE root
-    $TC qdisc add dev $IFACE root $( get_stab_string ) $qdisc \
+    install_cake $IFACE bandwidth ${UPLINK}kbit $( get_cake_lla_string ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
+    $TC qdisc add dev $IFACE 
         bandwidth ${UPLINK}kbit $( get_cake_lla_string ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
 
 }
