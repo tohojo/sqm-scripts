@@ -986,7 +986,7 @@ install_cake() {
     if [ "$res" -ne "0" ] && [ "$qdisc" = "cake_mq" ]; then
         $TC qdisc replace dev $iface root $( get_stab_string ) cake "$@"
         res=$?
-        sqm_debug "Failed to install cake_mq. Falling back to cake."
+        sqm_warn "Failed to install cake_mq. Falling back to cake."
     fi
     return $res
 }
