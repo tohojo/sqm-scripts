@@ -21,10 +21,8 @@ QDISC=cake
 egress() {
     local qdisc
     SILENT=1 $TC qdisc del dev $IFACE root
-    install_cake $IFACE bandwidth ${UPLINK}kbit $( get_cake_lla_string ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
-    $TC qdisc add dev $IFACE 
+    install_cake $IFACE \
         bandwidth ${UPLINK}kbit $( get_cake_lla_string ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
-
 }
 
 
