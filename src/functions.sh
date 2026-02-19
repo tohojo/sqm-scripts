@@ -972,10 +972,10 @@ install_cake() {
     shift
 
     qdisc=$(select_cake $iface)
-    $TC qdisc replace dev $iface root $( get_stab_string ) $qdisc "$@"
+    $TC qdisc replace dev $iface root $qdisc "$@"
     res=$?
     if [ "$res" -ne "0" ] && [ "$qdisc" = "cake_mq" ]; then
-        $TC qdisc replace dev $iface root $( get_stab_string ) cake "$@"
+        $TC qdisc replace dev $iface root cake "$@"
         res=$?
         sqm_warn "Failed to install cake_mq. Falling back to cake."
     fi
