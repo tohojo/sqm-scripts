@@ -352,9 +352,18 @@ create_new_ifb_for_if() {
 
 # TODO: report failures
 create_ifb() {
-    local CUR_IFB
-    CUR_IFB=${1}
-    $IP link add name ${CUR_IFB} type ifb
+    local name
+    local args
+    local num_procs
+    name=$1
+    args=
+
+    num_procs=$(grep -c processor /proc/cpuinfo)
+
+    if [ "$USE_MQ" -eq "1" ] && [ "$num_procs" -gt 1 ]; then
+        args="numtxqueues $num_procs"
+    fi
+    $IP link add name $name $args type ifb
 }
 
 delete_ifb() {
