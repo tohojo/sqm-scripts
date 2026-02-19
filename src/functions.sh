@@ -360,6 +360,8 @@ create_ifb() {
 
     num_procs=$(grep -c processor /proc/cpuinfo)
 
+    # It is possible that this does not create multiple tx-queues because 
+    # some versions of 'ip' do not support it. (e.g., busybox 1.37.0) 
     if [ "$USE_MQ" -eq "1" ] && [ "$num_procs" -gt 1 ]; then
         args="numtxqueues $num_procs"
     fi
