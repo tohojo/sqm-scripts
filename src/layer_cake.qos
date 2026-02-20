@@ -18,9 +18,14 @@
 
 egress() {
     SILENT=1 $TC qdisc del dev $IFACE root
+    num_queues=$(ls -d /sys/class/net/$IFACE/queues/tx-* | wc -l)
+    if [ "$QDISC" = "cake_mq" ] && [ "$num_queues" -le "1" ]; then
+        sqm_error "Hardware does not support multiple transmission queues. Cannot use cake_mq."
+        return 1
+    fi
+
     $TC qdisc add dev $IFACE root $( get_stab_string ) $QDISC \
         bandwidth ${UPLINK}kbit $( get_cake_lla_string ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
-
 }
 
 
