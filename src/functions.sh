@@ -352,9 +352,20 @@ create_new_ifb_for_if() {
 
 # TODO: report failures
 create_ifb() {
-    local CUR_IFB
-    CUR_IFB=${1}
-    $IP link add name ${CUR_IFB} type ifb
+    local name
+    local args
+    local num_procs
+    name=$1
+    use_mq=$2
+    args=
+
+    num_procs=$(grep -c processor /proc/cpuinfo)
+
+    if [ "$use_mq" = "1" ] && [ "$num_procs" -gt 1 ]; then
+        args="numtxqueues $num_procs"
+    fi
+    $IP link add name $name $args type ifb || return false
+
 }
 
 delete_ifb() {
@@ -400,6 +411,7 @@ verify_qdisc() {
     ifb=SQM_IFB_$randnum
     root_string="root" # this works for most qdiscs
     args=""
+    use_mq=0
     IFB_MTU=1514
 
     if [ -n "$supported" ]; then
@@ -409,7 +421,8 @@ verify_qdisc() {
         done
         [ "$found" -eq "1" ] || return 1
     fi
-    create_ifb $ifb || return 1
+    [ "$qdisc" = "cake_mq" ] && use_mq=1
+    create_ifb $ifb $use_mq || return 1
 
 
     case $qdisc in
@@ -421,6 +434,13 @@ verify_qdisc() {
 	    IFB_MTU=$(( ${IFB_MTU} + 14 )) # TBF's warning is confused, it says MTU but it checks MTU + 14
 	    args="limit 1 burst ${IFB_MTU} rate 1kbps"
 	    ;;
+        cake_mq)
+        num_queues=$(ls -d /sys/class/net/$name/queues/tx-* | wc -l)
+        if [ "$num_queues" -le "1" ]; then
+            sqm_warning "ip could not create a multi tx queue device. \
+                Please install iputils-ip, if you want to use $qdisc."
+        fi
+        ;;
     esac
 
     $TC qdisc replace dev $ifb $root_string $qdisc $args

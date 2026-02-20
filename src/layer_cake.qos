@@ -12,14 +12,13 @@
 #sm: TODO pass in the cake diffserv keyword
 
 . ${SQM_LIB_DIR}/defaults.sh
-QDISC=cake
 
 # Default traffic classication is passed in INGRESS_CAKE_OPTS and EGRESS_CAKE_OPTS, defined in defaults.sh now
 
 
 egress() {
     SILENT=1 $TC qdisc del dev $IFACE root
-    $TC qdisc add dev $IFACE root $( get_stab_string ) cake \
+    $TC qdisc add dev $IFACE root $( get_stab_string ) $QDISC \
         bandwidth ${UPLINK}kbit $( get_cake_lla_string ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
 
 }
@@ -48,5 +47,5 @@ ingress() {
 
 sqm_prepare_script() {
     do_modules
-    verify_qdisc $QDISC "cake" || return 1
+    verify_qdisc $QDISC "cake cake_mq" || return 1
 }

@@ -10,8 +10,6 @@
 
 
 . ${SQM_LIB_DIR}/defaults.sh
-QDISC=cake
-
 
 # to keep this as simple as possible we append the *_CAKE_OPTS from defaults.sh
 # since cake will always just keep the last instance of competing keywords this
@@ -23,7 +21,7 @@ EGRESS_CAKE_OPTS="${EGRESS_CAKE_OPTS} besteffort"
 egress() {
     sqm_debug "egress"
     SILENT=1 $TC qdisc del dev $IFACE root
-    $TC qdisc add dev $IFACE root $( get_stab_string ) cake \
+    $TC qdisc add dev $IFACE root $QDISC \
         bandwidth ${UPLINK}kbit $( get_cake_lla_string ) ${EGRESS_CAKE_OPTS} ${EQDISC_OPTS}
 }
 
@@ -37,7 +35,7 @@ ingress() {
 
     [ "$ZERO_DSCP_INGRESS" -eq "1" ] && INGRESS_CAKE_OPTS="$INGRESS_CAKE_OPTS wash"
 
-    $TC qdisc add dev $DEV root $( get_stab_string ) cake \
+    $TC qdisc add dev $DEV root cake \
         bandwidth ${DOWNLINK}kbit $( get_cake_lla_string ) ${INGRESS_CAKE_OPTS} ${IQDISC_OPTS}
 
     $IP link set dev $DEV up
@@ -50,5 +48,5 @@ ingress() {
 
 sqm_prepare_script() {
     do_modules
-    verify_qdisc $QDISC "cake" || return 1
+    verify_qdisc $QDISC "cake cake_mq" || return 1
 }
