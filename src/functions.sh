@@ -360,7 +360,7 @@ create_ifb() {
 
     num_procs=$(grep -c processor /proc/cpuinfo)
 
-    if [ "$QDISC" = "cake_mq" ] && [ "$num_procs" -gt 1 ]; then
+    if [ "$num_procs" -gt 1 ]; then
         args="numtxqueues $num_procs"
     fi
     $IP link add name $name $args type ifb
@@ -431,9 +431,9 @@ verify_qdisc() {
 	    args="limit 1 burst ${IFB_MTU} rate 1kbps"
 	    ;;
         cake_mq)
-        num_queues=$(ls -d /sys/class/net/$name/queues/tx-* | wc -l)
+        num_queues=$(ls -d /sys/class/net/$ifb/queues/tx-* | wc -l)
         if [ "$num_queues" -le "1" ]; then
-            sqm_warning "ip could not create a multi tx queue device. \
+            sqm_warn "ip could not create a multi tx queue device. \
                 Please install ip-full, if you want to use $qdisc."
         fi
         ;;
