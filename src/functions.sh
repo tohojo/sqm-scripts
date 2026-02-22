@@ -433,8 +433,8 @@ verify_qdisc() {
         cake_mq)
         num_queues=$(ls -d /sys/class/net/$ifb/queues/tx-* | wc -l)
         if [ "$num_queues" -le "1" ]; then
-            sqm_warn "ip could not create a multi tx queue device. \
-                Please install ip-full, if you want to use $qdisc."
+            sqm_warn "ip could not create a multi tx queue device." \
+               "Please install ip-full, if you want to use $qdisc."
         fi
         ;;
     esac
@@ -456,8 +456,8 @@ verify_qdisc_for_if() {
         cake_mq)
         num_queues=$(ls -d /sys/class/net/$IFACE/queues/tx-* | wc -l)
         if [ "$num_queues" -le "1" ]; then
-            sqm_error "Hardware does not support multiple transmission queues. \
-                Cannot use cake_mq on interface $IFACE."
+            sqm_error "Hardware does not support multiple transmission queues." \
+               "Cannot use cake_mq on interface $IFACE."
             return false
         fi
         ;;
@@ -531,7 +531,7 @@ sqm_start_default() {
 
     if fn_exists sqm_prepare_script ; then
 	sqm_debug "sqm_start_default: starting sqm_prepare_script"
-        sqm_prepare_script
+    sqm_prepare_script || (sqm_error "sqm_start_default: sqm_prepare_failed" && return 1)
     else
 	sqm_debug "sqm_start_default: no sqm_prepare_script function found, proceeding without."
     fi
