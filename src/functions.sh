@@ -356,16 +356,14 @@ create_ifb() {
     local args
     local num_procs
     name=$1
-    use_mq=$2
     args=
 
     num_procs=$(grep -c processor /proc/cpuinfo)
 
-    if [ "$use_mq" = "1" ] && [ "$num_procs" -gt 1 ]; then
+    if [ "$QDISC" = "cake_mq" ] && [ "$num_procs" -gt 1 ]; then
         args="numtxqueues $num_procs"
     fi
-    $IP link add name $name $args type ifb || return false
-
+    $IP link add name $name $args type ifb
 }
 
 delete_ifb() {
@@ -411,7 +409,6 @@ verify_qdisc() {
     ifb=SQM_IFB_$randnum
     root_string="root" # this works for most qdiscs
     args=""
-    use_mq=0
     IFB_MTU=1514
 
     if [ -n "$supported" ]; then
@@ -421,8 +418,7 @@ verify_qdisc() {
         done
         [ "$found" -eq "1" ] || return 1
     fi
-    [ "$qdisc" = "cake_mq" ] && use_mq=1
-    create_ifb $ifb $use_mq || return 1
+    create_ifb $ifb || return 1
 
 
     case $qdisc in
