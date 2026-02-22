@@ -454,6 +454,20 @@ verify_qdisc() {
     return $res
 }
 
+verify_qdisc_for_if() {
+    verify_qdisc "$@" || false 
+    case $qdisc in
+        cake_mq)
+        num_queues=$(ls -d /sys/class/net/$IFACE/queues/tx-* | wc -l)
+        if [ "$num_queues" -le "1" ]; then
+            sqm_error "Hardware does not support multiple transmission queues. \
+                Cannot use cake_mq on interface $IFACE."
+            return false
+        fi
+        ;;
+    esac
+}
+
 
 get_htb_adsll_string() {
     ADSLL=""
@@ -527,7 +541,7 @@ sqm_start_default() {
     fi
 
     do_modules
-    verify_qdisc $QDISC || return 1
+    verify_qdisc_for_if $QDISC || return 1
     sqm_debug "sqm_start_default: Starting ${SCRIPT}"
 
     [ -z "$DEV" ] && DEV=$( get_ifb_for_if ${IFACE} )
