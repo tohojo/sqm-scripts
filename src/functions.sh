@@ -438,7 +438,7 @@ verify_qdisc() {
         num_queues=$(ls -d /sys/class/net/$name/queues/tx-* | wc -l)
         if [ "$num_queues" -le "1" ]; then
             sqm_warning "ip could not create a multi tx queue device. \
-                Please install iputils-ip, if you want to use $qdisc."
+                Please install ip-full, if you want to use $qdisc."
         fi
         ;;
     esac
