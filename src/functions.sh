@@ -95,102 +95,29 @@ fn_exists() {
 }
 
 
-# Transaction logging for ipt rules to allow for gracefull final teardown
-ipt_log_restart() {
-    [ -f "$IPT_TRANS_LOG" ] && rm -f "$IPT_TRANS_LOG"
+nft_log_restart() {
+    [ -f "$NFT_RULESET_FILE" ] && rm -f "$NFT_RULESET_FILE"
+}
+
+nft_cleanup() {
+    [ -n "$NFT_BINARY" ] || return 0
+    SILENT=1 ${NFT} destroy table inet ${NFT_TABLE} >/dev/null 2>&1
+    nft_log_restart
 }
 
 
-# Function to negate iptables commands. Turns addition and insertion into
-# deletion, and creation of new chains into deletion
-# Its output has quotes around all parameters so we can preserve arguments
-# containing whitespace across log file write & re-read
-ipt_negate()
+# wrapper to call nft to allow debug logging
+nft_wrapper(){
+    cmd_wrapper nft ${NFT_BINARY} "$@"
+}
+
+verify_nft()
 {
-    for var in "$@"; do
-        case "$var" in
-            "-A"|"-I") echo -n '"-D" ' ;;
-            "-N") echo -n '"-X" ' ;;
-            *) echo -n "\"$var\" "  ;;
-        esac
-    done
-    echo ""
-}
-
-ipt_log()
-{
-    echo "$@" >> $IPT_TRANS_LOG
-}
-
-# Split a string containing an iptables command line parameter invocation, then
-# run it through ipt(). This is used to turn lines read from the log file, or
-# output from ipt_negate() back into proper parameters contained in $@
-ipt_run_split()
-{
-    eval "set -- $1"
-    ipt "$@"
-}
-
-# Read the transaction log in reverse and execute using ipt to undo changes.
-# Since we logged only ipt '-D' commands, ipt won't add them again to the
-# transaction log, but will include them in the syslog/debug log.
-ipt_log_rewind() {
-    [ -f "$IPT_TRANS_LOG" ] || return 0
-    sed -n '1!G;h;$p' "$IPT_TRANS_LOG" |
-        while read line; do
-            [ -n "$line" ] || continue
-            ipt_run_split "$line"
-        done
-
-    # We just rewound the log, make sure to restart it
-    ipt_log_restart
-}
-
-ipt() {
-    local neg
-
-    for var in "$@"; do
-        case "$var" in
-            "-A"|"-I"|"-N")
-                # If the rule is an addition rule, we first run its negation,
-                # then log that negation to be used by ipt_log_rewind() on
-                # shutdown
-                neg="$(ipt_negate "$@")"
-                ipt_run_split "$neg"
-                ipt_log "$neg"
-                ;;
-        esac
-    done
-
-    SILENT=1 ${IPTABLES} $IPTABLES_ARGS "$@"
-    SILENT=1 ${IP6TABLES} $IPTABLES_ARGS "$@"
-}
-
-
-# wrapper to call iptables to allow debug logging
-iptables_wrapper(){
-    cmd_wrapper iptables ${IPTABLES_BINARY} "$@"
-}
-
-# wrapper to call ip6tables to allow debug logging
-ip6tables_wrapper(){
-    cmd_wrapper ip6tables ${IP6TABLES_BINARY} "$@"
-}
-
-verify_iptables()
-{
-    local ret
-    ret=0
-
-    if [ -z "$IPTABLES_BINARY" ]; then
-        sqm_error "No iptables binary found, please install 'iptables' or 'iptables-nft' to use this script"
-        ret=1
+    if [ -z "$NFT_BINARY" ]; then
+        sqm_error "No nft binary found, please install 'nftables' to use this script"
+        return 1
     fi
-    if [ -z "$IP6TABLES_BINARY" ]; then
-        sqm_error "No ip6tables binary found, please install 'ip6tables' or 'ip6tables-nft' to use this script"
-        ret=1
-    fi
-    return $ret
+    return 0
 }
 
 # wrapper to call tc to allow debug logging
@@ -505,8 +432,8 @@ sqm_start_default() {
     #sqm_error "sqm_start_default"
     [ -n "$IFACE" ] || return 1
 
-    # reset the iptables trace log
-    ipt_log_restart
+    # reset the firewall rule file
+    nft_log_restart
 
     if fn_exists sqm_prepare_script ; then
 	sqm_debug "sqm_start_default: starting sqm_prepare_script"
@@ -553,8 +480,7 @@ sqm_cleanup()
     local silent
     silent=${1:-0}
 
-    # undo accumulated ipt commands during shutdown
-    ipt_log_rewind
+    nft_cleanup
 
     [ -n "$CUR_IFB" ] || return 0
 
