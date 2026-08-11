@@ -33,6 +33,10 @@ current). The only exception is that if you want to use the `cake` qdisc, you
 either need kernel 4.19 or newer (with matching `iproute2` version), or you need
 to build CAKE yourself from the out-of-tree repository at
 https://github.com/dtaht/sch_cake.
+Note, for non-openwrt/systemd distributions the Makefile expects that 
+"pkg-config --variable systemdsystemunitdir systemd" returns the appropriate 
+directory for systemd's unit files for installed packages, which on debian trixie 
+(and likely others) requires the  systemd-dev package to be installed first (e.g. "sudo apt install systemd-dev").
 
 ## Installing
 `sudo make install` should install things on a regular Linux box. For
