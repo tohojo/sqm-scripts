@@ -33,6 +33,8 @@ current). The only exception is that if you want to use the `cake` qdisc, you
 either need kernel 4.19 or newer (with matching `iproute2` version), or you need
 to build CAKE yourself from the out-of-tree repository at
 https://github.com/dtaht/sch_cake.
+At least for raspbian / Debian GNU/Linux 13 (trixie) one needs to install the 
+systemd-dev package for the Makefile to work.
 
 ## Installing
 `sudo make install` should install things on a regular Linux box. For
