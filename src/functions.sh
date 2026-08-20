@@ -239,8 +239,8 @@ get_ifb_associated_with_if() {
     # we could not detect an associated IFB for CUR_IF
     if [ -z "${CUR_IFB}" ]; then
         TMP=$( $TC_BINARY -p filter show parent ffff: dev ${CUR_IF} )
-        if [ ! -z "${TMP}" ]; then
-            # oops, there is output but we failed to properly parse it? Ask for a user report
+        if [ ! -z "${TMP}" ] && echo "${TMP}" | grep -q mirred; then
+            # oops, a redirect is there but we failed to parse it? Ask for a user report
             sqm_error "#---- CUT HERE ----#"
             sqm_error "get_ifb_associated_with_if failed to extrect the ifb name from:"
             sqm_error $( $TC_BINARY -p filter show parent ffff: dev ${CUR_IF} )
