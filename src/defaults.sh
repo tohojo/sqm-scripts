@@ -65,6 +65,14 @@ fi
 [ -z "$ISHAPER_BURST_DUR_US" ] && ISHAPER_BURST_DUR_US=$SHAPER_BURST_DUR_US
 [ -z "$ESHAPER_BURST_DUR_US" ] && ESHAPER_BURST_DUR_US=$SHAPER_BURST_DUR_US
 
+# how deep the queue behind an egress shaper may grow, as the time it takes
+# the shaped rate to drain it: the latency the bottleneck queue may add for
+# the traffic inside it. Scripts that isolate latency-sensitive traffic in a
+# queue of its own (hw_ppe.qos) can afford a deep bulk queue here; a shared
+# single queue cannot. The _DEFAULTED marker tells such a script the duration
+# is this fallback and not one the user chose.
+[ -z "$ESHAPER_QUEUE_DUR_US" ] && ESHAPER_QUEUE_DUR_US=1000 ESHAPER_QUEUE_DEFAULTED=1
+
 # use the same logic for the calculation of htb's quantum
 # quantum controlls how many bytes htb tries to deque from the current tier
 # before switching tiers.

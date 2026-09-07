@@ -1,0 +1,223 @@
+################################################################################
+# hw_ppe.qos (Qualcomm PPE hardware shaper)
+#
+# Abstract:
+# Shapes in the switch rather than on the CPU, so that connections the kernel
+# has offloaded to the PPE flow engine - which no qdisc on this box ever sees
+# again - are shaped too.
+#
+# Egress is a tbf on the port itself, which the qca_ppe driver programs into
+# that port's hardware token bucket. No packet is redirected, which is what
+# lets an offloaded flow be governed at all.
+#
+# The switch cannot queue a packet arriving on a port, so the download
+# direction is shaped where it leaves - but only the download. Every user
+# port's scheduler keeps a band of queues that no frame selects on its own,
+# and a classifier rule on the WAN port marks each arriving frame addressed
+# to the router into that band: that is every routed download frame and
+# nothing bridged. An mqprio class over the band carries the download rate,
+# which the driver programs into the band's own scheduler node. A transfer
+# between two local ports never wears the mark and passes at line rate; the
+# port's own token bucket stays unprogrammed.
+#
+# Frames no longer than the driver's small-packet cutoff are promoted past
+# the band by the classifier rule the driver owns, so acks, DNS and voice
+# keep jumping the standing bulk queue exactly as they do on the shaped
+# egress port.
+#
+# What the switch does not forward in hardware reaches the host by the CPU
+# port, and only that - an offloaded flow's packets never do: the flows the
+# flow table does not hold, and the path to Wi-Fi clients, whose frames all
+# take it. That port has no netdev for a qdisc to name, so the driver's
+# cpu_port_rate parameter carries the download rate to the same band on it,
+# and the switch shapes that remainder too. Local traffic to a Wi-Fi client
+# crosses the CPU port unmarked and is not shaped.
+#
+# The user ports' bands and the CPU port's each carry the full download
+# rate; a workload split across both at once can therefore exceed it while
+# the split lasts. Sustaining that takes a flow table too full to take new
+# flows, which is thousands of concurrent bulk flows.
+#
+# Configure this on the physical WAN port (wan), not on a pppoe or vlan
+# device above it - the hardware only knows the port.
+#
+################################################################################
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+#
+#       Copyright (C) 2026 Julius Bairaktaris
+#
+################################################################################
+
+. ${SQM_LIB_DIR}/defaults.sh
+
+# The egress bulk queue can afford to be deep here, because the switch
+# schedules higher-priority queues past it: latency-sensitive traffic rides
+# those, not this queue. Measured on a 165 Mbit/s uplink, 1 ms of queue caps
+# a single TCP flow at 50 Mbit/s where 8 ms delivers 162, and only traffic
+# inside the bulk queue pays the 8 ms.
+[ -n "$ESHAPER_QUEUE_DEFAULTED" ] && ESHAPER_QUEUE_DUR_US=8000
+
+# The internal priority whose queue class is the download band on every user
+# port of this switch.
+DL_BAND_PRIO=8
+
+
+################################################################################
+
+egress() {
+    local burst limit min_limit
+
+    MTU=$(get_mtu $IFACE)
+    burst="$(get_burst ${MTU:-1514} ${UPLINK} ${ESHAPER_BURST_DUR_US})"
+    burst=${burst:-1514}
+
+    # The tbf limit is how deep the queue behind the shaper may get, and a
+    # driver that drains a real queue sizes it from this, so it is the number
+    # that decides the latency the shaper adds for the traffic queued in it.
+    # A queue of fewer than about eight full frames cannot hold a single
+    # flow at the rate it is shaped to, so that is the floor.
+    limit=$(( UPLINK * ESHAPER_QUEUE_DUR_US / 8000 ))
+    min_limit=$(( (${MTU:-1514} + 18) * 8 ))
+    [ $limit -lt $min_limit ] && limit=$min_limit
+    [ $limit -lt $burst ] && limit=$burst
+
+    SILENT=1 $TC qdisc del dev $IFACE root
+
+    # The root tbf is what the driver turns into the port's token bucket and
+    # queue limit. The qdisc below it shapes the CPU path, which is where
+    # anything not offloaded still travels.
+    $TC qdisc add dev $IFACE root handle 1: tbf \
+        rate ${UPLINK}kbit burst $burst limit $limit
+    $TC qdisc add dev $IFACE parent 1: handle 110: $QDISC \
+        $(get_limit ${ELIMIT}) $(get_target "${ETARGET}" ${UPLINK}) \
+        $(get_ecn ${EECN}) $(get_flows ${UPLINK}) ${EQDISC_OPTS}
+}
+
+# The other ports of the switch this interface belongs to, taken from what is
+# present rather than from a name or a count - the port set differs across
+# IPQ807x boards. Also what a teardown walks, so that it reaches the same ports
+# without having to know what the configuration was when they came up.
+ingress_ports() {
+    local sw id dev
+
+    sw="$(cat /sys/class/net/$IFACE/phys_switch_id 2>/dev/null)"
+    [ -n "$sw" ] || return 1
+
+    for id in /sys/class/net/*/phys_switch_id ; do
+        dev="${id%/phys_switch_id}" ; dev="${dev##*/}"
+        [ "$dev" = "$IFACE" ] && continue
+        [ "$(cat $id 2>/dev/null)" = "$sw" ] && echo "$dev"
+    done
+}
+
+ingress() {
+    local dev ports wanmac
+
+    if ! ports="$(ingress_ports)" ; then
+        sqm_error "$IFACE is not a switch port; the download direction needs one"
+        return 1
+    fi
+
+    # The download band, shaped. The first class is every queue the port
+    # serves unmarked traffic from and carries no rate; the second is the
+    # band the WAN mark selects, and its rate goes to the band's own
+    # scheduler node, so only what wears the mark is shaped. hw 1 makes an
+    # offload failure a failure, the same stance skip_sw takes for a filter.
+    for dev in $ports ; do
+        SILENT=1 $TC qdisc del dev $dev root
+        $TC qdisc add dev $dev root handle 1: mqprio num_tc 2 \
+            map 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 queues 8@0 4@8 \
+            hw 1 mode channel shaper bw_rlimit \
+            max_rate 0 ${DOWNLINK}kbit || return 1
+    done
+
+    # The mark. A frame arriving on the WAN port addressed to the port is a
+    # routed download frame - bridged traffic is addressed to the host
+    # behind a local port, never to this one.
+    wanmac="$(cat /sys/class/net/$IFACE/address)"
+    $TC qdisc add dev $IFACE handle ffff: ingress 2>/dev/null
+    SILENT=1 $TC filter del dev $IFACE parent ffff: pref 511
+    $TC filter add dev $IFACE parent ffff: pref 511 protocol all flower \
+        skip_sw dst_mac $wanmac \
+        action skbedit priority $DL_BAND_PRIO || return 1
+
+    # The remainder: what the switch did not forward in hardware leaves for
+    # the host by the CPU port, and the mark selects the same band there.
+    # The driver sizes that band's queue from the rate.
+    echo ${DOWNLINK} > /sys/module/qca_ppe/parameters/cpu_port_rate || return 1
+}
+
+# What ingress() built, deleted from what is present rather than from the
+# configuration, so that it reaches the same ports whatever the configuration
+# was when they came up.
+ingress_teardown() {
+    local dev
+
+    SILENT=1 $TC qdisc del dev $IFACE ingress
+    for dev in $(ingress_ports) ; do
+        SILENT=1 $TC qdisc del dev $dev root
+    done
+    [ -w /sys/module/qca_ppe/parameters/cpu_port_rate ] && \
+        echo 0 > /sys/module/qca_ppe/parameters/cpu_port_rate
+}
+
+# sqm_start_default allocates an ifb before either direction runs and fails
+# hard without one; nothing here needs one, so this is that function without
+# the allocation.
+sqm_start() {
+    [ -n "$IFACE" ] || return 1
+
+    nft_log_restart
+
+    if fn_exists sqm_prepare_script ; then
+        sqm_prepare_script || return 1
+    fi
+
+    do_modules
+    verify_qdisc $QDISC || return 1
+
+    if [ "${UPLINK}" -ne 0 ] ; then
+        CUR_DIRECTION="egress"
+        egress
+    else
+        SILENT=1 $TC qdisc del dev ${IFACE} root
+    fi
+
+    if [ "${DOWNLINK}" -ne 0 ] ; then
+        CUR_DIRECTION="ingress"
+        ingress || return 1
+    else
+        ingress_teardown
+    fi
+
+    return 0
+}
+
+sqm_stop() {
+    ingress_teardown
+    SILENT=1 $TC qdisc del dev $IFACE root
+    nft_cleanup
+    return 0
+}
+
+sqm_prepare_script() {
+    do_modules
+    verify_qdisc "tbf" || return 1
+
+    case $QDISC in
+        cake*)
+            sqm_warn "cake cannot be offloaded to the PPE; using fq_codel for the CPU path"
+            QDISC=fq_codel ;;
+    esac
+
+    # Every link layer adjustment mechanism is keyed on LINKLAYER, and LLAM
+    # is still "default" when the user set only linklayer and overhead.
+    if [ "$LINKLAYER" != "none" ] ; then
+        sqm_warn "link layer adjustment is not expressible in the PPE shaper; the hardware meters the wire frame including preamble, gap and CRC"
+    fi
+}
+
+################################################################################
