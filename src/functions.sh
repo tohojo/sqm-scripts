@@ -242,7 +242,7 @@ get_ifb_associated_with_if() {
         if [ ! -z "${TMP}" ] && echo "${TMP}" | grep -q mirred; then
             # oops, a redirect is there but we failed to parse it? Ask for a user report
             sqm_error "#---- CUT HERE ----#"
-            sqm_error "get_ifb_associated_with_if failed to extrect the ifb name from:"
+            sqm_error "get_ifb_associated_with_if failed to extract the ifb name from:"
             sqm_error $( $TC_BINARY -p filter show parent ffff: dev ${CUR_IF} )
             sqm_error "Please report this as an issue at https://github.com/tohojo/sqm-scripts"
             sqm_error "Please copy and paste everything below the cut-here line into your issue report, thanks."
