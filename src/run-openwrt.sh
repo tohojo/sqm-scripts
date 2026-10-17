@@ -133,5 +133,5 @@ if [ "$ACTION" = "stop" ]; then
     fi
 else
     config_load sqm
-    config_foreach start_sqm_section
+    config_foreach start_sqm_section queue
 fi
