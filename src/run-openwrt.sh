@@ -81,7 +81,7 @@ start_sqm_section() {
     export SQM_VERBOSITY_MAX=${SQM_VERBOSITY_MAX:-$(config_get "$section" verbosity)}
     export SQM_VERBOSITY_MIN
 
-    "${SQM_LIB_DIR}/start-sqm"
+    "${SQM_LIB_DIR}/start-sqm" || SQM_EXIT_STATUS=$?
 }
 
 release_lock() {
@@ -132,6 +132,8 @@ if [ "$ACTION" = "stop" ]; then
         stop_statefile "${SQM_STATE_DIR}/${RUN_IFACE}.state"
     fi
 else
+    SQM_EXIT_STATUS=0
     config_load sqm
     config_foreach start_sqm_section
+    exit "$SQM_EXIT_STATUS"
 fi

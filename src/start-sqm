@@ -60,10 +60,18 @@ sqm_log "Starting SQM script: ${SCRIPT} on ${IFACE}, in: ${DOWNLINK} Kbps, out: 
 
 if fn_exists sqm_start ; then
     sqm_debug "Using script specific sqm_start function overriding the generic sqm_start_default."
-    sqm_start && write_state_file ${STATE_FILE} && sqm_log "${SCRIPT} was started on ${IFACE} successfully"
+    sqm_start
 else
     sqm_debug "Using generic sqm_start_default function."
-    sqm_start_default && write_state_file ${STATE_FILE} && sqm_log "${SCRIPT} was started on ${IFACE} successfully"
+    sqm_start_default
 fi
+
+ret=$?
+if [ "$ret" -ne 0 ]; then
+    sqm_error "${SCRIPT} failed to start on ${IFACE} (exit ${ret})"
+    exit "$ret"
+fi
+write_state_file "${STATE_FILE}" || exit 1
+sqm_log "${SCRIPT} was started on ${IFACE} successfully"
 
 exit 0
