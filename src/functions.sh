@@ -437,7 +437,7 @@ sqm_start_default() {
 
     if fn_exists sqm_prepare_script ; then
 	sqm_debug "sqm_start_default: starting sqm_prepare_script"
-        sqm_prepare_script
+        sqm_prepare_script || return 1
     else
 	sqm_debug "sqm_start_default: no sqm_prepare_script function found, proceeding without."
     fi
@@ -451,7 +451,11 @@ sqm_start_default() {
     if [ "${UPLINK}" -ne 0 ];
     then
 	CUR_DIRECTION="egress"
-	fn_exists egress && egress || sqm_warn "sqm_start_default: ${SCRIPT} lacks an egress() function"
+        if fn_exists egress; then
+            egress || return 1
+        else
+            sqm_warn "sqm_start_default: ${SCRIPT} lacks an egress() function"
+        fi
         #egress
         sqm_debug "sqm_start_default: egress shaping activated"
     else
@@ -462,7 +466,11 @@ sqm_start_default() {
     then
 	CUR_DIRECTION="ingress"
 	verify_qdisc ingress "ingress" || return 1
-	fn_exists ingress && ingress || sqm_warn "sqm_start_default: ${SCRIPT} lacks an ingress() function"
+        if fn_exists ingress; then
+            ingress || return 1
+        else
+            sqm_warn "sqm_start_default: ${SCRIPT} lacks an ingress() function"
+        fi
         #ingress
         sqm_debug "sqm_start_default: ingress shaping activated"
     else
